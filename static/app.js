@@ -62,6 +62,21 @@ function renderTasks(tasks, containerId) {
             weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit'
         }) : 'Sin fecha';
 
+        let materialsHtml = '';
+        if (task.materials && task.materials.length > 0) {
+            materialsHtml = `<div class="flex flex-wrap gap-2 mb-4">`;
+            task.materials.forEach(mat => {
+                const icon = mat.type === 'driveFile' ? 'fa-file-pdf' : 'fa-link';
+                materialsHtml += `
+                    <a href="${mat.url}" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-700/50 hover:bg-slate-700 border border-slate-600 text-xs text-slate-300 hover:text-indigo-300 transition-colors max-w-full">
+                        <i class="fa-solid ${icon}"></i>
+                        <span class="truncate">${mat.title}</span>
+                    </a>
+                `;
+            });
+            materialsHtml += `</div>`;
+        }
+
         card.innerHTML += `
             <div class="flex-1 z-10 w-full flex flex-col">
                 <div class="flex items-center gap-2 mb-1">
@@ -71,7 +86,8 @@ function renderTasks(tasks, containerId) {
                 <h3 class="text-lg font-bold ${isDone ? 'text-slate-400 line-through' : 'text-slate-100'} mb-2">
                     <a href="${task.link}" target="_blank" class="hover:text-indigo-400 transition-colors">${task.title} <i class="fa-solid fa-arrow-up-right-from-square text-xs ml-1 opacity-50"></i></a>
                 </h3>
-                <p class="text-sm text-slate-400 line-clamp-2 mb-4">${task.description || 'Sin descripción.'}</p>
+                <p class="text-sm text-slate-400 line-clamp-2 mb-3">${task.description || 'Sin descripción.'}</p>
+                ${materialsHtml}
 
                 <details class="mb-4">
                     <summary class="cursor-pointer text-sm text-slate-400 hover:text-slate-200 transition-colors">
@@ -258,7 +274,8 @@ async function handleChatSubmit(e) {
                     course_name: currentTaskContext.course_name,
                     title: currentTaskContext.title,
                     description: currentTaskContext.description,
-                    due_date: currentTaskContext.due_date
+                        due_date: currentTaskContext.due_date,
+                        materials_text: currentTaskContext.materials_text
                 },
                 messages: chatHistory
             })

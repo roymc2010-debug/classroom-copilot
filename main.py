@@ -89,6 +89,8 @@ Course: {request.task_context.get('course_name', 'Unknown')}
 Title: {request.task_context.get('title', 'Unknown')}
 Description: {request.task_context.get('description', 'No description')}
 Due Date: {request.task_context.get('due_date', 'No due date')}
+Instrucciones del profesor extraídas del material adjunto:
+{request.task_context.get('materials_text', 'Ninguno')}
 
 Please provide helpful guidance, explain concepts clearly, and assist the student with understanding the assignment. Do not just give out direct answers, but help them learn.
         """

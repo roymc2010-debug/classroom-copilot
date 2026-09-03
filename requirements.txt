@@ -6,3 +6,4 @@ google-auth-oauthlib
 openai
 python-dotenv
 jinja2
+pypdf
