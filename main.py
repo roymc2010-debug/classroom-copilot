@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict
 import datetime
 
-from services.classroom_service import fetch_tasks
+from services.classroom_service import fetch_tasks, get_announcements_and_alerts
 from services.ai_service import ask_copilot
 from db.database import get_all_task_states, update_task_status, update_task_notes
 
@@ -32,7 +32,7 @@ class CopilotRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="index.html", context={"request": request})
 
 @app.get("/api/tasks")
 async def api_get_tasks():
@@ -65,6 +65,14 @@ async def api_get_tasks():
         "tasks_without_dates": tasks_without_dates
     }
 
+@app.get("/api/announcements")
+async def api_announcements():
+    try:
+        alerts = get_announcements_and_alerts()
+        return {"announcements": alerts}
+    except Exception:
+        return {"announcements": []}
+    
 @app.post("/api/tasks/{task_id}/toggle")
 async def toggle_task(task_id: str, request: TaskToggleRequest):
     if request.status not in ["pending", "done"]:
@@ -89,8 +97,6 @@ Course: {request.task_context.get('course_name', 'Unknown')}
 Title: {request.task_context.get('title', 'Unknown')}
 Description: {request.task_context.get('description', 'No description')}
 Due Date: {request.task_context.get('due_date', 'No due date')}
-Instrucciones del profesor extraídas del material adjunto:
-{request.task_context.get('materials_text', 'Ninguno')}
 
 Please provide helpful guidance, explain concepts clearly, and assist the student with understanding the assignment. Do not just give out direct answers, but help them learn.
         """

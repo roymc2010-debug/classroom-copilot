@@ -3,140 +3,565 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classroom Task Manager</title>
+    <title>Ágora — Organizador de Misiones para Classroom</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    },
                     colors: {
-                        slate: {
-                            800: '#1e293b',
-                            900: '#0f172a',
+                        night: {
+                            950: '#050811',
+                            900: '#0A0F1D',
+                            800: '#111827',
+                            700: '#1F2937',
+                            600: '#374151'
+                        },
+                        cantera: {
+                            50: '#FAF8F5',
+                            100: '#F4EFE6',
+                            200: '#E9E2D2',
+                            300: '#D8CEBA',
+                            400: '#C2B59D',
+                            600: '#78716C',
+                            700: '#44403C',
+                            800: '#292524',
+                            900: '#1C1917'
                         },
                         indigo: {
-                            500: '#6366f1',
-                            600: '#4f46e5',
+                            400: '#818CF8',
+                            500: '#6366F1',
+                            600: '#4F46E5'
                         }
                     }
                 }
             }
         }
     </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            background-color: #0f172a;
-            color: #f8fafc;
+        html.dark body { background-color: #080C16; color: #F8FAFC; }
+        html:not(.dark) body { background-color: #F4EFE6; color: #1C1917; }
+
+        #chat-messages::-webkit-scrollbar, .custom-scroll::-webkit-scrollbar { width: 5px; }
+        #chat-messages::-webkit-scrollbar-track, .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        #chat-messages::-webkit-scrollbar-thumb, .custom-scroll::-webkit-scrollbar-thumb { background: #78716C; border-radius: 3px; }
+
+        .model-pill:has(input:checked) {
+            background-color: rgba(99, 102, 241, 0.18);
+            border-color: #6366F1;
+            color: #6366F1;
         }
 
-        /* Custom Scrollbar for chat */
-        #chat-messages::-webkit-scrollbar {
-            width: 6px;
-        }
-        #chat-messages::-webkit-scrollbar-track {
-            background: #1e293b;
-        }
-        #chat-messages::-webkit-scrollbar-thumb {
-            background: #475569;
-            border-radius: 3px;
-        }
+        details > summary { list-style: none; }
+        details > summary::-webkit-details-marker { display: none; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 font-sans">
+<body class="h-screen overflow-hidden font-sans flex flex-col transition-colors duration-300">
 
-    <div class="max-w-4xl mx-auto">
-        <header class="flex justify-between items-center mb-8 pb-4 border-b border-slate-700">
-            <h1 class="text-3xl font-bold text-indigo-400"><i class="fa-solid fa-graduation-cap mr-2"></i>Classroom Manager</h1>
-            <button id="refresh-btn" class="bg-slate-800 hover:bg-slate-700 text-white p-2 rounded-full transition-colors" onclick="loadTasks()">
-                <i class="fa-solid fa-arrows-rotate"></i>
-            </button>
-        </header>
-
-        <div id="loading" class="text-center py-10">
-            <i class="fa-solid fa-spinner fa-spin text-4xl text-indigo-500 mb-4"></i>
-            <p class="text-slate-400">Cargando tareas...</p>
-        </div>
-
-        <div id="auth-warning" class="hidden bg-yellow-900/50 border border-yellow-600 text-yellow-200 p-4 rounded-lg mb-6">
-            <p><i class="fa-solid fa-triangle-exclamation mr-2"></i> Se requiere autenticación de Google. Revisa la consola del servidor para iniciar sesión o asegúrate de tener credentials.json.</p>
-        </div>
-
-        <main id="tasks-container" class="hidden">
-            <h2 class="text-xl font-semibold mb-4 text-slate-300">Próximas Entregas</h2>
-            <div id="timeline" class="space-y-4 mb-8">
-                <!-- Tasks will be injected here -->
+    <!-- Encabezado Superior -->
+    <header class="sticky top-0 z-30 backdrop-blur-md bg-cantera-100/90 dark:bg-night-900/90 border-b border-cantera-300 dark:border-slate-800 transition-colors shrink-0">
+        <div class="w-full px-6 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleMainMenu()" aria-label="Menú principal" class="w-9 h-9 rounded-xl bg-white dark:bg-night-800 border border-cantera-300 dark:border-slate-700 flex items-center justify-center text-cantera-800 dark:text-slate-200 hover:border-indigo-500 transition-all shadow-sm">
+                    <i class="fa-solid fa-bars text-sm"></i>
+                </button>
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 dark:text-indigo-400">
+                    <i class="fa-solid fa-landmark text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-black tracking-tight leading-none text-cantera-900 dark:text-white">Ágora</h1>
+                    <p class="text-xs text-cantera-600 dark:text-slate-400 mt-0.5">Espacio de estudio y misiones</p>
+                </div>
             </div>
+            
+            <div class="flex items-center gap-4 md:gap-6">
+                <!-- Barra de Progreso Tripartita Global -->
+                <div class="hidden sm:flex flex-col gap-1.5 w-52 text-xs">
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium text-cantera-800 dark:text-slate-300">Progreso del Semestre</span>
+                        <span id="progress-tri-text" class="font-bold text-indigo-600 dark:text-indigo-400">0%</span>
+                    </div>
+                    <!-- Barra Segmentada: Verde (Calificadas), Azul (En revisión), Gris (Pendientes) -->
+                    <div class="w-full bg-cantera-200 dark:bg-night-800 rounded-full h-2 overflow-hidden flex border border-cantera-300 dark:border-slate-700">
+                        <div id="bar-seg-graded" class="bg-emerald-500 h-full transition-all duration-500" style="width: 0%" title="Calificadas"></div>
+                        <div id="bar-seg-submitted" class="bg-indigo-500 h-full transition-all duration-500" style="width: 0%" title="En revisión"></div>
+                        <div id="bar-seg-pending" class="bg-transparent h-full transition-all duration-500" style="width: 100%" title="Pendientes"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px] text-cantera-600 dark:text-slate-400">
+                        <span id="tri-graded-label">0 calificadas</span>
+                        <span id="tri-submitted-label">0 en revisión</span>
+                    </div>
+                </div>
 
-            <details class="group bg-slate-800 rounded-lg overflow-hidden border border-slate-700 mb-8">
-                <summary class="cursor-pointer p-4 font-semibold text-slate-300 flex justify-between items-center hover:bg-slate-700/50 transition-colors">
-                    <span>Tareas sin fecha límite (<span id="no-date-count">0</span>)</span>
-                    <i class="fa-solid fa-chevron-down transition-transform group-open:rotate-180"></i>
+                <!-- Botones: Métrica y Slider Helios/Selene -->
+                <div class="hidden md:flex flex-col gap-1.5 items-center">
+                    <button onclick="toggleProgressMetric()" id="metric-toggle-btn" class="w-24 px-2 py-0.5 rounded bg-white dark:bg-night-800 border border-cantera-300 dark:border-slate-700 text-[10px] font-semibold text-cantera-800 dark:text-slate-300 text-center shadow-sm">
+                        <span id="metric-btn-label">Por Tareas</span>
+                    </button>
+                    
+                    <button onclick="toggleTheme()" id="theme-toggle-slider" class="relative w-14 h-6 rounded-full transition-colors duration-300 p-0.5 flex items-center bg-cantera-300 dark:bg-night-950 border border-cantera-400 dark:border-slate-700 shadow-inner cursor-pointer" title="Helios (Día) / Selene (Noche)">
+                        <div id="theme-slider-thumb" class="w-5 h-5 rounded-full bg-white dark:bg-night-800 shadow-md transform transition-transform duration-300 flex items-center justify-center translate-x-0 dark:translate-x-7">
+                            <i class="fa-solid fa-sun text-amber-500 text-[10px] block dark:hidden"></i>
+                            <i class="fa-solid fa-moon text-indigo-400 text-[9px] hidden dark:block"></i>
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Antorcha de Prometeo limpia -->
+                <div class="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white dark:bg-night-800 border border-cantera-300 dark:border-slate-700 select-none shadow-sm">
+                    <svg class="w-7 h-7 shrink-0" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="flame-gradient" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#F59E0B"/>
+                                <stop offset="1" stop-color="#DC2626"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M16 26L15 32H21L20 26H16Z" fill="#78716C"/>
+                        <path d="M14 24H22V26H14V24Z" fill="#A8A29E"/>
+                        <path id="torch-flame" d="M18 2C15 8 9 12 9 19C9 24.5 13 26.5 18 26.5C23 26.5 27 24.5 27 19C27 12 21 8 18 2Z" fill="#A8A29E"/>
+                    </svg>
+                    <span id="streak-text" class="text-xs font-bold text-cantera-700 dark:text-slate-400 tracking-tight">0 días de racha</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Área de Trabajo -->
+    <div class="flex-1 flex w-full min-h-0 overflow-hidden relative">
+
+        <!-- Sidebar con Scroll Vertical Suave (shrink-0 en cada tarjeta para evitar compresión) -->
+        <aside id="sidebar" class="w-[340px] h-full shrink-0 bg-cantera-100 dark:bg-night-900 border-r border-cantera-300 dark:border-slate-800 p-5 pb-10 flex flex-col gap-5 custom-scroll overflow-y-auto z-10 transition-colors">
+            
+            <!-- Materias (Multi-selección) -->
+            <details class="shrink-0 group bg-white dark:bg-night-800/80 rounded-xl border border-cantera-300 dark:border-slate-700/80 overflow-hidden shadow-sm" open>
+                <summary onclick="clearCourseSelection()" class="cursor-pointer p-3.5 text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex justify-between items-center hover:bg-cantera-50 dark:hover:bg-slate-700/40">
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-book-bookmark text-indigo-500 dark:text-indigo-400"></i>
+                        <span>Materias</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down text-xs text-cantera-600 dark:text-slate-500 transition-transform group-open:rotate-180"></i>
                 </summary>
-                <div id="no-date-tasks" class="p-4 space-y-4 bg-slate-800/50 border-t border-slate-700">
-                    <!-- No date tasks here -->
+                <div id="courses-filter-list" class="p-3 pt-1 space-y-1 text-xs border-t border-cantera-200 dark:border-slate-700/50"></div>
+            </details>
+
+            <!-- Centro de Misiones (5 Tiers) -->
+            <details class="shrink-0 group bg-white dark:bg-night-800/80 rounded-xl border border-cantera-300 dark:border-slate-700/80 overflow-hidden shadow-sm" open>
+                <summary class="cursor-pointer p-3.5 text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex justify-between items-center hover:bg-cantera-50 dark:hover:bg-slate-700/40">
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-amber-500 dark:text-amber-400"></i>
+                        <span>Centro de Misiones</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down text-xs text-cantera-600 dark:text-slate-500 transition-transform group-open:rotate-180"></i>
+                </summary>
+                <div class="p-3 pt-1 space-y-1.5 text-xs border-t border-cantera-200 dark:border-slate-700/50">
+                    <button onclick="setMissionFilter('all')" id="btn-filter-all" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-cantera-200 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-cantera-300 dark:border-slate-700 font-semibold">
+                        <span>Todas</span>
+                        <span id="count-all" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
+                    </button>
+                    <button onclick="setMissionFilter('main')" id="btn-filter-main" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-khanda text-amber-500"></i> Principal</span>
+                        <span id="count-main" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
+                    </button>
+                    <button onclick="setMissionFilter('secondary')" id="btn-filter-secondary" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-halved text-indigo-500"></i> Secundarias</span>
+                        <span id="count-secondary" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
+                    </button>
+                    <button onclick="setMissionFilter('daily')" id="btn-filter-daily" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-bolt text-sky-500"></i> Diarias</span>
+                        <span id="count-daily" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
+                    </button>
+                    <button onclick="setMissionFilter('special')" id="btn-filter-special" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles text-purple-500"></i> Especiales</span>
+                        <span id="count-special" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
+                    </button>
+                    <button onclick="setMissionFilter('rescue')" id="btn-filter-rescue" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-life-ring text-orange-500"></i> Rescate</span>
+                        <span id="count-rescue" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
+                    </button>
                 </div>
             </details>
+
+            <!-- Temporizador de Estudio Real con 2 Fases -->
+            <details class="shrink-0 group bg-white dark:bg-night-800/80 rounded-xl border border-cantera-300 dark:border-slate-700/80 overflow-hidden shadow-sm" open>
+                <summary class="cursor-pointer p-3.5 text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex justify-between items-center hover:bg-cantera-50 dark:hover:bg-slate-700/40">
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-stopwatch text-sky-500 dark:text-sky-400"></i>
+                        <span>Temporizador</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-down text-xs text-cantera-600 dark:text-slate-500 transition-transform group-open:rotate-180"></i>
+                </summary>
+                <div class="p-4 border-t border-cantera-200 dark:border-slate-700/50 space-y-3 text-center">
+                    <div id="timer-phase-badge" class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-0.5">Foco • Pomodoro</div>
+                    <div id="timer-display" class="text-3xl font-mono font-extrabold tracking-wider text-cantera-900 dark:text-white transition-colors">25:00</div>
+                    <div class="flex items-center justify-center gap-2">
+                        <button onclick="startTimer()" id="timer-start-btn" class="px-3.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm">Iniciar Foco</button>
+                        <button onclick="pauseTimer()" class="px-3 py-1 rounded bg-cantera-200 dark:bg-slate-700 text-cantera-800 dark:text-slate-200 text-xs font-semibold">Pausa</button>
+                        <button onclick="resetTimer()" class="px-2 py-1 rounded bg-cantera-100 dark:bg-slate-800 text-cantera-600 dark:text-slate-400 text-xs"><i class="fa-solid fa-rotate-right"></i></button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1.5 text-[10px] pt-1">
+                        <button onclick="setTimerPreset('pomodoro')" class="p-1.5 rounded bg-cantera-50 dark:bg-slate-900/80 border border-cantera-300 dark:border-slate-700 font-medium">Pomodoro 25/5</button>
+                        <button onclick="setTimerPreset('52-17')" class="p-1.5 rounded bg-cantera-50 dark:bg-slate-900/80 border border-cantera-300 dark:border-slate-700 font-medium">Regla 52/17</button>
+                        <button onclick="setTimerPreset('ultradiano')" class="p-1.5 rounded bg-cantera-50 dark:bg-slate-900/80 border border-cantera-300 dark:border-slate-700 font-medium">Ultradiano 90/20</button>
+                        <button onclick="setTimerPreset('5min')" class="p-1.5 rounded bg-cantera-50 dark:bg-slate-900/80 border border-cantera-300 dark:border-slate-700 font-medium">5 min Inicio</button>
+                    </div>
+                    <p class="text-[10px] text-cantera-600 dark:text-slate-500 italic pt-1">Presiona [Espacio] para pausar</p>
+                </div>
+            </details>
+
+            <!-- Calendario Integrado (Con altura propia) -->
+            <div class="shrink-0 bg-white dark:bg-night-800/80 rounded-xl border border-cantera-300 dark:border-slate-700/80 p-3.5 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300">Días de Clase</span>
+                    <span id="cal-month-label" class="text-xs text-indigo-600 dark:text-indigo-400 font-bold"></span>
+                </div>
+                <div id="mini-calendar" class="grid grid-cols-7 gap-1 text-center text-xs font-medium"></div>
+            </div>
+        </aside>
+
+        <!-- Contenedor Central Dinámico (Timeline) -->
+        <main id="main-content-area" class="flex-1 h-full overflow-y-auto custom-scroll p-6 md:p-8">
+            <div id="loading" class="text-center py-16">
+                <i class="fa-solid fa-spinner fa-spin text-3xl text-indigo-500 mb-4"></i>
+                <p class="text-cantera-600 dark:text-slate-400 text-sm">Sincronizando con Classroom...</p>
+            </div>
+
+            <div id="auth-warning" style="display: none;" class="bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 p-4 rounded-xl mb-6 items-start gap-3">
+                <i class="fa-solid fa-triangle-exclamation mt-0.5 text-amber-500"></i>
+                <p class="text-sm leading-relaxed">Se requiere autenticación de Google. Revisa la consola del servidor para iniciar sesión o asegúrate de tener credentials.json.</p>
+            </div>
+
+            <!-- Banner Superior de Avisos Urgentes (Classroom + Gmail) -->
+            <div id="announcements-banner" style="display: none;" class="max-w-3xl mx-auto mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 shadow-sm space-y-2">
+                <div class="flex items-center justify-between font-bold text-xs">
+                    <span class="flex items-center gap-2"><i class="fa-solid fa-bell text-amber-500"></i> Avisos Urgentes de Profesores</span>
+                    <button onclick="dismissAnnouncements()" class="text-xs opacity-60 hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div id="announcements-list" class="space-y-1.5 text-xs"></div>
+            </div>
+
+            <div id="timeline-view" class="max-w-3xl mx-auto space-y-6">
+                <div class="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-cantera-200 dark:border-slate-800">
+                    <h2 id="current-view-title" class="text-xl font-bold tracking-tight text-cantera-900 dark:text-white">Próximas entregas</h2>
+                    
+                    <!-- Selector de Ordenamiento -->
+                    <div class="flex items-center gap-1.5 text-xs">
+                        <span class="text-cantera-600 dark:text-slate-400 font-medium">Ordenar:</span>
+                        <select id="timeline-sort-select" onchange="changeTimelineSort(this.value)" class="bg-white dark:bg-night-800 border border-cantera-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-cantera-800 dark:text-slate-200 font-semibold focus:outline-none focus:border-indigo-500">
+                            <option value="urgency">Urgencia (Fecha)</option>
+                            <option value="importance">Importancia (Tier)</option>
+                            <option value="course">Por Materia</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Timeline Principal de Tareas -->
+                <div id="timeline" class="space-y-4"></div>
+
+                <!-- Sección Misiones de Rescate / Vencidas -->
+                <details id="overdue-section" style="display: none;" class="group bg-white dark:bg-night-800/80 rounded-xl overflow-hidden border border-orange-300 dark:border-orange-900/40 shadow-sm">
+                    <summary class="cursor-pointer p-4 text-sm font-medium text-orange-700 dark:text-orange-300 flex justify-between items-center">
+                        <span class="flex items-center gap-2">
+                            <i class="fa-solid fa-life-ring text-orange-500"></i>
+                            <span>Misiones de Rescate (Entregas Tardías)</span>
+                            <span class="text-cantera-600 dark:text-slate-500 font-normal">(<span id="overdue-count">0</span>)</span>
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-xs text-cantera-600 dark:text-slate-500 transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <div id="overdue-tasks" class="p-4 space-y-3 border-t border-cantera-200 dark:border-slate-700/60 bg-cantera-50/50 dark:bg-slate-900/30"></div>
+                </details>
+
+                <!-- Sección Sin fecha -->
+                <details class="group bg-white dark:bg-night-800/80 rounded-xl overflow-hidden border border-cantera-300 dark:border-slate-700 shadow-sm">
+                    <summary class="cursor-pointer p-4 text-sm font-medium text-cantera-800 dark:text-slate-300 flex justify-between items-center">
+                        <span>Sin fecha límite (<span id="no-date-count">0</span>)</span>
+                        <i class="fa-solid fa-chevron-down text-xs text-cantera-600 dark:text-slate-500 transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <div id="no-date-tasks" class="p-4 space-y-3 border-t border-cantera-200 dark:border-slate-700"></div>
+                </details>
+            </div>
         </main>
-    </div>
 
-    <!-- Copilot Modal -->
-    <div id="copilot-modal" class="fixed inset-0 bg-black/70 hidden flex items-center justify-center z-50 p-4">
-        <div class="bg-slate-800 rounded-xl w-full max-w-2xl border border-slate-700 flex flex-col h-[85vh] shadow-2xl">
-            <!-- Header -->
-            <div class="p-4 border-b border-slate-700 flex justify-between items-start bg-slate-800 rounded-t-xl">
-                <div class="pr-8">
-                    <h3 class="text-xl font-bold text-indigo-400 flex items-center gap-2">
-                        <i class="fa-solid fa-robot"></i> Copilot
-                    </h3>
-                    <p id="modal-task-title" class="text-sm text-slate-400 mt-1 line-clamp-1"></p>
-                </div>
-                <button onclick="closeCopilot()" class="text-slate-400 hover:text-white absolute top-4 right-4">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-            </div>
-
-            <!-- Model Selection -->
-            <div class="p-3 bg-slate-900/50 border-b border-slate-700 flex gap-2 overflow-x-auto text-sm">
-                <label class="flex items-center gap-2 cursor-pointer bg-slate-800 px-3 py-1.5 rounded-full border border-slate-600 hover:border-indigo-500 transition-colors">
-                    <input type="radio" name="ai_provider" value="gemini" checked class="accent-indigo-500">
-                    <span>Gemini</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer bg-slate-800 px-3 py-1.5 rounded-full border border-slate-600 hover:border-indigo-500 transition-colors">
-                    <input type="radio" name="ai_provider" value="groq" class="accent-indigo-500">
-                    <span>Groq (Llama3)</span>
-                </label>
-                <label class="flex items-center gap-2 cursor-pointer bg-slate-800 px-3 py-1.5 rounded-full border border-slate-600 hover:border-indigo-500 transition-colors">
-                    <input type="radio" name="ai_provider" value="openrouter" class="accent-indigo-500">
-                    <span>OpenRouter</span>
-                </label>
-            </div>
-
-            <!-- Chat Area -->
-            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-900">
-                <div class="flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center shrink-0">
-                        <i class="fa-solid fa-robot text-xs"></i>
+        <!-- VENTANA SIMÉTRICA DE IGNIS -->
+        <div id="ignis-workspace-modal" style="display: none;" class="fixed inset-y-4 left-[360px] right-[360px] z-40 flex-col bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="p-3.5 px-5 border-b border-cantera-300 dark:border-slate-700 flex justify-between items-center bg-cantera-50 dark:bg-night-800 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-fire text-amber-500"></i>
                     </div>
-                    <div class="bg-slate-800 p-3 rounded-2xl rounded-tl-none border border-slate-700 text-sm">
-                        ¡Hola! Estoy listo para ayudarte con esta tarea. ¿Qué necesitas?
-                    </div>
+                    <span class="font-extrabold text-sm tracking-tight text-cantera-900 dark:text-white">Ignis</span>
+                    <span class="text-cantera-400 dark:text-slate-600">|</span>
+                    <select id="mentor-select" class="bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-indigo-700 dark:text-indigo-300 font-medium">
+                        <option value="newton">Isaac Newton (Exactas / Cálculo)</option>
+                        <option value="lovelace">Ada Lovelace (Código / Algoritmos)</option>
+                        <option value="turing">Alan Turing (Sistemas / Lógica)</option>
+                        <option value="sorjuana">Sor Juana (Reportes / Redacción)</option>
+                        <option value="osler">William Osler (Salud / Clínica)</option>
+                        <option value="ciceron">Cicerón (Derecho / Debate)</option>
+                        <option value="smith">Adam Smith (Negocios / Finanzas)</option>
+                        <option value="socrates">Sócrates (Simulador de Examen)</option>
+                        <option value="franklin">B. Franklin (Estratega de Agenda)</option>
+                    </select>
+                    <p id="modal-task-title" class="text-xs text-cantera-600 dark:text-slate-400 truncate max-w-xs"></p>
                 </div>
-            </div>
 
-            <!-- Input Area -->
-            <div class="p-4 border-t border-slate-700 bg-slate-800 rounded-b-xl">
-                <form id="chat-form" onsubmit="handleChatSubmit(event)" class="flex gap-2">
-                    <input type="text" id="chat-input" placeholder="Pregunta sobre la tarea..." class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500 transition-colors" autocomplete="off">
-                    <button type="submit" id="chat-submit-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center min-w-[3rem]">
-                        <i class="fa-solid fa-paper-plane"></i>
+                <div class="flex items-center gap-3">
+                    <div class="hidden sm:flex gap-1 border border-cantera-300 dark:border-slate-700 rounded p-1 bg-white dark:bg-slate-900">
+                        <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="gemini" checked class="hidden"><span>Gemini</span></label>
+                        <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="groq" class="hidden"><span>Groq</span></label>
+                        <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="openrouter" class="hidden"><span>OpenRouter</span></label>
+                    </div>
+                    <button onclick="closeIgnisWorkspace()" class="text-cantera-600 dark:text-slate-400 hover:text-red-500 w-8 h-8 rounded-lg flex items-center justify-center">
+                        <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
-                </form>
+                </div>
+            </div>
+
+            <div class="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+                <div class="w-full md:w-1/2 border-b md:border-b-0 md:border-r border-cantera-300 dark:border-slate-700 flex flex-col bg-cantera-50/70 dark:bg-slate-900/50">
+                    <div class="p-2.5 px-4 border-b border-cantera-300 dark:border-slate-700 flex items-center justify-between text-xs bg-cantera-100 dark:bg-slate-900">
+                        <span id="doc-carousel-title" class="font-medium truncate text-cantera-900 dark:text-slate-200">Documento adjunto</span>
+                        <div class="flex items-center gap-1.5">
+                            <button onclick="prevDoc()" id="doc-prev-btn" class="w-6 h-6 rounded bg-white dark:bg-slate-800 border border-cantera-300 dark:border-slate-700 flex items-center justify-center"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
+                            <span id="doc-carousel-counter" class="text-[11px] font-mono px-1">1/1</span>
+                            <button onclick="nextDoc()" id="doc-next-btn" class="w-6 h-6 rounded bg-white dark:bg-slate-800 border border-cantera-300 dark:border-slate-700 flex items-center justify-center"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+                            <a id="doc-external-link" href="#" target="_blank" class="ml-1 text-indigo-600 dark:text-indigo-400 p-1"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                        </div>
+                    </div>
+                    <div id="doc-viewer-container" class="flex-1 p-2 overflow-y-auto custom-scroll text-xs leading-relaxed"></div>
+                </div>
+
+                <div class="w-full md:w-1/2 flex flex-col bg-white dark:bg-slate-900/20">
+                    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+                    <div class="p-3 border-t border-cantera-300 dark:border-slate-700 bg-cantera-50 dark:bg-slate-800">
+                        <form id="chat-form" onsubmit="handleChatSubmit(event)" class="flex gap-2">
+                            <input type="text" id="chat-input" placeholder="Pregunta a Ignis sobre el documento..." autocomplete="off" class="flex-1 bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-600 rounded-lg px-3.5 py-2 text-sm text-cantera-900 dark:text-white focus:outline-none focus:border-indigo-500">
+                            <button type="submit" id="chat-submit-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold"><i class="fa-solid fa-paper-plane text-sm"></i></button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="/static/app.js"></script>
+    <!-- Reloj Digital en Vivo -->
+    <div class="fixed bottom-5 right-6 z-20 pointer-events-none select-none">
+        <div class="px-4 py-2.5 rounded-2xl bg-white/95 dark:bg-night-900/95 border border-cantera-300 dark:border-slate-700 shadow-2xl backdrop-blur-md flex flex-col items-end">
+            <div class="flex items-center gap-2.5">
+                <i class="fa-regular fa-clock text-indigo-500 dark:text-indigo-400 text-base"></i>
+                <span id="live-clock-time" class="text-2xl font-mono font-black tracking-wider text-cantera-900 dark:text-white">--:--:--</span>
+            </div>
+            <span id="live-clock-date" class="text-[11px] text-cantera-600 dark:text-slate-400 font-medium uppercase tracking-wider mt-0.5"></span>
+        </div>
+    </div>
+
+    <!-- Menú Principal Drawer -->
+    <div id="main-menu-drawer" style="display: none;" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs">
+        <div class="w-80 h-full bg-cantera-50 dark:bg-night-900 border-r border-cantera-300 dark:border-slate-800 p-6 flex flex-col justify-between shadow-2xl custom-scroll overflow-y-auto">
+            <div class="space-y-6">
+                <div class="flex items-center justify-between pb-4 border-b border-cantera-200 dark:border-slate-800">
+                    <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-landmark text-indigo-500 dark:text-indigo-400 text-lg"></i>
+                        <span class="font-extrabold text-base text-cantera-900 dark:text-white">Menú Ágora</span>
+                    </div>
+                    <button onclick="toggleMainMenu()" class="text-cantera-600 dark:text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+
+                <nav class="space-y-2 text-sm font-medium">
+                    <button onclick="openMentorsModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors">
+                        <i class="fa-solid fa-user-graduate text-indigo-500 w-5"></i>
+                        <span>Profesores de Ignis</span>
+                    </button>
+                    <button onclick="openTechniquesModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors">
+                        <i class="fa-solid fa-stopwatch text-sky-500 w-5"></i>
+                        <span>Técnicas y Consejos</span>
+                    </button>
+                    <button onclick="openGradesModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors">
+                        <i class="fa-solid fa-chart-line text-emerald-500 w-5"></i>
+                        <span>Calificaciones y Avance</span>
+                    </button>
+                    <button onclick="openSettingsModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors">
+                        <i class="fa-solid fa-sliders text-amber-500 w-5"></i>
+                        <span>Configuración de la App</span>
+                    </button>
+                </nav>
+            </div>
+
+            <div class="pt-6 border-t border-cantera-200 dark:border-slate-800">
+                <button onclick="logoutSession()" class="w-full p-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-2 font-bold text-xs transition-colors">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Cerrar Sesión / Cambiar Cuenta</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Profesores: Los 9 Mentores Oficiales -->
+    <div id="modal-mentors" style="display: none;" onclick="if(event.target === this) closeMentorsModal()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs items-center justify-center p-4">
+        <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] overflow-y-auto custom-scroll">
+            <div class="flex justify-between items-center mb-4 border-b border-cantera-200 dark:border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-cantera-900 dark:text-white">Panel de Profesores de Ignis</h3>
+                <button onclick="closeMentorsModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-3.5 text-xs text-cantera-700 dark:text-slate-300 leading-relaxed">
+                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Isaac Newton (Exactas y Físico-Matemáticas)</span>
+                    Creador del cálculo y las leyes del movimiento. Resuelve dudas de álgebra, cálculo y física modelando ejercicios gemelos con números cambiados para que tú resuelvas tu tarea por ti mismo.
+                </div>
+                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Ada Lovelace (Software, Algoritmos y Código)</span>
+                    Pionera de la programación. Te ayuda a diseñar la lógica de tus algoritmos, estructuras de datos y depurar errores sin regalarte el código terminado.
+                </div>
+                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Alan Turing (Sistemas, Lógica y Diagramas)</span>
+                    Padre de la ciencia computacional. Te orienta a diagramar máquinas de estado, flujos de sistemas, autómatas y circuitos con razonamiento estructurado.
+                </div>
+                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Sor Juana Inés de la Cruz (Reportes y Redacción Académica)</span>
+                    Máxima polímata hispana. Revisa la coherencia, introducción, marco teórico y conclusiones de tus reportes de laboratorio o ensayos técnicos.
+                </div>
+                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">William Osler (Salud y Razonamiento Clínico)</span>
+                    Referente de la medicina de cabecera. Convierte la teoría en árboles diagnósticos, interpretación de signos y análisis de casos clínicos.
+                </div>
+                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Marco Tulio Cicerón (Derecho y Debate Forense)</span>
+                    El orador y jurista supremo. Te guía en la fundamentación legal, argumentación de hechos y silogismos para alegatos jurídicos.
+                </div>
+                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Adam Smith (Negocios, Finanzas y Economía)</span>
+                    Padre de la economía moderna. Te ayuda a evaluar la viabilidad de proyectos, costos, balance financiero y estrategia comercial.
+                </div>
+                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Sócrates (Simulador de Exámenes bajo Presión)</span>
+                    Maestro de la mayéutica. Te hace preguntas incisivas basadas en los documentos de clase para poner a prueba si realmente estás listo para el parcial.
+                </div>
+                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Benjamin Franklin (Estratega del Tiempo y Agenda)</span>
+                    Genio de la productividad práctica. Te ayuda a fraccionar misiones pesadas en bloques según tus horas libres para evitar entregas de pánico.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Técnicas -->
+    <div id="modal-techniques" style="display: none;" onclick="if(event.target === this) closeTechniquesModal()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs items-center justify-center p-4">
+        <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] overflow-y-auto custom-scroll">
+            <div class="flex justify-between items-center mb-4 border-b border-cantera-200 dark:border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-cantera-900 dark:text-white">Guía de Técnicas y Consejos de Estudio</h3>
+                <button onclick="closeTechniquesModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-4 text-xs text-cantera-700 dark:text-slate-300 leading-relaxed">
+                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                    <span class="font-bold text-cantera-900 dark:text-sky-400 block mb-1">Técnica Pomodoro (25 min / 5 min)</span>
+                    Estudia 25 minutos sin mirar el celular. Al sonar la alarma, descansa 5 minutos completos lejos de la pantalla. Ideal para tareas rutinarias y lecturas.
+                </div>
+                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                    <span class="font-bold text-cantera-900 dark:text-sky-400 block mb-1">Regla 52 / 17 (La Técnica del Flow)</span>
+                    52 minutos de concentración intensa seguidos de 17 minutos de desconexión. Diseñada para programar o resolver problemas complejos donde 25 minutos corta el ritmo.
+                </div>
+                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                    <span class="font-bold text-cantera-900 dark:text-sky-400 block mb-1">Ciclo Ultradiano (90 min / 20 min)</span>
+                    Aprovecha el límite biológico del cerebro humano antes de que caiga la atención. 90 minutos de trabajo profundo seguidos de un descanso largo.
+                </div>
+                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                    <span class="font-bold text-cantera-900 dark:text-sky-400 block mb-1">Regla de los 5 Minutos (Vencer la Procrastinación)</span>
+                    Fija el reloj en 5 minutos con la promesa de que puedes parar si quieres. En la mayoría de los casos, la inercia te llevará a continuar.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Calificaciones -->
+    <div id="modal-grades" style="display: none;" onclick="if(event.target === this) closeGradesModal()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs items-center justify-center p-4">
+        <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl max-h-[85vh] overflow-y-auto custom-scroll">
+            <div class="flex justify-between items-center mb-4 border-b border-cantera-200 dark:border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-cantera-900 dark:text-white">Rendimiento y Calificaciones</h3>
+                <button onclick="closeGradesModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="grades-summary-content" class="space-y-3 text-xs"></div>
+        </div>
+    </div>
+
+    <!-- Modal Configuración con Switches de Alarma y Auto-Enfoque -->
+    <div id="modal-settings" style="display: none;" onclick="if(event.target === this) closeSettingsModal()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs items-center justify-center p-4">
+        <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl max-h-[85vh] overflow-y-auto custom-scroll">
+            <div class="flex justify-between items-center mb-4 border-b border-cantera-200 dark:border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-cantera-900 dark:text-white">Configuración de la Aplicación</h3>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="space-y-5 text-xs">
+                <!-- Opciones de Alarma con Interruptores Deslizantes -->
+                <div class="p-3.5 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700 space-y-3">
+                    <span class="font-bold text-cantera-900 dark:text-white block text-sm mb-1">Preferencias del Temporizador</span>
+                    
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="font-semibold text-cantera-800 dark:text-slate-200 block">Sonido de Campana</span>
+                            <span class="text-[11px] text-cantera-600 dark:text-slate-400">Emite un tono suave al terminar el foco o descanso.</span>
+                        </div>
+                        <button onclick="toggleSettingChime()" id="switch-chime" class="relative w-12 h-6 rounded-full transition-colors p-0.5 bg-indigo-600">
+                            <div id="thumb-chime" class="w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform translate-x-6"></div>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2 border-t border-cantera-200 dark:border-slate-700/60">
+                        <div>
+                            <span class="font-semibold text-cantera-800 dark:text-slate-200 block">Auto-enfoque de Pestaña</span>
+                            <span class="text-[11px] text-cantera-600 dark:text-slate-400">Te lleva automáticamente a la pestaña al sonar.</span>
+                        </div>
+                        <button onclick="toggleSettingAutofocus()" id="switch-autofocus" class="relative w-12 h-6 rounded-full transition-colors p-0.5 bg-indigo-600">
+                            <div id="thumb-autofocus" class="w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform translate-x-6"></div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Configuración de API Keys -->
+                <div class="space-y-3">
+                    <span class="font-bold text-cantera-900 dark:text-white block text-sm">Claves de API de IA (BYOK)</span>
+                    <p class="text-cantera-600 dark:text-slate-400 leading-relaxed">
+                        Tus claves se guardan únicamente en el almacenamiento local de tu computadora para tu privacidad.
+                    </p>
+
+                    <div class="space-y-1">
+                        <label class="font-bold flex items-center justify-between text-cantera-800 dark:text-slate-200">
+                            <span>Google Gemini (Gratis)</span>
+                            <a href="https://aistudio.google.com/apikey" target="_blank" class="text-indigo-500 font-normal">Obtener clave</a>
+                        </label>
+                        <input type="password" id="key-gemini" placeholder="AIzaSy..." class="w-full bg-cantera-50 dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 rounded-lg p-2 font-mono">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="font-bold flex items-center justify-between text-cantera-800 dark:text-slate-200">
+                            <span>Groq (Gratis / Ultrarrápida)</span>
+                            <a href="https://console.groq.com/keys" target="_blank" class="text-indigo-500 font-normal">Obtener clave</a>
+                        </label>
+                        <input type="password" id="key-groq" placeholder="gsk_..." class="w-full bg-cantera-50 dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 rounded-lg p-2 font-mono">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="font-bold flex items-center justify-between text-cantera-800 dark:text-slate-200">
+                            <span>OpenRouter (Modelos gratis)</span>
+                            <a href="https://openrouter.ai/settings/keys" target="_blank" class="text-indigo-500 font-normal">Obtener clave</a>
+                        </label>
+                        <input type="password" id="key-openrouter" placeholder="sk-or-v1-..." class="w-full bg-cantera-50 dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 rounded-lg p-2 font-mono">
+                    </div>
+
+                    <button onclick="saveApiKeys()" class="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors mt-2">
+                        Guardar Configuración
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js?v=999"></script>
 </body>
 </html>

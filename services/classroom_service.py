@@ -1,177 +1,252 @@
 import os
-import os.path
 import io
-from pypdf import PdfReader
-
-from google.auth.transport.requests import Request
+import datetime
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
+from pypdf import PdfReader
 
-# Avoid Scope aliases errors
+# Permite relajar el scope en caso de discrepancias menores de Google OAuthlib
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
-# If modifying these scopes, delete the file token.json.
 SCOPES = [
-    "https://www.googleapis.com/auth/classroom.courses.readonly",
-    "https://www.googleapis.com/auth/classroom.coursework.me.readonly",
-    "https://www.googleapis.com/auth/drive.readonly"
+    'https://www.googleapis.com/auth/classroom.courses.readonly',
+    'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+    'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
+    'https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly',
+    'https://www.googleapis.com/auth/classroom.announcements.readonly',
+    'https://www.googleapis.com/auth/drive.readonly',
+    'https://www.googleapis.com/auth/gmail.readonly'
 ]
 
-def get_google_credentials():
-    """Retrieves Google Credentials, handling token generation and renewal."""
+def get_credentials():
     creds = None
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-
-        # Check if scopes changed (if existing token doesn't have the new drive scope)
-        if creds and not set(SCOPES).issubset(set(creds.scopes)):
-            print("Scopes changed, requiring new authorization...")
-            os.remove("token.json")
+    if os.path.exists('token.json'):
+        try:
+            creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+        except Exception:
             creds = None
 
-    # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            if not os.path.exists("credentials.json"):
-                # If credentials.json is missing, return None to handle it gracefully in main app
-                return None
-            flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json", SCOPES
-            )
-            # Run local server to allow user login flow
+            try:
+                creds.refresh(Request())
+            except Exception:
+                creds = None
+
+        if not creds:
+            if not os.path.exists('credentials.json'):
+                raise FileNotFoundError("No se encontro credentials.json en la raiz del proyecto.")
+            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
             creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
-        with open("token.json", "w") as token:
+
+        with open('token.json', 'w') as token:
             token.write(creds.to_json())
+
     return creds
 
-def get_services():
-    """Returns Classroom and Drive services."""
-    creds = get_google_credentials()
-    if not creds:
-        return None, None
+def get_classroom_service():
+    return build('classroom', 'v1', credentials=get_credentials())
+
+def get_drive_service():
+    return build('drive', 'v3', credentials=get_credentials())
+
+def get_gmail_service():
     try:
-        classroom_service = build("classroom", "v1", credentials=creds)
-        drive_service = build("drive", "v3", credentials=creds)
-        return classroom_service, drive_service
-    except HttpError as error:
-        print(f"An error occurred: {error}")
-        return None, None
-
-def extract_pdf_text_from_drive(drive_service, file_id):
-    """Downloads a PDF from Drive and extracts text using pypdf."""
-    try:
-        request = drive_service.files().get_media(fileId=file_id)
-        file_io = io.BytesIO()
-        downloader = MediaIoBaseDownload(file_io, request)
-        done = False
-        while done is False:
-            status, done = downloader.next_chunk()
-
-        file_io.seek(0)
-        reader = PdfReader(file_io)
-        text = ""
-        for page in reader.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text += page_text + "\n"
-        return text.strip()
-    except Exception as e:
-        print(f"Failed to extract text from PDF {file_id}: {e}")
-        return "(No se pudo extraer el texto del archivo adjunto)"
-
-def fetch_tasks():
-    """
-    Fetches active courses and extracts pending assignments.
-    Returns a list of dictionaries with: id, course_name, title, description, due_date, link, materials, materials_text.
-    """
-    classroom_service, drive_service = get_services()
-    if not classroom_service:
+        return build('gmail', 'v1', credentials=get_credentials())
+    except Exception:
         return None
 
-    tasks = []
+def extract_pdf_text_from_drive(drive_service, file_id: str) -> str:
     try:
-        # Get active courses
-        results = classroom_service.courses().list(courseStates=['ACTIVE']).execute()
-        courses = results.get("courses", [])
+        request = drive_service.files().get_media(fileId=file_id)
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
 
-        if not courses:
-            return []
+        fh.seek(0)
+        reader = PdfReader(fh)
+        text_content = []
+        for page in reader.pages:
+            t = page.extract_text()
+            if t:
+                text_content.append(t)
+        return "\n".join(text_content).strip()
+    except Exception as e:
+        return ""
 
-        for course in courses:
-            course_id = course.get("id")
-            course_name = course.get("name")
+def get_all_tasks():
+    service = get_classroom_service()
+    drive_service = get_drive_service()
 
-            # Get coursework for each course
-            # We fetch courseWork, then optionally submissions to filter "pending", but for simplicity and read-only
-            # we fetch courseWork and handle completion in our local SQLite.
-            coursework_results = classroom_service.courses().courseWork().list(courseId=course_id).execute()
-            courseworks = coursework_results.get("courseWork", [])
+    # pageSize=50 para que no se corte Control I
+    courses_res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=50).execute()
+    courses = courses_res.get('courses', [])
 
-            for cw in courseworks:
-                cw_id = cw.get("id")
-                title = cw.get("title")
-                description = cw.get("description", "")
-                link = cw.get("alternateLink")
+    tasks = []
 
-                materials = cw.get("materials", [])
-                parsed_materials = []
-                materials_text_parts = []
+    for course in courses:
+        course_id = course['id']
+        course_name = course['name']
 
-                for material in materials:
-                    if "driveFile" in material:
-                        drive_file = material["driveFile"]["driveFile"]
-                        file_title = drive_file.get("title", "Documento")
-                        file_url = drive_file.get("alternateLink", "")
-                        file_id = drive_file.get("id")
+        try:
+            cw_res = service.courses().courseWork().list(courseId=course_id).execute()
+            course_works = cw_res.get('courseWork', [])
+        except Exception:
+            course_works = []
 
-                        parsed_materials.append({"title": file_title, "url": file_url, "type": "driveFile"})
+        for cw in course_works:
+            cw_id = cw['id']
+            title = cw.get('title', 'Sin titulo')
+            desc = cw.get('description', '')
+            alt_link = cw.get('alternateLink', '')
+            max_points = cw.get('maxPoints')
 
-                        # Process PDF files
-                        if file_title.lower().endswith(".pdf") and file_id:
-                            extracted_text = extract_pdf_text_from_drive(drive_service, file_id)
-                            materials_text_parts.append(f"--- Archivo: {file_title} ---\n{extracted_text}")
+            due_date = cw.get('dueDate')
+            due_time = cw.get('dueTime')
+            due_date_iso = None
 
-                    elif "link" in material:
-                        link_material = material["link"]
-                        parsed_materials.append({"title": link_material.get("title", "Enlace"), "url": link_material.get("url", ""), "type": "link"})
+            if due_date:
+                year = due_date.get('year')
+                month = due_date.get('month')
+                day = due_date.get('day')
+                hour = due_time.get('hours', 23) if due_time else 23
+                minute = due_time.get('minutes', 59) if due_time else 59
+                dt = datetime.datetime(year, month, day, hour, minute)
+                due_date_iso = dt.isoformat()
 
-                materials_text = "\n\n".join(materials_text_parts)
+            classroom_status = 'PENDIENTE'
+            assigned_grade = None
 
-                # Format due_date if available
-                due_date_obj = cw.get("dueDate")
-                due_time_obj = cw.get("dueTime")
+            try:
+                sub_res = service.courses().courseWork().studentSubmissions().list(
+                    courseId=course_id,
+                    courseWorkId=cw_id,
+                    userId='me'
+                ).execute()
+                submissions = sub_res.get('studentSubmissions', [])
+                if submissions:
+                    sub = submissions[0]
+                    state = sub.get('state')  # 'NEW', 'CREATED', 'TURNED_IN', 'RETURNED'
+                    assigned_grade = sub.get('assignedGrade')
 
-                due_date_str = None
-                if due_date_obj:
-                    year = due_date_obj.get('year')
-                    month = due_date_obj.get('month')
-                    day = due_date_obj.get('day')
-                    if year and month and day:
-                        due_date_str = f"{year}-{month:02d}-{day:02d}"
+                    assignment_sub = sub.get('assignmentSubmission', {})
+                    attachments = assignment_sub.get('attachments', [])
 
-                        if due_time_obj:
-                            hours = due_time_obj.get('hours', 0)
-                            minutes = due_time_obj.get('minutes', 0)
-                            due_date_str += f"T{hours:02d}:{minutes:02d}:00"
+                    if state == 'RETURNED':
+                        if assigned_grade is not None:
+                            classroom_status = 'CALIFICADA'
+                        else:
+                            classroom_status = 'DEVUELTA'
+                    elif state == 'TURNED_IN':
+                        classroom_status = 'ENTREGADA'
+                    elif attachments and state in ('NEW', 'CREATED'):
+                        classroom_status = 'SUBIDA_SIN_ENTREGAR'
+                    else:
+                        classroom_status = 'PENDIENTE'
+            except Exception:
+                classroom_status = 'PENDIENTE'
 
-                tasks.append({
-                    "id": cw_id,
-                    "course_name": course_name,
-                    "title": title,
-                    "description": description,
-                    "due_date": due_date_str, # Format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS or None
-                    "link": link,
-                    "materials": parsed_materials,
-                    "materials_text": materials_text
-                })
+            materials = cw.get('materials', [])
+            extracted_docs = []
+            attachment_links = []
 
-    except HttpError as error:
-        print(f"An error occurred: {error}")
+            for m in materials:
+                drive_file = m.get('driveFile', {}).get('driveFile', {})
+                if drive_file:
+                    f_id = drive_file.get('id')
+                    f_title = drive_file.get('title', 'Documento adjunto')
+                    f_link = drive_file.get('alternateLink', '')
+
+                    if f_link:
+                        attachment_links.append(f"{f_title} ({f_link})")
+
+                    if f_title.lower().endswith('.pdf') and f_id:
+                        pdf_text = extract_pdf_text_from_drive(drive_service, f_id)
+                        if pdf_text:
+                            extracted_docs.append(f"--- Documento adjunto: {f_title} ---\n{pdf_text}")
+
+            full_desc = desc
+            if extracted_docs:
+                full_desc += "\n\n" + "\n\n".join(extracted_docs)
+            if attachment_links:
+                full_desc += "\n\nArchivos/Enlaces adjuntos:\n" + "\n".join(attachment_links)
+
+            tasks.append({
+                'id': str(cw_id),
+                'course_id': course_id,
+                'course_name': course_name,
+                'title': title,
+                'description': full_desc,
+                'link': alt_link,
+                'due_date': due_date_iso,
+                'classroom_status': classroom_status,
+                'assigned_grade': assigned_grade,
+                'max_points': max_points
+            })
 
     return tasks
+
+# Exportar con ambos nombres para compatibilidad total con main.py
+fetch_tasks = get_all_tasks
+
+def get_announcements_and_alerts():
+    alerts = []
+    try:
+        service = get_classroom_service()
+        courses_res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=50).execute()
+        courses = courses_res.get('courses', [])
+
+        cutoff_date = (datetime.datetime.utcnow() - datetime.timedelta(days=3)).isoformat() + "Z"
+
+        for course in courses:
+            c_id = course['id']
+            c_name = course['name']
+
+            try:
+                ann_res = service.courses().announcements().list(courseId=c_id).execute()
+                announcements = ann_res.get('announcements', [])
+                for a in announcements:
+                    created = a.get('creationTime', '')
+                    if created >= cutoff_date:
+                        text = a.get('text', '').strip()
+                        alerts.append({
+                            'source': 'Classroom',
+                            'course_name': c_name,
+                            'title': f"Aviso en {c_name}",
+                            'content': text,
+                            'link': a.get('alternateLink', ''),
+                            'date': created
+                        })
+            except Exception:
+                pass
+
+        gmail_service = get_gmail_service()
+        if gmail_service:
+            try:
+                query = "newer_than:3d (clase OR suspende OR asistencia OR aviso OR cancela OR examen OR práctica)"
+                msgs_res = gmail_service.users().messages().list(userId='me', q=query, maxResults=5).execute()
+                messages = msgs_res.get('messages', [])
+
+                for m in messages:
+                    msg_data = gmail_service.users().messages().get(userId='me', id=m['id'], format='snippet').execute()
+                    snippet = msg_data.get('snippet', '')
+                    alerts.append({
+                        'source': 'Gmail',
+                        'course_name': 'Correo Institucional',
+                        'title': 'Aviso urgente por Correo',
+                        'content': snippet,
+                        'link': f"https://mail.google.com/mail/u/0/#inbox/{m['id']}",
+                        'date': datetime.datetime.utcnow().isoformat()
+                    })
+            except Exception:
+                pass
+
+    except Exception:
+        pass
+
+    return alerts
