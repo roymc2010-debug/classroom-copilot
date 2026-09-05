@@ -1,4 +1,5 @@
 import os
+import json
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -33,7 +34,9 @@ app = FastAPI(title="Ágora")
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key=os.getenv("SECRET_KEY", "agora-secret-key-production-udg-cucei-2026")
+    secret_key=os.getenv("SECRET_KEY", "agora-secret-key-production-udg-cucei-2026"),
+    same_site="lax",
+    https_only=False
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -75,15 +78,8 @@ async def auth_callback(request: Request, code: str = None):
     try:
         flow.fetch_token(code=code)
         creds = flow.credentials
-        
-        request.session['credentials'] = {
-            'token': creds.token,
-            'refresh_token': creds.refresh_token,
-            'token_uri': creds.token_uri,
-            'client_id': creds.client_id,
-            'client_secret': creds.client_secret,
-            'scopes': creds.scopes
-        }
+        # Guardado oficial en JSON estándar de Google
+        request.session['credentials_json'] = creds.to_json()
     except Exception as e:
         print(f"Error en OAuth callback: {e}")
         
@@ -99,13 +95,14 @@ async def auth_logout(request: Request):
 # -------------------------------------------------------------
 @app.get("/api/tasks")
 async def get_tasks(request: Request):
-    creds_data = request.session.get('credentials')
+    creds_json = request.session.get('credentials_json')
     creds = None
     
-    if creds_data:
+    if creds_json:
         try:
-            creds = Credentials(**creds_data)
-        except Exception:
+            creds = Credentials.from_authorized_user_info(json.loads(creds_json), SCOPES)
+        except Exception as e:
+            print(f"Error reconstruyendo credenciales: {e}")
             creds = None
 
     if not creds:
@@ -127,11 +124,11 @@ async def get_tasks(request: Request):
 
 @app.get("/api/announcements")
 async def api_announcements(request: Request):
-    creds_data = request.session.get('credentials')
+    creds_json = request.session.get('credentials_json')
     creds = None
-    if creds_data:
+    if creds_json:
         try:
-            creds = Credentials(**creds_data)
+            creds = Credentials.from_authorized_user_info(json.loads(creds_json), SCOPES)
         except Exception:
             pass
     try:
