@@ -1,111 +1,143 @@
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse
+import os
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
-from typing import List, Optional, Dict
-import datetime
+from starlette.middleware.sessions import SessionMiddleware
+from google.oauth2.credentials import Credentials
 
-from services.classroom_service import fetch_tasks, get_announcements_and_alerts
+from services.classroom_service import fetch_tasks, get_announcements_and_alerts, get_oauth_flow
 from services.ai_service import ask_copilot
-from db.database import get_all_task_states, update_task_status, update_task_notes
 
-app = FastAPI(title="Classroom Task Manager")
+app = FastAPI(title="Ágora")
+
+# Sesiones de usuario para que cada alumno tenga su propia sesión aislada
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.getenv("SECRET_KEY", "agora-secret-key-production-udg-cucei-2026")
+)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-class TaskToggleRequest(BaseModel):
-    status: str
-
-class ChatMessage(BaseModel):
-    role: str
-    content: str
-
-class TaskNotesRequest(BaseModel):
-    notes: str
-
-class CopilotRequest(BaseModel):
-    provider: str
-    task_context: Dict[str, Optional[str]]
-    messages: List[ChatMessage]
-
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse(request=request, name="index.html", context={"request": request})
+    return templates.TemplateResponse("index.html", {"request": request})
 
+# -------------------------------------------------------------
+# RUTAS DE AUTENTICACIÓN GOOGLE (MULTI-USUARIO WEB)
+# -------------------------------------------------------------
+@app.get("/auth/login")
+async def auth_login(request: Request):
+    base = str(request.base_url).rstrip('/')
+    if "onrender.com" in base:
+        redirect_uri = "https://agora-app-leox.onrender.com/auth/callback"
+    else:
+        redirect_uri = f"{base}/auth/callback"
+    
+    flow = get_oauth_flow(redirect_uri)
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true',
+        prompt='consent'
+    )
+    request.session['oauth_state'] = state
+    return RedirectResponse(authorization_url)
+
+@app.get("/auth/callback")
+async def auth_callback(request: Request, code: str = None):
+    base = str(request.base_url).rstrip('/')
+    if "onrender.com" in base:
+        redirect_uri = "https://agora-app-leox.onrender.com/auth/callback"
+    else:
+        redirect_uri = f"{base}/auth/callback"
+    
+    flow = get_oauth_flow(redirect_uri)
+    try:
+        flow.fetch_token(code=code)
+        creds = flow.credentials
+        
+        # Guarda las credenciales privadas del alumno en su sesión de navegador
+        request.session['credentials'] = {
+            'token': creds.token,
+            'refresh_token': creds.refresh_token,
+            'token_uri': creds.token_uri,
+            'client_id': creds.client_id,
+            'client_secret': creds.client_secret,
+            'scopes': creds.scopes
+        }
+    except Exception as e:
+        print(f"Error en OAuth callback: {e}")
+        
+    return RedirectResponse(url="/")
+
+@app.get("/auth/logout")
+async def auth_logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/")
+
+# -------------------------------------------------------------
+# API DE TAREAS Y CALIFICACIONES POR USUARIO
+# -------------------------------------------------------------
 @app.get("/api/tasks")
-async def api_get_tasks():
-    classroom_tasks = fetch_tasks()
-    if classroom_tasks is None:
-        # User needs to authenticate
-        raise HTTPException(status_code=401, detail="Authentication required")
+async def get_tasks(request: Request):
+    creds_data = request.session.get('credentials')
+    creds = None
+    
+    if creds_data:
+        try:
+            creds = Credentials(**creds_data)
+        except Exception:
+            creds = None
 
-    local_states = get_all_task_states()
-
-    tasks_with_dates = []
-    tasks_without_dates = []
-
-    for task in classroom_tasks:
-        task_id = task["id"]
-        local_state = local_states.get(task_id, {"status": "pending", "notes": ""})
-        task["status"] = local_state["status"]
-        task["notes"] = local_state["notes"]
-
-        if task["due_date"]:
-            tasks_with_dates.append(task)
+    # Si no hay sesión web, en local permite fallback si existe token.json
+    if not creds:
+        if os.path.exists('token.json') and "localhost" in str(request.base_url):
+            creds = None
         else:
-            tasks_without_dates.append(task)
+            return JSONResponse(status_code=401, content={"error": "Not authenticated"})
 
-    # Sort tasks with dates chronologically
-    tasks_with_dates.sort(key=lambda x: x["due_date"])
-
-    return {
-        "tasks_with_dates": tasks_with_dates,
-        "tasks_without_dates": tasks_without_dates
-    }
+    try:
+        tasks = fetch_tasks(creds=creds)
+        tasks_with_dates = [t for t in tasks if t.get('due_date')]
+        tasks_without_dates = [t for t in tasks if not t.get('due_date')]
+        return {
+            "tasks_with_dates": tasks_with_dates,
+            "tasks_without_dates": tasks_without_dates
+        }
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.get("/api/announcements")
-async def api_announcements():
+async def api_announcements(request: Request):
+    creds_data = request.session.get('credentials')
+    creds = None
+    if creds_data:
+        try:
+            creds = Credentials(**creds_data)
+        except Exception:
+            pass
     try:
-        alerts = get_announcements_and_alerts()
+        alerts = get_announcements_and_alerts(creds=creds)
         return {"announcements": alerts}
     except Exception:
         return {"announcements": []}
-    
-@app.post("/api/tasks/{task_id}/toggle")
-async def toggle_task(task_id: str, request: TaskToggleRequest):
-    if request.status not in ["pending", "done"]:
-        raise HTTPException(status_code=400, detail="Invalid status")
 
-    update_task_status(task_id, request.status)
-    return {"status": "success"}
-
-@app.post("/api/tasks/{task_id}/notes")
-async def update_notes(task_id: str, request: TaskNotesRequest):
-    update_task_notes(task_id, request.notes)
-    return {"status": "success"}
-
+# -------------------------------------------------------------
+# TUTOR SOCRÁTICO IGNIS
+# -------------------------------------------------------------
 @app.post("/api/copilot/ask")
-async def api_copilot_ask(request: CopilotRequest):
-    try:
-        # System prompt with task context
-        system_prompt = f"""
-You are a helpful and experienced teaching assistant and tutor.
-You are helping a student with the following assignment:
-Course: {request.task_context.get('course_name', 'Unknown')}
-Title: {request.task_context.get('title', 'Unknown')}
-Description: {request.task_context.get('description', 'No description')}
-Due Date: {request.task_context.get('due_date', 'No due date')}
+async def ask_ai(request: Request):
+    data = await request.json()
+    provider = data.get("provider", "gemini")
+    mentor = data.get("mentor", "newton")
+    task_context = data.get("task_context", {})
+    messages = data.get("messages", [])
 
-Please provide helpful guidance, explain concepts clearly, and assist the student with understanding the assignment. Do not just give out direct answers, but help them learn.
-        """
-
-        messages = [{"role": "system", "content": system_prompt}]
-        for msg in request.messages:
-            messages.append({"role": msg.role, "content": msg.content})
-
-        response_text = await ask_copilot(request.provider, messages)
-        return {"response": response_text}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    response_text = ask_copilot(
+        provider=provider,
+        mentor=mentor,
+        task_context=task_context,
+        messages=messages
+    )
+    return {"response": response_text}
