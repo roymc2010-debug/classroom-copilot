@@ -1,6 +1,7 @@
 # Classroom Task Manager con Multi-IA Copilot
 
 Una aplicación web full-stack para gestionar tareas pendientes de Google Classroom, visualizarlas en una línea de tiempo (Timeline) y contar con la ayuda de un asistente "Copilot" potenciado por múltiples modelos de IA (Gemini, Groq, OpenRouter).
+El sistema es capaz de extraer automáticamente el texto de los PDFs adjuntos por los profesores y enviarlos como contexto a las IAs para que ofrezcan respuestas precisas y basadas en las rúbricas y materiales del curso.
 
 ## Requisitos previos
 
@@ -18,10 +19,14 @@ Para conectar la app con tu cuenta de Google Classroom:
 1. Ve a [Google Cloud Console](https://console.cloud.google.com/).
 2. Crea un nuevo proyecto.
 3. En el menú lateral, ve a **APIs & Services > Library** y busca "Google Classroom API". Habilítala.
-4. Ve a **APIs & Services > OAuth consent screen**. Configúralo como "External" (o "Internal" si tienes Workspace) y añade tu correo como usuario de prueba. Añade los scopes: `.../auth/classroom.courses.readonly` y `.../auth/classroom.coursework.me.readonly`.
-5. Ve a **APIs & Services > Credentials**. Haz clic en "Create Credentials" y selecciona "OAuth client ID".
-6. Tipo de aplicación: "Desktop app".
-7. Descarga el archivo JSON generado, renómbralo a `credentials.json` y colócalo en la raíz de este proyecto.
+4. Vuelve a **Library** y busca "Google Drive API". Habilítala también (es necesaria para leer los PDFs adjuntos).
+5. Ve a **APIs & Services > OAuth consent screen**. Configúralo como "External" (o "Internal" si tienes Workspace) y añade tu correo como usuario de prueba. Añade los scopes:
+   - `.../auth/classroom.courses.readonly`
+   - `.../auth/classroom.coursework.me.readonly`
+   - `.../auth/drive.readonly`
+6. Ve a **APIs & Services > Credentials**. Haz clic en "Create Credentials" y selecciona "OAuth client ID".
+7. Tipo de aplicación: "Desktop app".
+8. Descarga el archivo JSON generado, renómbralo a `credentials.json` y colócalo en la raíz de este proyecto.
 
 ## Instalación y Configuración
 
@@ -43,4 +48,4 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 - **Backend:** FastAPI (Python), SQLite.
 - **Frontend:** HTML5, Tailwind CSS, JavaScript Vanilla.
-- **Servicios Integrados:** Google Classroom API, OpenAI SDK (unificado para múltiples proveedores).
+- **Servicios Integrados:** Google Classroom API, Google Drive API (v3 con `pypdf`), OpenAI SDK (unificado para múltiples proveedores).
