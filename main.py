@@ -12,11 +12,9 @@ from google_auth_oauthlib.flow import Flow
 from services.classroom_service import fetch_tasks, get_announcements_and_alerts
 from services.ai_service import ask_copilot
 
-# Permite OAuth seguro detrás de los proxies de Render y UDG
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
-# Almacenamiento seguro de sesiones en memoria del servidor
 user_sessions = {}
 
 SCOPES = [
@@ -30,11 +28,19 @@ SCOPES = [
 ]
 
 def get_oauth_flow(redirect_uri: str):
-    return Flow.from_client_secrets_file(
-        'credentials.json',
-        scopes=SCOPES,
-        redirect_uri=redirect_uri
-    )
+    try:
+        return Flow.from_client_secrets_file(
+            'credentials.json',
+            scopes=SCOPES,
+            redirect_uri=redirect_uri,
+            autogenerate_code_verifier=False
+        )
+    except TypeError:
+        return Flow.from_client_secrets_file(
+            'credentials.json',
+            scopes=SCOPES,
+            redirect_uri=redirect_uri
+        )
 
 app = FastAPI(title="Ágora")
 
@@ -46,7 +52,7 @@ async def read_root(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
 
 # -------------------------------------------------------------
-# RUTAS DE AUTENTICACIÓN GOOGLE (MULTI-USUARIO WEB)
+# RUTAS DE AUTENTICACIÓN GOOGLE CON PKCE CONTROLADO
 # -------------------------------------------------------------
 @app.get("/auth/login")
 async def auth_login(request: Request):
@@ -62,7 +68,12 @@ async def auth_login(request: Request):
         include_granted_scopes='true',
         prompt='consent'
     )
-    return RedirectResponse(authorization_url)
+    
+    verifier = getattr(flow, 'code_verifier', None)
+    response = RedirectResponse(authorization_url)
+    if verifier:
+        response.set_cookie(key="agora_oauth_verifier", value=verifier, max_age=600, httponly=True, samesite="lax")
+    return response
 
 @app.get("/auth/callback")
 async def auth_callback(request: Request, code: str = None, error: str = None):
@@ -76,17 +87,23 @@ async def auth_callback(request: Request, code: str = None, error: str = None):
     else:
         redirect_uri = f"{base}/auth/callback"
     
+    verifier = request.cookies.get("agora_oauth_verifier")
     flow = get_oauth_flow(redirect_uri)
+    if verifier:
+        flow.code_verifier = verifier
+
     try:
-        flow.fetch_token(code=code)
+        if verifier:
+            flow.fetch_token(code=code, code_verifier=verifier)
+        else:
+            flow.fetch_token(code=code)
+
         creds = flow.credentials
-        
-        # Generar un ID de sesión ligero
         session_id = str(uuid.uuid4())
         user_sessions[session_id] = creds.to_json()
-        print(f"Sesion iniciada con exito: {session_id}")
+        print(f"Sesion iniciada con exito en Render: {session_id}")
         
-        response = RedirectResponse(url="/")
+        response = RedirectResponse(url="/", status_code=303)
         response.set_cookie(
             key="agora_session",
             value=session_id,
@@ -94,18 +111,19 @@ async def auth_callback(request: Request, code: str = None, error: str = None):
             httponly=True,
             samesite="lax"
         )
+        response.delete_cookie("agora_oauth_verifier")
         return response
     except Exception as e:
         print(f"Error en OAuth callback: {e}")
         traceback.print_exc()
-        return RedirectResponse(url="/")
+        return RedirectResponse(url="/", status_code=303)
 
 @app.get("/auth/logout")
 async def auth_logout(request: Request):
     session_id = request.cookies.get("agora_session")
     if session_id in user_sessions:
         del user_sessions[session_id]
-    response = RedirectResponse(url="/")
+    response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie("agora_session")
     return response
 
@@ -126,7 +144,6 @@ async def get_tasks(request: Request):
             creds = None
 
     if not creds:
-        # En localhost permite usar token.json de respaldo
         if os.path.exists('token.json') and "localhost" in str(request.base_url):
             creds = None
         else:
