@@ -20,36 +20,13 @@ SCOPES = [
     'https://www.googleapis.com/auth/gmail.readonly'
 ]
 
-def get_oauth_flow(redirect_uri: str):
-    """Crea el flujo web oficial para autenticar a cualquier alumno"""
-    return Flow.from_client_secrets_file(
-        'credentials.json',
-        scopes=SCOPES,
-        redirect_uri=redirect_uri
-    )
-
 def get_credentials():
-    """Credenciales de respaldo para desarrollo local"""
     creds = None
     if os.path.exists('token.json'):
         try:
             creds = Credentials.from_authorized_user_file('token.json', SCOPES)
         except Exception:
             creds = None
-
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            try:
-                creds.refresh(Request())
-            except Exception:
-                creds = None
-
-        if not creds and os.path.exists('credentials.json'):
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-            with open('token.json', 'w') as token:
-                token.write(creds.to_json())
-
     return creds
 
 def get_classroom_service(creds=None):
