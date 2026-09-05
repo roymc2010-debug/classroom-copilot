@@ -1,19 +1,17 @@
 import os
 import json
 import uuid
+import urllib.request
+import urllib.parse
 import traceback
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import Flow
 
 from services.classroom_service import fetch_tasks, get_announcements_and_alerts
 from services.ai_service import ask_copilot
-
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
-os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 
 user_sessions = {}
 
@@ -27,20 +25,11 @@ SCOPES = [
     'https://www.googleapis.com/auth/gmail.readonly'
 ]
 
-def get_oauth_flow(redirect_uri: str):
-    try:
-        return Flow.from_client_secrets_file(
-            'credentials.json',
-            scopes=SCOPES,
-            redirect_uri=redirect_uri,
-            autogenerate_code_verifier=False
-        )
-    except TypeError:
-        return Flow.from_client_secrets_file(
-            'credentials.json',
-            scopes=SCOPES,
-            redirect_uri=redirect_uri
-        )
+def load_client_secrets():
+    with open('credentials.json', 'r') as f:
+        data = json.load(f)
+        cfg = data.get('web') or data.get('installed') or {}
+        return cfg.get('client_id'), cfg.get('client_secret')
 
 app = FastAPI(title="Ágora")
 
@@ -52,57 +41,63 @@ async def read_root(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
 
 # -------------------------------------------------------------
-# RUTAS DE AUTENTICACIÓN GOOGLE CON PKCE CONTROLADO
+# AUTENTICACIÓN DIRECTA CON GOOGLE (Sin librerías intermedias)
 # -------------------------------------------------------------
 @app.get("/auth/login")
 async def auth_login(request: Request):
+    client_id, _ = load_client_secrets()
     base = str(request.base_url).rstrip('/')
-    if "onrender.com" in base:
-        redirect_uri = "https://agora-app-leox.onrender.com/auth/callback"
-    else:
-        redirect_uri = f"{base}/auth/callback"
+    redirect_uri = "https://agora-app-leox.onrender.com/auth/callback" if "onrender.com" in base else f"{base}/auth/callback"
     
-    flow = get_oauth_flow(redirect_uri)
-    authorization_url, state = flow.authorization_url(
-        access_type='offline',
-        include_granted_scopes='true',
-        prompt='consent'
+    scopes_str = "%20".join(SCOPES)
+    auth_url = (
+        f"https://accounts.google.com/o/oauth2/v2/auth?"
+        f"client_id={client_id}&"
+        f"redirect_uri={urllib.parse.quote(redirect_uri)}&"
+        f"response_type=code&"
+        f"scope={scopes_str}&"
+        f"access_type=offline&"
+        f"prompt=consent"
     )
-    
-    verifier = getattr(flow, 'code_verifier', None)
-    response = RedirectResponse(authorization_url)
-    if verifier:
-        response.set_cookie(key="agora_oauth_verifier", value=verifier, max_age=600, httponly=True, samesite="lax")
-    return response
+    return RedirectResponse(auth_url)
 
 @app.get("/auth/callback")
 async def auth_callback(request: Request, code: str = None, error: str = None):
-    if error:
-        print(f"Error devuelto por Google: {error}")
+    if error or not code:
+        print(f"Error de Google OAuth: {error}")
         return RedirectResponse(url="/")
 
+    client_id, client_secret = load_client_secrets()
     base = str(request.base_url).rstrip('/')
-    if "onrender.com" in base:
-        redirect_uri = "https://agora-app-leox.onrender.com/auth/callback"
-    else:
-        redirect_uri = f"{base}/auth/callback"
-    
-    verifier = request.cookies.get("agora_oauth_verifier")
-    flow = get_oauth_flow(redirect_uri)
-    if verifier:
-        flow.code_verifier = verifier
+    redirect_uri = "https://agora-app-leox.onrender.com/auth/callback" if "onrender.com" in base else f"{base}/auth/callback"
 
     try:
-        if verifier:
-            flow.fetch_token(code=code, code_verifier=verifier)
-        else:
-            flow.fetch_token(code=code)
+        token_url = "https://oauth2.googleapis.com/token"
+        payload = urllib.parse.urlencode({
+            "code": code,
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code"
+        }).encode("utf-8")
 
-        creds = flow.credentials
+        req = urllib.request.Request(token_url, data=payload, headers={"Content-Type": "application/x-www-form-urlencoded"})
+        with urllib.request.urlopen(req) as resp:
+            token_data = json.loads(resp.read().decode("utf-8"))
+
+        creds = Credentials(
+            token=token_data.get("access_token"),
+            refresh_token=token_data.get("refresh_token"),
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=client_id,
+            client_secret=client_secret,
+            scopes=SCOPES
+        )
+
         session_id = str(uuid.uuid4())
         user_sessions[session_id] = creds.to_json()
-        print(f"Sesion iniciada con exito en Render: {session_id}")
-        
+        print(f"Autenticacion completada con exito en Render: {session_id}")
+
         response = RedirectResponse(url="/", status_code=303)
         response.set_cookie(
             key="agora_session",
@@ -111,10 +106,9 @@ async def auth_callback(request: Request, code: str = None, error: str = None):
             httponly=True,
             samesite="lax"
         )
-        response.delete_cookie("agora_oauth_verifier")
         return response
     except Exception as e:
-        print(f"Error en OAuth callback: {e}")
+        print(f"Error en canje directo de token: {e}")
         traceback.print_exc()
         return RedirectResponse(url="/", status_code=303)
 
