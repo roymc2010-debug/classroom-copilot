@@ -7,10 +7,12 @@ const tasksMap = new Map();
 let allUpcomingTasks = [];
 let allOverdueTasks = [];
 let allNoDateTasks = [];
+let allCompletedTasks = [];
 
 let selectedCourses = new Set();
 let currentMissionFilter = 'all';
 let currentSortMode = 'urgency';
+let selectedCalendarDay = null;
 let metricMode = 'tasks';
 
 let currentTaskDocs = [];
@@ -21,7 +23,7 @@ let docViewMode = 'pdf';
 let timerInterval = null;
 let timerSeconds = 25 * 60;
 let timerRunning = false;
-let timerPhase = 'focus'; // 'focus' o 'break'
+let timerPhase = 'focus';
 
 const TIMER_PRESETS = {
     'pomodoro': { label: 'Pomodoro 25/5', focus: 25, break: 5 },
@@ -87,7 +89,7 @@ function getAcademicDateString(d = new Date()) {
 }
 
 // -------------------------------------------------------------
-// TEMPORIZADOR A PRUEBA DE FALLOS (Sin NaN)
+// TEMPORIZADOR A PRUEBA DE FALLOS
 // -------------------------------------------------------------
 function setTimerPreset(arg) {
     clearInterval(timerInterval);
@@ -279,7 +281,7 @@ function saveApiKeys() {
 }
 
 // -------------------------------------------------------------
-// CARGA AUTOMÁTICA DE TAREAS Y AUTO-MARCADO DESDE CLASSROOM
+// CARGA Y SEPARACIÓN DE TAREAS (Activas vs Entregadas)
 // -------------------------------------------------------------
 async function loadTasks() {
     const loading = document.getElementById('loading');
@@ -303,24 +305,25 @@ async function loadTasks() {
         const now = new Date();
         allUpcomingTasks = [];
         allOverdueTasks = [];
-        allNoDateTasks = data.tasks_without_dates || [];
+        allNoDateTasks = [];
+        allCompletedTasks = [];
         tasksMap.clear();
 
+        // Procesar tareas con fecha
         (data.tasks_with_dates || []).forEach(task => {
             const dueDate = new Date(task.due_date);
             
-            // Auto-marcado automático sincronizado desde Classroom
             if (task.classroom_status === 'ENTREGADA' || task.classroom_status === 'CALIFICADA') {
                 task.status = 'done';
             }
 
-            const isCompleted = task.status === 'done';
-
+            const isDone = task.status === 'done';
             classifyTaskMission(task, dueDate, now);
             tasksMap.set(String(task.id), task);
 
-            // Misiones de Rescate
-            if (dueDate < now && !isCompleted) {
+            if (isDone) {
+                allCompletedTasks.push(task);
+            } else if (dueDate < now) {
                 task.mission_type = 'rescue';
                 allOverdueTasks.push(task);
             } else {
@@ -328,18 +331,31 @@ async function loadTasks() {
             }
         });
 
-        allNoDateTasks.forEach(task => {
+        // Procesar tareas sin fecha
+        (data.tasks_without_dates || []).forEach(task => {
             if (task.classroom_status === 'ENTREGADA' || task.classroom_status === 'CALIFICADA') {
                 task.status = 'done';
             }
+
+            const isDone = task.status === 'done';
             classifyTaskMission(task, null, now);
             tasksMap.set(String(task.id), task);
+
+            if (isDone) {
+                allCompletedTasks.push(task);
+            } else {
+                allNoDateTasks.push(task);
+            }
         });
 
         renderCoursesFilter();
         applyAllFilters();
+        renderTasks(allCompletedTasks, 'completed-tasks');
         renderTasks(allOverdueTasks, 'overdue-tasks');
         renderTasks(allNoDateTasks, 'no-date-tasks');
+
+        const completedCountEl = document.getElementById('completed-count');
+        if (completedCountEl) completedCountEl.textContent = allCompletedTasks.length;
 
         const overdueCountEl = document.getElementById('overdue-count');
         if (overdueCountEl) overdueCountEl.textContent = allOverdueTasks.length;
@@ -391,41 +407,78 @@ function classifyTaskMission(task, dueDate, now) {
     task.estimated_hours = 1.5;
 }
 
+// -------------------------------------------------------------
+// CAMPANA DE NOTIFICACIONES (Tablón y Correos)
+// -------------------------------------------------------------
+function toggleAnnouncementsDropdown() {
+    const dd = document.getElementById('bell-dropdown');
+    if (!dd) return;
+    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+document.addEventListener('mousedown', (e) => {
+    const dd = document.getElementById('bell-dropdown');
+    const btn = document.getElementById('btn-bell');
+    if (dd && dd.style.display !== 'none') {
+        if (!dd.contains(e.target) && !btn.contains(e.target) && !btn.closest('button')) {
+            dd.style.display = 'none';
+        }
+    }
+});
+
 async function loadAnnouncements() {
     try {
         const res = await fetch('/api/announcements');
         if (!res.ok) return;
         const data = await res.json();
         const list = data.announcements || [];
-        const banner = document.getElementById('announcements-banner');
-        const container = document.getElementById('announcements-list');
+        const badge = document.getElementById('bell-badge');
+        const container = document.getElementById('bell-announcements-list');
 
-        if (!banner || !container || list.length === 0) return;
+        if (!badge || !container) return;
 
-        container.innerHTML = '';
-        list.slice(0, 3).forEach(a => {
-            container.innerHTML += `
-                <div class="p-2 rounded-lg bg-white/60 dark:bg-night-900/60 border border-amber-500/20 flex items-start justify-between gap-2">
-                    <div>
-                        <span class="font-bold text-amber-900 dark:text-amber-300 mr-1.5">[${a.course_name}]:</span>
-                        <span class="text-cantera-800 dark:text-slate-300">${a.content}</span>
+        if (list.length > 0) {
+            badge.textContent = list.length;
+            badge.style.display = 'flex';
+            container.innerHTML = '';
+            list.forEach(a => {
+                container.innerHTML += `
+                    <div class="p-2.5 rounded-xl bg-cantera-50 dark:bg-slate-800/80 border border-cantera-200 dark:border-slate-700 flex flex-col gap-1 shadow-sm">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-amber-700 dark:text-amber-300 truncate pr-1">${a.course_name}</span>
+                            <span class="text-[10px] text-slate-400 shrink-0">${a.source}</span>
+                        </div>
+                        <p class="text-cantera-800 dark:text-slate-200 text-xs leading-relaxed">${a.content}</p>
+                        ${a.link ? `<a href="${a.link}" target="_blank" class="self-end text-indigo-600 dark:text-indigo-400 hover:underline text-[10px] font-semibold mt-0.5 flex items-center gap-1">Ver aviso <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a>` : ''}
                     </div>
-                    ${a.link ? `<a href="${a.link}" target="_blank" class="text-indigo-600 dark:text-indigo-400 shrink-0 p-0.5"><i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i></a>` : ''}
-                </div>
-            `;
-        });
-        banner.style.display = 'block';
+                `;
+            });
+        } else {
+            badge.style.display = 'none';
+            container.innerHTML = `<p class="text-slate-500 italic text-center py-3">No hay avisos recientes</p>`;
+        }
     } catch(e) {}
 }
 
-function dismissAnnouncements() {
-    const banner = document.getElementById('announcements-banner');
-    if (banner) banner.style.display = 'none';
+// -------------------------------------------------------------
+// FILTROS Y ORDENAMIENTO (Incluye Filtro por Día del Calendario)
+// -------------------------------------------------------------
+function filterByCalendarDay(day) {
+    if (selectedCalendarDay === day) {
+        selectedCalendarDay = null;
+    } else {
+        selectedCalendarDay = day;
+    }
+    renderMiniCalendar();
+    applyAllFilters();
 }
 
-// -------------------------------------------------------------
-// FILTROS Y ORDENAMIENTO
-// -------------------------------------------------------------
+function clearCalendarDayFilter() {
+    selectedCalendarDay = null;
+    renderMiniCalendar();
+    applyAllFilters();
+}
+
 function changeTimelineSort(mode) {
     currentSortMode = mode;
     applyAllFilters();
@@ -434,14 +487,40 @@ function changeTimelineSort(mode) {
 function applyAllFilters() {
     let filtered = [...allUpcomingTasks];
 
+    // Filtro por Día del Calendario
+    const titleEl = document.getElementById('current-view-title');
+    const clearBtn = document.getElementById('btn-clear-day-filter');
+
+    if (selectedCalendarDay !== null) {
+        filtered = filtered.filter(t => {
+            if (!t.due_date) return false;
+            return new Date(t.due_date).getDate() === selectedCalendarDay;
+        });
+        if (titleEl) titleEl.textContent = `Misiones del día ${selectedCalendarDay}`;
+        if (clearBtn) clearBtn.style.display = 'inline-flex';
+    } else {
+        if (clearBtn) clearBtn.style.display = 'none';
+        if (titleEl) {
+            if (currentMissionFilter === 'main') titleEl.textContent = "Misión Principal (Bloques)";
+            else if (currentMissionFilter === 'secondary') titleEl.textContent = "Misiones Secundarias";
+            else if (currentMissionFilter === 'daily') titleEl.textContent = "Misiones Diarias (Rápidas)";
+            else if (currentMissionFilter === 'special') titleEl.textContent = "Misiones Especiales (Mejora)";
+            else if (currentMissionFilter === 'rescue') titleEl.textContent = "Misiones de Rescate (Tardías)";
+            else titleEl.textContent = "Próximas entregas";
+        }
+    }
+
+    // Filtro por Materia
     if (selectedCourses.size > 0) {
         filtered = filtered.filter(t => selectedCourses.has(t.course_name));
     }
 
+    // Filtro por Misión
     if (currentMissionFilter !== 'all') {
         filtered = filtered.filter(t => t.mission_type === currentMissionFilter);
     }
 
+    // Criterio de Ordenamiento
     if (currentSortMode === 'urgency') {
         filtered.sort((a, b) => {
             if (!a.due_date) return 1;
@@ -463,7 +542,7 @@ function renderCoursesFilter() {
     if (!listEl) return;
     listEl.innerHTML = '';
 
-    const all = [...allUpcomingTasks, ...allOverdueTasks, ...allNoDateTasks];
+    const all = [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks, ...allNoDateTasks];
     const courses = [...new Set(all.map(t => t.course_name).filter(Boolean))];
 
     if (courses.length === 0) {
@@ -515,17 +594,6 @@ function setMissionFilter(filter) {
             btn.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50";
         }
     });
-
-    const titleEl = document.getElementById('current-view-title');
-    if (titleEl) {
-        if (filter === 'main') titleEl.textContent = "Misión Principal (Bloques)";
-        else if (filter === 'secondary') titleEl.textContent = "Misiones Secundarias";
-        else if (filter === 'daily') titleEl.textContent = "Misiones Diarias (Rápidas)";
-        else if (filter === 'special') titleEl.textContent = "Misiones Especiales (Mejora)";
-        else if (filter === 'rescue') titleEl.textContent = "Misiones de Rescate (Tardías)";
-        else titleEl.textContent = "Próximas entregas";
-    }
-
     applyAllFilters();
 }
 
@@ -557,11 +625,10 @@ function toggleProgressMetric() {
 }
 
 // -------------------------------------------------------------
-// BARRA TRIPARTITA GLOBAL: Incluye allNoDateTasks
+// REGLA ESTRICTA DE RACHA (Solo al 100% de los pendientes de hoy)
 // -------------------------------------------------------------
 function updateProgressBars() {
-    // INCLUYE TODAS las tareas (con fecha y sin fecha) para que sume las entregadas
-    const all = [...allUpcomingTasks, ...allOverdueTasks, ...allNoDateTasks];
+    const all = [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks, ...allNoDateTasks];
     if (all.length === 0) return;
 
     let todayDone = 0;
@@ -579,7 +646,7 @@ function updateProgressBars() {
         const isDone = isGraded || isSubmitted;
 
         const taskDay = t.due_date ? t.due_date.split('T')[0] : '';
-        const isToday = (taskDay === academicToday || t.mission_type === 'daily') && t.mission_type !== 'rescue';
+        const isToday = taskDay === academicToday && t.mission_type !== 'rescue';
         
         if (isToday) {
             todayTotal++;
@@ -591,8 +658,10 @@ function updateProgressBars() {
         else countPending++;
     });
 
-    if (todayTotal === 0) todayTotal = 1;
-    const todayPct = Math.min(100, Math.round((todayDone / todayTotal) * 100));
+    let todayPct = 0;
+    if (todayTotal > 0) {
+        todayPct = Math.min(100, Math.round((todayDone / todayTotal) * 100));
+    }
 
     const pBar = document.getElementById('progress-today-bar');
     const pText = document.getElementById('progress-today-text');
@@ -617,11 +686,11 @@ function updateProgressBars() {
     if (lblGraded) lblGraded.textContent = `${countGraded} calificadas`;
     if (lblSub) lblSub.textContent = `${countSubmitted} en revisión`;
 
-    // Antorcha de Prometeo
+    // Antorcha de Prometeo: Solo se enciende si había tareas hoy y se cumplieron todas al 100%
     const flameEl = document.getElementById('torch-flame');
     const streakText = document.getElementById('streak-text');
     if (flameEl && streakText) {
-        if (todayPct === 100) {
+        if (todayTotal > 0 && todayPct === 100) {
             flameEl.setAttribute('fill', 'url(#flame-gradient)');
             streakText.textContent = '1 día de racha';
             streakText.className = 'text-xs font-bold text-amber-600 dark:text-amber-400 tracking-tight';
@@ -633,6 +702,9 @@ function updateProgressBars() {
     }
 }
 
+// -------------------------------------------------------------
+// CALENDARIO INTERACTIVO CON PUNTOS SEMÁNTICOS
+// -------------------------------------------------------------
 function renderMiniCalendar() {
     const calEl = document.getElementById('mini-calendar');
     if (!calEl) return;
@@ -656,28 +728,38 @@ function renderMiniCalendar() {
         calEl.innerHTML += `<span></span>`;
     }
 
-    const taskCountByDay = {};
-    [...allUpcomingTasks, ...allOverdueTasks].forEach(t => {
+    const dayStatus = {};
+    [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks].forEach(t => {
         if (t.due_date) {
             const dayNum = new Date(t.due_date).getDate();
-            taskCountByDay[dayNum] = (taskCountByDay[dayNum] || 0) + 1;
+            if (!dayStatus[dayNum]) dayStatus[dayNum] = { pending: false, done: false };
+            const isDone = t.status === 'done' || t.classroom_status === 'ENTREGADA' || t.classroom_status === 'CALIFICADA';
+            if (isDone) dayStatus[dayNum].done = true;
+            else dayStatus[dayNum].pending = true;
         }
     });
 
     for (let day = 1; day <= totalDays; day++) {
-        const count = taskCountByDay[day] || 0;
+        const info = dayStatus[day];
         const isToday = day === now.getDate();
+        const isSelected = selectedCalendarDay === day;
 
-        let statusDot = '';
-        if (count > 0) {
-            statusDot = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-0.5"></span>`;
+        let dotsHtml = '';
+        if (info) {
+            dotsHtml = `<div class="flex items-center justify-center gap-0.5 mt-0.5">`;
+            if (info.pending) dotsHtml += `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>`;
+            if (info.done) dotsHtml += `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>`;
+            dotsHtml += `</div>`;
         }
 
+        let selectRing = isSelected ? 'ring-2 ring-indigo-500 font-extrabold bg-indigo-50 dark:bg-indigo-950/60' : '';
+        let todayClass = isToday ? 'bg-indigo-600 text-white font-bold' : 'text-cantera-800 dark:text-slate-400 hover:bg-cantera-200 dark:hover:bg-slate-800/60';
+
         calEl.innerHTML += `
-            <div class="h-8 flex flex-col items-center justify-center rounded-lg ${isToday ? 'bg-indigo-600 text-white font-bold' : 'text-cantera-800 dark:text-slate-400 hover:bg-cantera-200 dark:hover:bg-slate-800/60'} transition-colors cursor-default">
-                <span>${day}</span>
-                ${statusDot}
-            </div>
+            <button onclick="filterByCalendarDay(${day})" class="h-8 flex flex-col items-center justify-center rounded-lg ${todayClass} ${selectRing} transition-all cursor-pointer">
+                <span class="leading-none">${day}</span>
+                ${dotsHtml}
+            </button>
         `;
     }
 }
@@ -735,7 +817,7 @@ function renderTasks(tasks, containerId) {
 
         const dateStr = formatRelativeDate(task.due_date);
 
-        // Tarea entregada: Se marca automáticamente y se minimiza con franja verde
+        // Fila compacta de tarea entregada
         if (isDone) {
             card.className = "bg-cantera-50/80 dark:bg-night-950/60 border border-cantera-300 dark:border-slate-800 rounded-lg px-4 py-3 flex items-center justify-between text-cantera-600 dark:text-slate-400 shadow-sm opacity-85 hover:opacity-100 transition-opacity";
             card.style.borderLeft = `5px solid #10B981`;
@@ -756,7 +838,7 @@ function renderTasks(tasks, containerId) {
             return;
         }
 
-        // Tarea activa con franja lateral visible
+        // Tarea activa amplia
         card.className = "bg-white dark:bg-night-800/90 border border-cantera-300 dark:border-slate-700/80 rounded-xl p-5 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all";
         card.style.borderLeft = `5px solid ${borderHex}`;
 
@@ -867,7 +949,7 @@ async function saveNotes(taskId) {
 }
 
 // -------------------------------------------------------------
-// VISOR DE IGNIS Y DOCUMENTOS DE GOOGLE DRIVE (preview)
+// VISOR DE IGNIS Y DOCUMENTOS
 // -------------------------------------------------------------
 function openIgnisWorkspace(taskId) {
     const task = typeof taskId === 'object' ? taskId : tasksMap.get(String(taskId));
@@ -918,354 +1000,3 @@ function openIgnisWorkspace(taskId) {
         const inp = document.getElementById('chat-input');
         if (inp) inp.focus();
     }, 80);
-}
-
-function closeIgnisWorkspace() {
-    const modal = document.getElementById('ignis-workspace-modal');
-    if (modal) {
-        modal.style.display = 'none';
-        modal.classList.add('hidden');
-    }
-    currentTaskContext = null;
-}
-
-document.addEventListener('mousedown', (e) => {
-    const modal = document.getElementById('ignis-workspace-modal');
-    if (!modal || modal.style.display === 'none') return;
-    if (!modal.contains(e.target) && !e.target.closest('button[onclick*="openIgnisWorkspace"]')) {
-        closeIgnisWorkspace();
-    }
-});
-
-function autoSelectMentor(courseName) {
-    const name = (courseName || '').toLowerCase();
-    const select = document.getElementById('mentor-select');
-    if (!select) return;
-
-    if (name.includes('sistema') || name.includes('cálculo') || name.includes('física') || name.includes('circuito') || name.includes('control')) {
-        select.value = 'newton';
-    } else if (name.includes('program') || name.includes('datos') || name.includes('algoritmo') || name.includes('compilador')) {
-        select.value = 'lovelace';
-    } else if (name.includes('redes') || name.includes('arquitectura') || name.includes('lógica')) {
-        select.value = 'turing';
-    } else if (name.includes('taller') || name.includes('lectura') || name.includes('redacción') || name.includes('metodología')) {
-        select.value = 'sorjuana';
-    } else if (name.includes('salud') || name.includes('médic') || name.includes('anatomía')) {
-        select.value = 'osler';
-    } else if (name.includes('derecho') || name.includes('legal')) {
-        select.value = 'ciceron';
-    }
-}
-
-function setupDocumentCarousel(task) {
-    currentTaskDocs = [];
-    currentDocIndex = 0;
-    const desc = task.description || '';
-    
-    try {
-        const driveLinks = [...desc.matchAll(/https:\/\/drive\.google\.com\/file\/d\/[^\s\)]+/g)].map(m => m[0]);
-        const docMatches = [...desc.matchAll(/--- Documento adjunto: (.*?) ---\n([\s\S]*?)(?=(--- Documento adjunto:|$))/g)];
-        
-        if (docMatches.length > 0) {
-            docMatches.forEach((m, idx) => {
-                const docTitle = m.at(1) || 'Documento adjunto';
-                const docContent = m.at(2) || '';
-                const docLink = driveLinks.at(idx) || task.link;
-                currentTaskDocs.push({
-                    title: docTitle.trim(),
-                    content: docContent.trim(),
-                    link: docLink
-                });
-            });
-        } else {
-            currentTaskDocs.push({
-                title: "Instrucciones de la tarea",
-                content: desc || "No hay documento adjunto para esta tarea.",
-                link: driveLinks.at(0) || task.link
-            });
-        }
-    } catch (err) {
-        currentTaskDocs.push({
-            title: "Instrucciones de la tarea",
-            content: desc || "No hay documento adjunto.",
-            link: task.link
-        });
-    }
-
-    renderCurrentDoc();
-}
-
-function renderCurrentDoc() {
-    if (currentTaskDocs.length === 0) return;
-    const doc = currentTaskDocs[currentDocIndex];
-    document.getElementById('doc-carousel-title').textContent = doc.title;
-    document.getElementById('doc-carousel-counter').textContent = `${currentDocIndex + 1}/${currentTaskDocs.length}`;
-    document.getElementById('doc-external-link').href = doc.link || currentTaskContext.link;
-
-    const container = document.getElementById('doc-viewer-container');
-
-    if (docViewMode === 'pdf' && doc.link && doc.link.includes('drive.google.com/file/d/')) {
-        const fileId = doc.link.split('/d/').at(1).split('/')[0];
-        const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-        container.innerHTML = `
-            <iframe src="${previewUrl}" class="w-full h-full min-h-[500px] border-0 rounded-xl bg-white" allow="autoplay"></iframe>
-        `;
-    } else {
-        container.innerHTML = `<div class="whitespace-pre-wrap p-3 text-xs leading-relaxed text-cantera-900 dark:text-slate-300">${doc.content}</div>`;
-    }
-
-    document.getElementById('doc-prev-btn').disabled = currentDocIndex === 0;
-    document.getElementById('doc-next-btn').disabled = currentDocIndex >= currentTaskDocs.length - 1;
-}
-
-function prevDoc() {
-    if (currentDocIndex > 0) {
-        currentDocIndex--;
-        renderCurrentDoc();
-    }
-}
-
-function nextDoc() {
-    if (currentDocIndex < currentTaskDocs.length - 1) {
-        currentDocIndex++;
-        renderCurrentDoc();
-    }
-}
-
-// -------------------------------------------------------------
-// CHAT CON IGNIS
-// -------------------------------------------------------------
-function appendMessage(role, content) {
-    const chatContainer = document.getElementById('chat-messages');
-    const msgDiv = document.createElement('div');
-    msgDiv.className = "flex items-start gap-3 " + (role === 'user' ? "flex-row-reverse" : "");
-
-    const icon = role === 'user' ?
-        `<div class="w-8 h-8 rounded-full bg-cantera-200 dark:bg-slate-700 flex items-center justify-center shrink-0 border border-cantera-300 dark:border-slate-600 text-cantera-800 dark:text-slate-300"><i class="fa-solid fa-user text-xs"></i></div>` :
-        `<div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-500/30"><i class="fa-solid fa-fire text-amber-500 text-xs"></i></div>`;
-
-    const bubbleClass = role === 'user' ?
-        "bg-indigo-100 dark:bg-indigo-900/40 p-3 rounded-2xl rounded-tr-none border border-indigo-300 dark:border-indigo-700/50 text-xs text-indigo-950 dark:text-indigo-100 whitespace-pre-wrap max-w-[85%]" :
-        "bg-cantera-50 dark:bg-slate-900 p-3.5 rounded-2xl rounded-tl-none border border-cantera-300 dark:border-slate-700 text-xs whitespace-pre-wrap text-cantera-900 dark:text-slate-200 max-w-[85%] leading-relaxed shadow-sm";
-
-    let formattedContent = content
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/`(.*?)`/g, '<code class="bg-cantera-200 dark:bg-slate-800 text-indigo-600 dark:text-indigo-300 px-1 py-0.5 rounded text-[11px]">$1</code>');
-
-    msgDiv.innerHTML = `${icon}<div class="${bubbleClass}">${formattedContent}</div>`;
-    chatContainer.appendChild(msgDiv);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-
-    if (currentTaskContext) {
-        sessionTaskHistories[currentTaskContext.id] = {
-            history: chatHistory,
-            html: chatContainer.innerHTML
-        };
-    }
-}
-
-function showTypingIndicator() {
-    const chatContainer = document.getElementById('chat-messages');
-    const msgDiv = document.createElement('div');
-    msgDiv.id = "typing-indicator";
-    msgDiv.className = "flex items-start gap-3";
-    msgDiv.innerHTML = `
-        <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-500/30">
-            <i class="fa-solid fa-fire text-amber-500 text-xs"></i>
-        </div>
-        <div class="bg-cantera-50 dark:bg-slate-900 p-3 rounded-2xl rounded-tl-none border border-cantera-300 dark:border-slate-700 text-xs flex gap-1 items-center shadow-sm">
-            <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
-            <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
-            <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
-        </div>
-    `;
-    chatContainer.appendChild(msgDiv);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-}
-
-function removeTypingIndicator() {
-    const el = document.getElementById('typing-indicator');
-    if (el) el.remove();
-}
-
-async function handleChatSubmit(e) {
-    e.preventDefault();
-    const input = document.getElementById('chat-input');
-    const btn = document.getElementById('chat-submit-btn');
-    const text = input.value.trim();
-
-    if (!text || !currentTaskContext) return;
-
-    input.value = '';
-    input.disabled = true;
-    btn.disabled = true;
-
-    appendMessage('user', text);
-    chatHistory.push({ role: 'user', content: text });
-
-    const provider = document.querySelector('input[name="ai_provider"]:checked').value;
-    const mentor = document.getElementById('mentor-select').value;
-
-    showTypingIndicator();
-
-    try {
-        const response = await fetch('/api/copilot/ask', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                provider: provider,
-                mentor: mentor,
-                task_context: {
-                    course_name: currentTaskContext.course_name,
-                    title: currentTaskContext.title,
-                    description: currentTaskContext.description,
-                    due_date: currentTaskContext.due_date
-                },
-                messages: chatHistory
-            })
-        });
-
-        removeTypingIndicator();
-        if (!response.ok) throw new Error('Error from AI service');
-
-        const data = await response.json();
-        appendMessage('assistant', data.response);
-        chatHistory.push({ role: 'assistant', content: data.response });
-
-    } catch (error) {
-        removeTypingIndicator();
-        appendMessage('assistant', 'Hubo un error al consultar a Ignis. Por favor intenta de nuevo.');
-    } finally {
-        input.disabled = false;
-        btn.disabled = false;
-        input.focus();
-    }
-}
-
-// -------------------------------------------------------------
-// MENÚ DE 3 LÍNEAS Y CALIFICACIONES
-// -------------------------------------------------------------
-function toggleMainMenu() {
-    const drawerEl = document.getElementById('main-menu-drawer');
-    if (!drawerEl) return;
-    drawerEl.style.display = drawerEl.style.display === 'none' ? 'block' : 'none';
-}
-
-function openMentorsModal() {
-    toggleMainMenu();
-    const el = document.getElementById('modal-mentors');
-    if (el) el.style.display = 'flex';
-}
-
-function closeMentorsModal() {
-    const el = document.getElementById('modal-mentors');
-    if (el) el.style.display = 'none';
-}
-
-function openTechniquesModal() {
-    toggleMainMenu();
-    const el = document.getElementById('modal-techniques');
-    if (el) el.style.display = 'flex';
-}
-
-function closeTechniquesModal() {
-    const el = document.getElementById('modal-techniques');
-    if (el) el.style.display = 'none';
-}
-
-function openGradesModal() {
-    toggleMainMenu();
-    renderGradesSummary();
-    const el = document.getElementById('modal-grades');
-    if (el) el.style.display = 'flex';
-}
-
-function closeGradesModal() {
-    const el = document.getElementById('modal-grades');
-    if (el) el.style.display = 'none';
-}
-
-function openSettingsModal() {
-    toggleMainMenu();
-    const el = document.getElementById('modal-settings');
-    if (el) el.style.display = 'flex';
-}
-
-function closeSettingsModal() {
-    const el = document.getElementById('modal-settings');
-    if (el) el.style.display = 'none';
-}
-
-function logoutSession() {
-    if (confirm("¿Deseas cerrar sesión en este dispositivo? Se eliminará la conexión de Classroom activa.")) {
-        localStorage.clear();
-        sessionStorage.clear();
-        window.location.reload();
-    }
-}
-
-function renderGradesSummary() {
-    const container = document.getElementById('grades-summary-content');
-    if (!container) return;
-    container.innerHTML = '';
-
-    const all = [...allUpcomingTasks, ...allOverdueTasks, ...allNoDateTasks];
-    const courses = [...new Set(all.map(t => t.course_name).filter(Boolean))];
-
-    if (courses.length === 0) {
-        container.innerHTML = `<p class="text-slate-500 italic text-center py-3">No hay materias registradas.</p>`;
-        return;
-    }
-
-    courses.forEach(c => {
-        const courseTasks = all.filter(t => t.course_name === c);
-        const gradedTasks = courseTasks.filter(t => t.classroom_status === 'CALIFICADA' && t.assigned_grade !== null);
-        const submittedTasks = courseTasks.filter(t => t.classroom_status === 'ENTREGADA' || t.status === 'done');
-        const total = courseTasks.length;
-
-        let avgStr = 'Sin nota aún';
-        if (gradedTasks.length > 0) {
-            const sumGrades = gradedTasks.reduce((acc, t) => acc + (t.assigned_grade || 0), 0);
-            const sumMax = gradedTasks.reduce((acc, t) => acc + (t.max_points || 100), 0);
-            const avgPct = Math.round((sumGrades / sumMax) * 100);
-            avgStr = `Promedio: ${avgPct}/100`;
-        }
-
-        const pctGraded = Math.round((gradedTasks.length / (total || 1)) * 100);
-        const pctSub = Math.round((submittedTasks.length / (total || 1)) * 100);
-
-        container.innerHTML += `
-            <details class="group p-3 rounded-xl bg-cantera-100 dark:bg-slate-800/80 border border-cantera-200 dark:border-slate-700">
-                <summary class="cursor-pointer list-none flex justify-between items-center font-bold">
-                    <span class="text-cantera-900 dark:text-slate-200 truncate pr-2">${c}</span>
-                    <span class="text-indigo-600 dark:text-indigo-400 shrink-0 text-xs font-extrabold">${avgStr}</span>
-                </summary>
-                
-                <div class="mt-2.5 pt-2 border-t border-cantera-200 dark:border-slate-700/60 space-y-2 text-[11px]">
-                    <div class="w-full bg-cantera-200 dark:bg-slate-900 rounded-full h-1.5 overflow-hidden flex">
-                        <div class="bg-emerald-500 h-full" style="width: ${pctGraded}%"></div>
-                        <div class="bg-indigo-500 h-full" style="width: ${pctSub}%"></div>
-                    </div>
-                    <div class="flex justify-between text-slate-400">
-                        <span>${gradedTasks.length} calificadas</span>
-                        <span>${submittedTasks.length} en revisión</span>
-                        <span>${total - gradedTasks.length - submittedTasks.length} pendientes</span>
-                    </div>
-
-                    <div class="space-y-1 pt-1.5">
-                        ${courseTasks.map(t => {
-                            let badge = '<span class="text-slate-500">Pendiente</span>';
-                            if (t.classroom_status === 'CALIFICADA') {
-                                badge = `<span class="text-emerald-500 font-bold">${t.assigned_grade}/${t.max_points || 100}</span>`;
-                            } else if (t.classroom_status === 'ENTREGADA' || t.status === 'done') {
-                                badge = '<span class="text-indigo-400 font-medium">Entregada</span>';
-                            }
-                            return `<div class="flex justify-between py-0.5 border-b border-cantera-200/40 dark:border-slate-700/30 truncate"><span class="truncate pr-2">${t.title}</span><span class="shrink-0">${badge}</span></div>`;
-                        }).join('')}
-                    </div>
-                </div>
-            </details>
-        `;
-    });
-}
