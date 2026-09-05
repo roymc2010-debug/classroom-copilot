@@ -1,17 +1,23 @@
 import os
 import json
+import uuid
+import traceback
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from starlette.middleware.sessions import SessionMiddleware
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 
 from services.classroom_service import fetch_tasks, get_announcements_and_alerts
 from services.ai_service import ask_copilot
 
+# Permite OAuth seguro detrás de los proxies de Render y UDG
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+
+# Almacenamiento seguro de sesiones en memoria del servidor
+user_sessions = {}
 
 SCOPES = [
     'https://www.googleapis.com/auth/classroom.courses.readonly',
@@ -31,13 +37,6 @@ def get_oauth_flow(redirect_uri: str):
     )
 
 app = FastAPI(title="Ágora")
-
-app.add_middleware(
-    SessionMiddleware,
-    secret_key=os.getenv("SECRET_KEY", "agora-secret-key-production-udg-cucei-2026"),
-    same_site="lax",
-    https_only=False
-)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -63,11 +62,14 @@ async def auth_login(request: Request):
         include_granted_scopes='true',
         prompt='consent'
     )
-    request.session['oauth_state'] = state
     return RedirectResponse(authorization_url)
 
 @app.get("/auth/callback")
-async def auth_callback(request: Request, code: str = None):
+async def auth_callback(request: Request, code: str = None, error: str = None):
+    if error:
+        print(f"Error devuelto por Google: {error}")
+        return RedirectResponse(url="/")
+
     base = str(request.base_url).rstrip('/')
     if "onrender.com" in base:
         redirect_uri = "https://agora-app-leox.onrender.com/auth/callback"
@@ -78,24 +80,42 @@ async def auth_callback(request: Request, code: str = None):
     try:
         flow.fetch_token(code=code)
         creds = flow.credentials
-        # Guardado oficial en JSON estándar de Google
-        request.session['credentials_json'] = creds.to_json()
+        
+        # Generar un ID de sesión ligero
+        session_id = str(uuid.uuid4())
+        user_sessions[session_id] = creds.to_json()
+        print(f"Sesion iniciada con exito: {session_id}")
+        
+        response = RedirectResponse(url="/")
+        response.set_cookie(
+            key="agora_session",
+            value=session_id,
+            max_age=30 * 24 * 3600,
+            httponly=True,
+            samesite="lax"
+        )
+        return response
     except Exception as e:
         print(f"Error en OAuth callback: {e}")
-        
-    return RedirectResponse(url="/")
+        traceback.print_exc()
+        return RedirectResponse(url="/")
 
 @app.get("/auth/logout")
 async def auth_logout(request: Request):
-    request.session.clear()
-    return RedirectResponse(url="/")
+    session_id = request.cookies.get("agora_session")
+    if session_id in user_sessions:
+        del user_sessions[session_id]
+    response = RedirectResponse(url="/")
+    response.delete_cookie("agora_session")
+    return response
 
 # -------------------------------------------------------------
 # API DE TAREAS Y CALIFICACIONES POR USUARIO
 # -------------------------------------------------------------
 @app.get("/api/tasks")
 async def get_tasks(request: Request):
-    creds_json = request.session.get('credentials_json')
+    session_id = request.cookies.get("agora_session")
+    creds_json = user_sessions.get(session_id)
     creds = None
     
     if creds_json:
@@ -106,6 +126,7 @@ async def get_tasks(request: Request):
             creds = None
 
     if not creds:
+        # En localhost permite usar token.json de respaldo
         if os.path.exists('token.json') and "localhost" in str(request.base_url):
             creds = None
         else:
@@ -124,7 +145,8 @@ async def get_tasks(request: Request):
 
 @app.get("/api/announcements")
 async def api_announcements(request: Request):
-    creds_json = request.session.get('credentials_json')
+    session_id = request.cookies.get("agora_session")
+    creds_json = user_sessions.get(session_id)
     creds = None
     if creds_json:
         try:
