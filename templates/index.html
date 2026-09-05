@@ -203,6 +203,10 @@
                         <span class="flex items-center gap-1.5"><i class="fa-solid fa-life-ring text-orange-500"></i> Rescate</span>
                         <span id="count-rescue" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
                     </button>
+                    <button onclick="setMissionFilter('open')" id="btn-filter-open" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-compass text-teal-500"></i> Abiertas (A tu ritmo)</span>
+                        <span id="count-open" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
+                    </button>
                 </div>
             </details>
 
@@ -240,9 +244,11 @@
                     <span id="cal-month-label" class="text-xs text-indigo-600 dark:text-indigo-400 font-bold"></span>
                 </div>
                 <div id="mini-calendar" class="grid grid-cols-7 gap-1 text-center text-xs font-medium"></div>
-                <div class="flex items-center justify-center gap-3 text-[10px] text-slate-400 pt-2.5 border-t border-cantera-200 dark:border-slate-700/60 mt-2">
+                <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[9px] text-slate-400 pt-2.5 border-t border-cantera-200 dark:border-slate-700/60 mt-2">
                     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pendiente</span>
                     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Entregada</span>
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span> Examen</span>
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Aviso</span>
                 </div>
             </div>
         </aside>
