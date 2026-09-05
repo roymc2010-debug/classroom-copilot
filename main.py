@@ -5,13 +5,32 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import Flow
 
-from services.classroom_service import fetch_tasks, get_announcements_and_alerts, get_oauth_flow
+from services.classroom_service import fetch_tasks, get_announcements_and_alerts
 from services.ai_service import ask_copilot
+
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+
+SCOPES = [
+    'https://www.googleapis.com/auth/classroom.courses.readonly',
+    'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+    'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
+    'https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly',
+    'https://www.googleapis.com/auth/classroom.announcements.readonly',
+    'https://www.googleapis.com/auth/drive.readonly',
+    'https://www.googleapis.com/auth/gmail.readonly'
+]
+
+def get_oauth_flow(redirect_uri: str):
+    return Flow.from_client_secrets_file(
+        'credentials.json',
+        scopes=SCOPES,
+        redirect_uri=redirect_uri
+    )
 
 app = FastAPI(title="Ágora")
 
-# Sesiones de usuario para que cada alumno tenga su propia sesión aislada
 app.add_middleware(
     SessionMiddleware,
     secret_key=os.getenv("SECRET_KEY", "agora-secret-key-production-udg-cucei-2026")
@@ -57,7 +76,6 @@ async def auth_callback(request: Request, code: str = None):
         flow.fetch_token(code=code)
         creds = flow.credentials
         
-        # Guarda las credenciales privadas del alumno en su sesión de navegador
         request.session['credentials'] = {
             'token': creds.token,
             'refresh_token': creds.refresh_token,
@@ -90,7 +108,6 @@ async def get_tasks(request: Request):
         except Exception:
             creds = None
 
-    # Si no hay sesión web, en local permite fallback si existe token.json
     if not creds:
         if os.path.exists('token.json') and "localhost" in str(request.base_url):
             creds = None
