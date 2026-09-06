@@ -134,44 +134,61 @@
                     </div>
                 </div>
 
-                <!-- Antorcha de Prometeo (Racha por Semanas Académicas y Niveles de Fuego) -->
-                <div onclick="cycleTestStreak()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-night-800 border border-cantera-300 dark:border-slate-700 select-none shadow-sm cursor-pointer hover:border-amber-500/50 transition-all group" title="La Antorcha de Prometeo (Racha por Semanas) — Clic para probar siguiente nivel">
+                <!-- Antorcha de Prometeo (Racha por Semanas Académicas - 8 Niveles de Fuego) -->
+                <div id="torch-badge-container" onclick="handleTorchClick()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-night-800 border border-cantera-300 dark:border-slate-700 select-none shadow-sm transition-all group" title="La Antorcha de Prometeo">
                     <svg class="w-7 h-7 shrink-0 transition-transform group-hover:scale-110 duration-300" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <defs>
-                            <!-- Nivel 0: Apagada (0 semanas) -->
+                            <!-- Nivel 0: Ceniza (0 sem) -->
                             <linearGradient id="flame-off" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
                                 <stop stop-color="#A8A29E"/>
                                 <stop offset="1" stop-color="#78716C"/>
                             </linearGradient>
-                            <!-- Nivel 1: Ámbar / Chispa Inicial (1 a 2 semanas) -->
+                            <!-- Nivel 1: La Chispa de Prometeo (Ámbar Cantera, Sem 1-2) -->
                             <linearGradient id="flame-amber" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
                                 <stop stop-color="#FBBF24"/>
+                                <stop offset="1" stop-color="#D97706"/>
+                            </linearGradient>
+                            <!-- Nivel 2: Flama de Bronce (Naranja Cobre, Sem 3-4) -->
+                            <linearGradient id="flame-bronze" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#FB923C"/>
                                 <stop offset="1" stop-color="#EA580C"/>
                             </linearGradient>
-                            <!-- Nivel 2: Rubí / Fuego Firme (3 a 5 semanas) -->
-                            <linearGradient id="flame-ruby" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
-                                <stop stop-color="#F87171"/>
-                                <stop offset="1" stop-color="#DC2626"/>
+                            <!-- Nivel 3: Llama Dorada Solar (Amarillo Oro, Sem 5-6) -->
+                            <linearGradient id="flame-gold" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#FEF08A"/>
+                                <stop offset="1" stop-color="#EAB308"/>
                             </linearGradient>
-                            <!-- Nivel 3: Amatista / Flujo Intelectual (6 a 9 semanas) -->
-                            <linearGradient id="flame-violet" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
-                                <stop stop-color="#C084FC"/>
-                                <stop offset="1" stop-color="#6366F1"/>
+                            <!-- Nivel 4: Fuego Esmeralda (Verde Esmeralda, Sem 7-8) -->
+                            <linearGradient id="flame-emerald" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#34D399"/>
+                                <stop offset="1" stop-color="#059669"/>
                             </linearGradient>
-                            <!-- Nivel 4: Zafiro / Fuego Azul de Alta Frecuencia (10 a 14 semanas) -->
-                            <linearGradient id="flame-sapphire" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                            <!-- Nivel 5: Flama Turquesa de Gas (Cian / Turquesa, Sem 9-10) -->
+                            <linearGradient id="flame-cyan" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
                                 <stop stop-color="#38BDF8"/>
+                                <stop offset="1" stop-color="#0891B2"/>
+                            </linearGradient>
+                            <!-- Nivel 6: Llama Índigo (Azul Zafiro, Sem 11-12) -->
+                            <linearGradient id="flame-sapphire" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#60A5FA"/>
                                 <stop offset="1" stop-color="#2563EB"/>
                             </linearGradient>
-                            <!-- Nivel 5: Oro Solar Legendario (15+ semanas / Semestre Invicto) -->
-                            <linearGradient id="flame-gold" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
-                                <stop stop-color="#FDE047"/>
-                                <stop offset="0.6" stop-color="#F59E0B"/>
-                                <stop offset="1" stop-color="#10B981"/>
+                            <!-- Nivel 7: Fuego Violeta Olímpico (Púrpura Amatista, Sem 13-14) -->
+                            <linearGradient id="flame-violet" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#C084FC"/>
+                                <stop offset="1" stop-color="#7C3AED"/>
                             </linearGradient>
-                            <filter id="flame-glow" x="-20%" y="-20%" width="140%" height="140%">
+                            <!-- Nivel 8: Llama de Mármol Blanco (Blanco Incandescente, Sem 15-16) -->
+                            <linearGradient id="flame-white" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#FFFFFF"/>
+                                <stop offset="1" stop-color="#F1F5F9"/>
+                            </linearGradient>
+                            <filter id="flame-glow-soft" x="-20%" y="-20%" width="140%" height="140%">
                                 <feGaussianBlur stdDeviation="1.2" result="blur" />
                                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                            </filter>
+                            <filter id="flame-glow-gold" x="-30%" y="-30%" width="160%" height="160%">
+                                <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#F59E0B" flood-opacity="0.9"/>
                             </filter>
                         </defs>
                         <path d="M16 26L15 32H21L20 26H16Z" fill="#78716C"/>
@@ -1027,60 +1044,114 @@
         };
         let activePresetKey = 'pomodoro';
 
-        // Niveles de Racha por Semanas Académicas (Modo de Prueba Temporal)
-        const testWeeksPool = [1, 2, 4, 7, 12, 16]; // 1-2: Ámbar, 3-5: Rubí, 6-9: Amatista, 10-14: Zafiro, 15+: Oro Legendario
+        // Los 8 Niveles Físicos de la Llama (Uno cada 2 semanas y Nivel 8 en Semana 15)
+        const ADMIN_TEST_EMAIL = 'rodrigo.munoz6509@alumnos.udg.mx';
+        let currentUserEmail = '';
+        let isUserAdminTest = false;
+
+        // Muestras exactas de los 8 niveles para pruebas en tu cuenta:
+        // Sem 1 (Chispa), Sem 3 (Bronce), Sem 5 (Oro Solar), Sem 7 (Esmeralda), Sem 9 (Turquesa), Sem 11 (Índigo), Sem 13 (Violeta), Sem 15 (Mármol Blanco)
+        const testWeeksPool = [1, 3, 5, 7, 9, 11, 13, 15];
         let currentTestStreakIndex = Math.floor(Math.random() * testWeeksPool.length);
         let activeStreakWeeks = testWeeksPool[currentTestStreakIndex];
 
         function setStreakLevel(weeks) {
             const flameEl = document.getElementById('torch-flame');
             const streakText = document.getElementById('streak-text');
+            const badgeContainer = document.getElementById('torch-badge-container');
             if (!flameEl || !streakText) return;
 
             let gradientId = 'flame-off';
             let textColor = 'text-cantera-600 dark:text-slate-400';
+            let borderColor = 'border-cantera-300 dark:border-slate-700';
             let label = `${weeks} semanas de racha`;
+            let filterType = 'none';
+            let isWhiteFlame = false;
 
             if (weeks === 0) {
+                // Nivel 0: Ceniza
                 gradientId = 'flame-off';
                 textColor = 'text-cantera-600 dark:text-slate-400';
+                borderColor = 'border-cantera-300 dark:border-slate-700';
                 label = '0 semanas de racha';
             } else if (weeks <= 2) {
-                // Nivel 1 (1 a 2 semanas): Ámbar
+                // Nivel 1 (Sem 1 y 2): La Chispa de Prometeo (Ámbar Cantera)
                 gradientId = 'flame-amber';
                 textColor = 'text-amber-600 dark:text-amber-400';
+                borderColor = 'border-amber-400/50 dark:border-amber-500/40';
                 label = weeks === 1 ? '1 sem. de racha' : `${weeks} sem. de racha`;
-            } else if (weeks <= 5) {
-                // Nivel 2 (3 a 5 semanas): Rubí
-                gradientId = 'flame-ruby';
-                textColor = 'text-rose-600 dark:text-rose-400';
+            } else if (weeks <= 4) {
+                // Nivel 2 (Sem 3 y 4): Flama de Bronce (Naranja Cobre)
+                gradientId = 'flame-bronze';
+                textColor = 'text-orange-600 dark:text-orange-400';
+                borderColor = 'border-orange-400/50 dark:border-orange-500/40';
                 label = `${weeks} sem. de racha`;
-            } else if (weeks <= 9) {
-                // Nivel 3 (6 a 9 semanas): Amatista
-                gradientId = 'flame-violet';
-                textColor = 'text-purple-600 dark:text-indigo-400';
-                label = `${weeks} sem. de racha`;
-            } else if (weeks <= 14) {
-                // Nivel 4 (10 a 14 semanas): Zafiro
-                gradientId = 'flame-sapphire';
-                textColor = 'text-sky-600 dark:text-sky-400';
-                label = `${weeks} sem. de racha`;
-            } else {
-                // Nivel 5 (15+ semanas): Oro Solar Legendario
+            } else if (weeks <= 6) {
+                // Nivel 3 (Sem 5 y 6): Llama Dorada Solar (Amarillo Oro)
                 gradientId = 'flame-gold';
-                textColor = 'text-amber-500 dark:text-yellow-400 font-extrabold';
-                label = `${weeks} sem. ¡Legendaria!`;
+                textColor = 'text-yellow-600 dark:text-yellow-400';
+                borderColor = 'border-yellow-400/50 dark:border-yellow-500/40';
+                label = `${weeks} sem. de racha`;
+                filterType = 'url(#flame-glow-soft)';
+            } else if (weeks <= 8) {
+                // Nivel 4 (Sem 7 y 8): Fuego Esmeralda (Verde)
+                gradientId = 'flame-emerald';
+                textColor = 'text-emerald-600 dark:text-emerald-400';
+                borderColor = 'border-emerald-400/50 dark:border-emerald-500/40';
+                label = `${weeks} sem. de racha`;
+                filterType = 'url(#flame-glow-soft)';
+            } else if (weeks <= 10) {
+                // Nivel 5 (Sem 9 y 10): Flama Turquesa de Gas (Cian)
+                gradientId = 'flame-cyan';
+                textColor = 'text-cyan-600 dark:text-cyan-400';
+                borderColor = 'border-cyan-400/50 dark:border-cyan-500/40';
+                label = `${weeks} sem. de racha`;
+                filterType = 'url(#flame-glow-soft)';
+            } else if (weeks <= 12) {
+                // Nivel 6 (Sem 11 y 12): Llama Índigo (Azul Zafiro)
+                gradientId = 'flame-sapphire';
+                textColor = 'text-blue-600 dark:text-blue-400';
+                borderColor = 'border-blue-400/50 dark:border-blue-500/40';
+                label = `${weeks} sem. de racha`;
+                filterType = 'url(#flame-glow-soft)';
+            } else if (weeks <= 14) {
+                // Nivel 7 (Sem 13 y 14): Fuego Violeta Olímpico (Púrpura Amatista)
+                gradientId = 'flame-violet';
+                textColor = 'text-purple-600 dark:text-purple-400';
+                borderColor = 'border-purple-400/50 dark:border-purple-500/40';
+                label = `${weeks} sem. de racha`;
+                filterType = 'url(#flame-glow-soft)';
+            } else {
+                // Nivel 8 (Sem 15 y 16): Llama de Mármol Blanco con halo dorado
+                gradientId = 'flame-white';
+                textColor = 'text-amber-500 dark:text-yellow-300 font-extrabold';
+                borderColor = 'border-amber-400 dark:border-yellow-400 shadow-md';
+                label = `${weeks} sem. ¡Mármol Blanco!`;
+                filterType = 'url(#flame-glow-gold)';
+                isWhiteFlame = true;
             }
 
             flameEl.setAttribute('fill', `url(#${gradientId})`);
-            if (weeks > 0) {
-                flameEl.setAttribute('filter', 'url(#flame-glow)');
+            if (isWhiteFlame) {
+                flameEl.setAttribute('stroke', '#F59E0B');
+                flameEl.setAttribute('stroke-width', '1');
+            } else {
+                flameEl.removeAttribute('stroke');
+                flameEl.removeAttribute('stroke-width');
+            }
+
+            if (filterType !== 'none') {
+                flameEl.setAttribute('filter', filterType);
             } else {
                 flameEl.removeAttribute('filter');
             }
 
             streakText.textContent = label;
             streakText.className = `text-xs font-bold ${textColor} tracking-tight`;
+
+            if (badgeContainer) {
+                badgeContainer.className = `flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-night-800 border ${borderColor} select-none shadow-sm transition-all group ${isUserAdminTest ? 'cursor-pointer hover:scale-105' : ''}`;
+            }
 
             // Sincronizar con el panel de Franklin
             const fPct = document.getElementById('franklin-streak-pct');
@@ -1090,14 +1161,29 @@
                 fPct.className = `text-xl font-black font-mono ${textColor}`;
             }
             if (fStatus && weeks > 0) {
-                fStatus.innerHTML = `<span class="${textColor} font-bold">La Antorcha Activa:</span> ${weeks} semana(s) consecutivas cumplidas.`;
+                fStatus.innerHTML = `<span class="${textColor} font-bold">La Antorcha Activa:</span> Racha de ${weeks} semana(s) académica(s). Ritmo constante.`;
             }
         }
 
-        function cycleTestStreak() {
+        function handleTorchClick() {
+            if (!isUserAdminTest) return;
             currentTestStreakIndex = (currentTestStreakIndex + 1) % testWeeksPool.length;
             activeStreakWeeks = testWeeksPool[currentTestStreakIndex];
             setStreakLevel(activeStreakWeeks);
+        }
+
+        function calculateRealUserStreak() {
+            const all = [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks, ...allNoDateTasks];
+            // Solo cuentan entregas verdaderas en Classroom
+            const realTurnedIn = all.filter(t => t.classroom_status === 'ENTREGADA' || t.classroom_status === 'CALIFICADA');
+            
+            if (realTurnedIn.length === 0) {
+                setStreakLevel(0); // Ceniza: no ha cumplido nada
+            } else {
+                // Al cumplir al menos una entrega, se activa la Semana 1
+                const weeksCount = Math.min(16, Math.max(1, Math.ceil(realTurnedIn.length / 3)));
+                setStreakLevel(weeksCount);
+            }
         }
 
         function initApp() {
@@ -1373,6 +1459,11 @@
                 }
 
                 const data = await response.json();
+                
+                // Reconocimiento de cuenta de Rodrigo
+                currentUserEmail = (data.user_email || '').toLowerCase().trim();
+                isUserAdminTest = (currentUserEmail === ADMIN_TEST_EMAIL.toLowerCase());
+
                 const now = new Date();
                 allUpcomingTasks = [];
                 allOverdueTasks = [];
@@ -1860,8 +1951,12 @@
             if (lblGraded) lblGraded.textContent = `${countGraded} calificadas`;
             if (lblSub) lblSub.textContent = `${countSubmitted} en revisión`;
 
-            // Actualizar La Antorcha con el nivel de racha por semanas académicas
-            setStreakLevel(activeStreakWeeks);
+            // Actualizar La Antorcha
+            if (isUserAdminTest) {
+                setStreakLevel(activeStreakWeeks);
+            } else {
+                calculateRealUserStreak();
+            }
         }
 
         // Calendario con 4 puntos
@@ -2035,7 +2130,7 @@
                             </a>
                         </h3>
 
-                        <p class="text-sm text-cantera-700 dark:text-slate-300 whitespace-pre-line line-clamp-3 mb-4 leading-relaxed">${task.description || 'Sin descripción.'}</p>
+                        ${formatTaskDescriptionBlock(task)}
 
                         <details class="mb-4 group">
                             <summary class="cursor-pointer text-xs font-medium text-cantera-600 dark:text-slate-400 hover:text-cantera-900 dark:hover:text-slate-200 list-none flex items-center gap-1">
@@ -2064,6 +2159,44 @@
                 `;
                 container.appendChild(card);
             });
+        }
+
+        function formatTaskDescriptionBlock(task) {
+            const raw = task.description || '';
+            if (!raw) {
+                return '<p class="text-sm text-cantera-700 dark:text-slate-300 whitespace-pre-line line-clamp-3 mb-4 leading-relaxed italic text-slate-400">Sin descripción asignada.</p>';
+            }
+
+            // Extraer nombre de documento si existe
+            const docMatch = raw.match(/--- Documento adjunto:\s*(.*?)\s*---/);
+            const docTitle = docMatch ? docMatch[1].trim() : '';
+
+            // Limpiar separadores técnicos para dejar solo el texto útil de la consigna/PDF
+            let cleanText = raw
+                .replace(/--- Documento adjunto:.*?---\s*/g, '')
+                .replace(/Archivos\/Enlaces adjuntos:[\s\S]*$/g, '')
+                .trim();
+
+            let docBadge = '';
+            if (docTitle) {
+                docBadge = `
+                    <div class="flex items-center gap-1.5 text-xs text-cantera-700 dark:text-slate-300 mb-2 font-medium">
+                        <i class="fa-regular fa-file-pdf text-red-500"></i>
+                        <span class="truncate max-w-md font-semibold text-cantera-800 dark:text-slate-200">${docTitle}</span>
+                    </div>
+                `;
+            }
+
+            if (!cleanText && docTitle) {
+                cleanText = 'Consigna y ejercicios adjuntos en el archivo. Abre el visor de Ignis para consultar el contenido y resolver tus dudas.';
+            } else if (!cleanText) {
+                cleanText = 'Sin descripción detallada para esta tarea.';
+            }
+
+            return `
+                ${docBadge}
+                <p class="text-sm text-cantera-700 dark:text-slate-300 whitespace-pre-line line-clamp-3 mb-4 leading-relaxed">${cleanText}</p>
+            `;
         }
 
         function formatRelativeDate(dueStr) {

@@ -244,9 +244,19 @@ async def get_tasks(request: Request):
         except Exception:
             pass
 
+        user_email = ""
+        try:
+            from googleapiclient.discovery import build
+            service = build('classroom', 'v1', credentials=creds)
+            profile = service.userProfiles().get(userId='me').execute()
+            user_email = profile.get('emailAddress', '')
+        except Exception as e:
+            print(f"No se pudo obtener email de perfil: {e}")
+
         tasks_with_dates = [t for t in tasks if t.get('due_date')]
         tasks_without_dates = [t for t in tasks if not t.get('due_date')]
         return {
+            "user_email": user_email,
             "tasks_with_dates": tasks_with_dates,
             "tasks_without_dates": tasks_without_dates
         }
