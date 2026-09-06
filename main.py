@@ -201,7 +201,8 @@ async def ask_ai(request: Request):
     task_context = data.get("task_context", {})
     messages = data.get("messages", [])
 
-    response_text = ask_copilot(
+    # AGREGAR 'await' AQUÍ:
+    response_text = await ask_copilot(
         provider=provider,
         mentor=mentor,
         task_context=task_context,
