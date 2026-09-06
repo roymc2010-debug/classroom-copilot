@@ -535,7 +535,7 @@
     </div>
 
     <!-- Menú Principal Drawer -->
-    <div id="main-menu-drawer" style="display: none;" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs">
+    <div id="main-menu-drawer" style="display: none;" onclick="if(event.target === this) toggleMainMenu()" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs cursor-pointer">
         <div class="w-80 h-full bg-cantera-50 dark:bg-night-900 border-r border-cantera-300 dark:border-slate-800 p-6 flex flex-col justify-between shadow-2xl custom-scroll overflow-y-auto">
             <div class="space-y-6">
                 <div class="flex items-center justify-between pb-4 border-b border-cantera-200 dark:border-slate-800">
@@ -1563,6 +1563,7 @@
                 updateProgressBars();
                 updateMissionCounts();
                 renderMiniCalendar();
+                renderMentorSelectOptions();
 
                 if (timelineView) timelineView.style.display = 'block';
 
@@ -1613,11 +1614,22 @@
         }
 
         document.addEventListener('mousedown', (e) => {
+            // Cerrar avisos de campana al hacer clic afuera
             const dd = document.getElementById('bell-dropdown');
             const btn = document.getElementById('btn-bell');
             if (dd && dd.style.display !== 'none') {
                 if (!dd.contains(e.target) && !btn.contains(e.target) && !btn.closest('button')) {
                     dd.style.display = 'none';
+                }
+            }
+
+            // Cerrar Menú Principal lateral al hacer clic afuera
+            const drawer = document.getElementById('main-menu-drawer');
+            if (drawer && drawer.style.display !== 'none') {
+                const innerDrawer = drawer.firstElementChild;
+                const menuBtn = document.querySelector('button[aria-label="Menú principal"]');
+                if (innerDrawer && !innerDrawer.contains(e.target) && (!menuBtn || !menuBtn.contains(e.target))) {
+                    toggleMainMenu();
                 }
             }
         });
@@ -2384,101 +2396,166 @@
             }
         }
 
-        function autoSelectMentor(courseName) {
-            const name = (courseName || '').toLowerCase();
+        // Catálogo Maestro de los 24 Profesores y Mentores Universitarios
+        const MENTORS_CATALOG = [
+            // Universales y Autónomos (Siempre presentes para todas las materias)
+            { id: 'sorjuana', name: 'Sor Juana Inés (Reportes / Redacción / Ensayos)', isUniversal: true },
+            { id: 'socrates', name: 'Sócrates (Simulador Socrático de Exámenes)', isUniversal: true },
+            { id: 'franklin', name: 'Benjamin Franklin (Estratega de Rutina)', isUniversal: true },
+
+            // Exactas, Computación y Hardware
+            { id: 'newton', name: 'Isaac Newton (Exactas / Cálculo / Dinámica)', keywords: ['calculo', 'cálculo', 'fisica', 'física', 'algebra', 'álgebra', 'ecuacion', 'ecuación', 'laplace', 'vectorial', 'matematica', 'matemática', 'diferencial'] },
+            { id: 'tesla', name: 'Nikola Tesla (Hardware / Circuitos / Embebidos)', keywords: ['arduino', 'circuito', 'electronica', 'electrónica', 'sensor', 'hardware', 'embebido', 'esp32', 'electricidad', 'potencia'] },
+            { id: 'lovelace', name: 'Ada Lovelace (Software / Algoritmos / Código)', keywords: ['program', 'datos', 'algoritmo', 'codigo', 'código', 'python', 'java', 'c++', 'software', 'desarrollo'] },
+            { id: 'turing', name: 'Alan Turing (Sistemas / Lógica / Autómatas)', keywords: ['sistemas', 'redes', 'logica', 'lógica', 'automata', 'autómata', 'computacion', 'computación', 'arquitectura', 'operativos'] },
+            { id: 'eiffel', name: 'Gustave Eiffel (Estructuras / Resistencia / Civil)', keywords: ['civil', 'estructura', 'viga', 'concreto', 'suelo', 'estatica', 'estática', 'resistencia'] },
+            { id: 'carnot', name: 'Sadi Carnot (Termodinámica / Fluidos / Calor)', keywords: ['termodinam', 'fluido', 'calor', 'entalp', 'entrop', 'maquinas'] },
+            { id: 'gantt', name: 'Henry Gantt (Procesos / Logística / Proyectos)', keywords: ['industrial', 'logistica', 'logística', 'gantt', 'cadena', 'manufactura', 'operaciones', 'proyectos'] },
+
+            // Diseño y Expresión Visual
+            { id: 'gropius', name: 'Walter Gropius (Diseño Web / UI-UX / Bauhaus)', keywords: ['web', 'ui', 'ux', 'interfaz', 'frontend', 'multimedia', 'diseno web', 'diseño web'] },
+            { id: 'worth', name: 'Charles Frederick Worth (Diseño de Moda / Textil)', keywords: ['moda', 'textil', 'patronaje', 'indumentaria', 'confeccion', 'confección'] },
+            { id: 'dewolfe', name: 'Elsie de Wolfe (Diseño de Interiores / Espacios)', keywords: ['interiores', 'espacio', 'iluminacion', 'habitabilidad', 'mobiliario'] },
+            { id: 'artemisia', name: 'Artemisia Gentileschi (Artes Plásticas / Dibujo)', keywords: ['arte', 'artes', 'dibujo', 'pintura', 'escultura', 'grabado', 'ilustracion', 'plástica'] },
+            { id: 'vitruvio', name: 'Marco Vitruvio (Arquitectura / Urbanismo)', keywords: ['arquitectura', 'urbanismo', 'construccion', 'planos', 'edificacion'] },
+
+            // Ciencias Naturales y Salud
+            { id: 'curie', name: 'Marie Curie (Química / Farmacia / Materiales)', keywords: ['quimica', 'química', 'materiales', 'farmacia', 'bioquimica', 'inorganica', 'organica'] },
+            { id: 'pasteur', name: 'Louis Pasteur (Biología / Microbiología)', keywords: ['biologia', 'biología', 'microbiologia', 'microbiología', 'celulas', 'genetica', 'inmunologia'] },
+            { id: 'osler', name: 'William Osler (Salud / Diagnóstico Clínico)', keywords: ['salud', 'medicina', 'clinica', 'clínica', 'diagnostico', 'anatomia', 'fisiologia', 'farmacologia'] },
+            { id: 'nightingale', name: 'Florence Nightingale (Estadística / Bioestadística)', keywords: ['estadistica', 'estadística', 'probabilidad', 'inferencia', 'bioestadistica', 'muestreo'] },
+
+            // Humanidades y Negocios
+            { id: 'ciceron', name: 'Marco Tulio Cicerón (Derecho / Debate Forense)', keywords: ['derecho', 'leyes', 'juridico', 'jurídico', 'forense', 'constitucional', 'penal', 'civil'] },
+            { id: 'wundt', name: 'Wilhelm Wundt (Psicología / Metodología)', keywords: ['psicologia', 'psicología', 'conducta', 'cognitivo', 'conductual', 'neurociencia', 'metodologia'] },
+            { id: 'smith', name: 'Adam Smith (Negocios / Finanzas / Economía)', keywords: ['economia', 'economía', 'finanzas', 'contabilidad', 'administracion', 'administración', 'mercadotecnia', 'negocios'] },
+            { id: 'bach', name: 'J. S. Bach (Música / Teoría / Acústica)', keywords: ['musica', 'música', 'acustica', 'acústica', 'armonia', 'armonía', 'audio', 'partitura', 'composicion'] },
+            { id: 'bly', name: 'Nellie Bly (Periodismo / Investigación / Medios)', keywords: ['periodismo', 'cronica', 'crónica', 'reportaje', 'noticia', 'comunicacion', 'comunicación', 'medios'] }
+        ];
+
+        let showAllMentorsCatalog = false;
+
+        function renderMentorSelectOptions(activeCourseName = null, selectedMentorId = null) {
             const select = document.getElementById('mentor-select');
             if (!select) return;
 
-            // Hardware / Circuitos / Embebidos (Tesla)
-            if (name.includes('arduino') || name.includes('circuito') || name.includes('electronica') || name.includes('electrónica') || name.includes('sensor') || name.includes('hardware') || name.includes('embebido') || name.includes('esp32')) {
-                select.value = 'tesla';
+            // Recopilar nombres de todas las materias inscritas del alumno
+            const allTasks = [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks, ...allNoDateTasks];
+            const taskCourses = allTasks.map(t => (t.course_name || '').toLowerCase());
+            const enrolledCourses = allEnrolledCourses.map(c => (c || '').toLowerCase());
+            if (activeCourseName) {
+                taskCourses.push(activeCourseName.toLowerCase());
             }
-            // Exactas / Dinámica / Cálculo / Física (Newton)
-            else if (name.includes('laplace') || name.includes('calculo') || name.includes('cálculo') || name.includes('fisica') || name.includes('física') || name.includes('ecuacion') || name.includes('ecuación') || name.includes('algebra') || name.includes('álgebra') || name.includes('control') || name.includes('sistemas dinamicos')) {
-                select.value = 'newton';
+            const studentCoursesText = [...new Set([...enrolledCourses, ...taskCourses])].join(' ');
+
+            // Filtrar solo los profesores pertinentes a las materias del alumno (más los universales como Sor Juana)
+            const relevantMentors = MENTORS_CATALOG.filter(m => {
+                if (showAllMentorsCatalog || m.isUniversal) return true;
+                if (!m.keywords) return false;
+                return m.keywords.some(kw => studentCoursesText.includes(kw));
+            });
+
+            // Si hay un mentor seleccionado explícito (o el de la tarea actual), asegurar que esté visible
+            const currentVal = selectedMentorId || select.value;
+            if (currentVal && !relevantMentors.some(m => m.id === currentVal) && currentVal !== '__toggle_all__') {
+                const found = MENTORS_CATALOG.find(m => m.id === currentVal);
+                if (found) relevantMentors.push(found);
             }
-            // Software / Algoritmos / Código (Lovelace)
-            else if (name.includes('program') || name.includes('datos') || name.includes('algoritmo') || name.includes('compilador') || name.includes('codigo') || name.includes('código') || name.includes('python') || name.includes('java')) {
-                select.value = 'lovelace';
+
+            select.innerHTML = '';
+
+            const grp = document.createElement('optgroup');
+            grp.label = showAllMentorsCatalog ? 'Catálogo Completo de Profesores' : 'Tus Profesores Asignados';
+            relevantMentors.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.name;
+                grp.appendChild(opt);
+            });
+            select.appendChild(grp);
+
+            // Opción al pie para alternar ver todos / ver solo tus materias
+            const optToggle = document.createElement('option');
+            optToggle.value = '__toggle_all__';
+            optToggle.textContent = showAllMentorsCatalog ? '🔍 Filtrar solo por mis materias' : '📋 Ver todos los 24 profesores...';
+            select.appendChild(optToggle);
+
+            if (currentVal && currentVal !== '__toggle_all__') {
+                select.value = currentVal;
+            } else if (relevantMentors.length > 0) {
+                select.value = relevantMentors[0].id;
             }
-            // Sistemas / Lógica / Autómatas / Redes (Turing)
-            else if (name.includes('redes') || name.includes('arquitectura') || name.includes('lógica') || name.includes('logica') || name.includes('automata') || name.includes('autómata') || name.includes('sistemas operativos')) {
-                select.value = 'turing';
-            }
-            // Estructuras / Obras Civiles (Eiffel)
-            else if (name.includes('civil') || name.includes('estructura') || name.includes('viga') || name.includes('concreto') || name.includes('suelo') || name.includes('estatica') || name.includes('estática')) {
-                select.value = 'eiffel';
-            }
-            // Termodinámica / Fluidos / Calor (Carnot)
-            else if (name.includes('termodinam') || name.includes('fluido') || name.includes('calor') || name.includes('entalp') || name.includes('entrop')) {
-                select.value = 'carnot';
-            }
-            // Industrial / Logística / Procesos (Gantt)
-            else if (name.includes('industrial') || name.includes('logistica') || name.includes('logística') || name.includes('gantt') || name.includes('cadena') || name.includes('manufactura') || name.includes('operaciones')) {
-                select.value = 'gantt';
-            }
-            // Estadística / Datos Cuantitativos (Nightingale)
-            else if (name.includes('estadistica') || name.includes('estadística') || name.includes('probabilidad') || name.includes('inferencia') || name.includes('bioestadistica')) {
-                select.value = 'nightingale';
-            }
-            // Música / Acústica (Bach)
-            else if (name.includes('musica') || name.includes('música') || name.includes('acustica') || name.includes('acústica') || name.includes('armonia') || name.includes('armonía') || name.includes('audio')) {
-                select.value = 'bach';
-            }
-            // Periodismo / Medios (Bly)
-            else if (name.includes('periodismo') || name.includes('reportaje') || name.includes('cronica') || name.includes('crónica') || name.includes('noticia') || name.includes('comunicacion') || name.includes('comunicación')) {
-                select.value = 'bly';
-            }
-            // Web / UI / UX (Gropius)
-            else if (name.includes('web') || name.includes('ui') || name.includes('ux') || name.includes('interfaz') || name.includes('frontend')) {
-                select.value = 'gropius';
-            }
-            // Moda / Confección (Worth)
-            else if (name.includes('moda') || name.includes('textil') || name.includes('patronaje') || name.includes('confeccion') || name.includes('confección')) {
-                select.value = 'worth';
-            }
-            // Interiores / Espacio (De Wolfe)
-            else if (name.includes('interior') || name.includes('habitabilidad') || name.includes('mobiliario') || name.includes('ergonomia')) {
-                select.value = 'dewolfe';
-            }
-            // Artes Plásticas / Dibujo (Artemisia)
-            else if (name.includes('arte') || name.includes('dibujo') || name.includes('pintura') || name.includes('ilustracion') || name.includes('ilustración')) {
-                select.value = 'artemisia';
-            }
-            // Arquitectura / Urbanismo (Vitruvio)
-            else if (name.includes('arquitectura') || name.includes('urbanismo')) {
-                select.value = 'vitruvio';
-            }
-            // Química / Materiales (Curie)
-            else if (name.includes('quimica') || name.includes('química') || name.includes('farmacia') || name.includes('materiales')) {
-                select.value = 'curie';
-            }
-            // Biología / Microbiología (Pasteur)
-            else if (name.includes('biolog') || name.includes('microbiolog') || name.includes('celular') || name.includes('genetica') || name.includes('genética')) {
-                select.value = 'pasteur';
-            }
-            // Salud / Clínica (Osler)
-            else if (name.includes('salud') || name.includes('medic') || name.includes('médic') || name.includes('anatomia') || name.includes('anatomía') || name.includes('clinica') || name.includes('clínica')) {
-                select.value = 'osler';
-            }
-            // Derecho / Debate (Cicerón)
-            else if (name.includes('derecho') || name.includes('legal') || name.includes('juridic') || name.includes('jurídic') || name.includes('penal') || name.includes('civil')) {
-                select.value = 'ciceron';
-            }
-            // Psicología / Conducta (Wundt)
-            else if (name.includes('psicolog') || name.includes('conducta') || name.includes('cognitiv')) {
-                select.value = 'wundt';
-            }
-            // Negocios / Economía (Smith)
-            else if (name.includes('negocio') || name.includes('finanz') || name.includes('econom') || name.includes('contabil') || name.includes('costo')) {
-                select.value = 'smith';
-            }
-            // Default: Redacción académica / Reportes (Sor Juana)
-            else {
-                select.value = 'sorjuana';
+
+            // Conectar el evento de cambio para alternar catálogo sin duplicar listeners
+            if (!select.dataset.hasListener) {
+                select.dataset.hasListener = 'true';
+                select.addEventListener('change', (e) => {
+                    if (e.target.value === '__toggle_all__') {
+                        showAllMentorsCatalog = !showAllMentorsCatalog;
+                        const curCourse = currentTaskContext ? currentTaskContext.course_name : null;
+                        renderMentorSelectOptions(curCourse, null);
+                    }
+                });
             }
         }
 
+        function getBestMentorForCourse(courseName) {
+            const name = (courseName || '').toLowerCase();
+            if (name.includes('arduino') || name.includes('circuito') || name.includes('electronica') || name.includes('electrónica') || name.includes('sensor') || name.includes('hardware') || name.includes('embebido') || name.includes('esp32')) {
+                return 'tesla';
+            } else if (name.includes('laplace') || name.includes('calculo') || name.includes('cálculo') || name.includes('fisica') || name.includes('física') || name.includes('ecuacion') || name.includes('ecuación') || name.includes('algebra') || name.includes('álgebra') || name.includes('control') || name.includes('sistemas dinamicos')) {
+                return 'newton';
+            } else if (name.includes('program') || name.includes('datos') || name.includes('algoritmo') || name.includes('compilador') || name.includes('codigo') || name.includes('código') || name.includes('python') || name.includes('java')) {
+                return 'lovelace';
+            } else if (name.includes('redes') || name.includes('arquitectura') || name.includes('lógica') || name.includes('logica') || name.includes('automata') || name.includes('autómata') || name.includes('sistemas')) {
+                return 'turing';
+            } else if (name.includes('civil') || name.includes('estructura') || name.includes('viga') || name.includes('concreto') || name.includes('suelo') || name.includes('estatica') || name.includes('estática')) {
+                return 'eiffel';
+            } else if (name.includes('termodinam') || name.includes('fluido') || name.includes('calor') || name.includes('entalp') || name.includes('entrop')) {
+                return 'carnot';
+            } else if (name.includes('industrial') || name.includes('logistica') || name.includes('logística') || name.includes('gantt') || name.includes('cadena') || name.includes('manufactura') || name.includes('operaciones')) {
+                return 'gantt';
+            } else if (name.includes('estadistica') || name.includes('estadística') || name.includes('probabilidad') || name.includes('inferencia') || name.includes('bioestadistica')) {
+                return 'nightingale';
+            } else if (name.includes('musica') || name.includes('música') || name.includes('acustica') || name.includes('acústica') || name.includes('armonia') || name.includes('armonía') || name.includes('audio')) {
+                return 'bach';
+            } else if (name.includes('periodismo') || name.includes('reportaje') || name.includes('cronica') || name.includes('crónica') || name.includes('noticia') || name.includes('comunicacion') || name.includes('comunicación')) {
+                return 'bly';
+            } else if (name.includes('web') || name.includes('ui') || name.includes('ux') || name.includes('interfaz') || name.includes('frontend')) {
+                return 'gropius';
+            } else if (name.includes('moda') || name.includes('textil') || name.includes('patronaje') || name.includes('confeccion') || name.includes('confección')) {
+                return 'worth';
+            } else if (name.includes('interior') || name.includes('espacio') || name.includes('habitabilidad') || name.includes('decoracion') || name.includes('decoración')) {
+                return 'dewolfe';
+            } else if (name.includes('arte') || name.includes('pintura') || name.includes('dibujo') || name.includes('escultura') || name.includes('plastica') || name.includes('plástica')) {
+                return 'artemisia';
+            } else if (name.includes('arquitectura') || name.includes('urbanismo') || name.includes('construccion') || name.includes('construcción')) {
+                return 'vitruvio';
+            } else if (name.includes('quimica') || name.includes('química') || name.includes('farmacia') || name.includes('material') || name.includes('polimero') || name.includes('polímero')) {
+                return 'curie';
+            } else if (name.includes('biolog') || name.includes('microbiolog') || name.includes('celular') || name.includes('genetica') || name.includes('genética')) {
+                return 'pasteur';
+            } else if (name.includes('salud') || name.includes('medic') || name.includes('clinica') || name.includes('clínica') || name.includes('anatomia') || name.includes('anatomía') || name.includes('fisiolog')) {
+                return 'osler';
+            } else if (name.includes('derecho') || name.includes('ley') || name.includes('jurid') || name.includes('juríd') || name.includes('penal') || name.includes('constitucional')) {
+                return 'ciceron';
+            } else if (name.includes('psicolog') || name.includes('conducta') || name.includes('cognit') || name.includes('metodolog') || name.includes('neurocienc')) {
+                return 'wundt';
+            } else if (name.includes('econom') || name.includes('finanz') || name.includes('negocio') || name.includes('mercadotecnia') || name.includes('contabil') || name.includes('administrac')) {
+                return 'smith';
+            }
+            return 'sorjuana';
+        }
+
+        function autoSelectMentor(courseName) {
+            const bestId = getBestMentorForCourse(courseName);
+            renderMentorSelectOptions(courseName, bestId);
+            const select = document.getElementById('mentor-select');
+            if (select) {
+                select.value = bestId;
+            }
+        }
+        
         function setupDocumentCarousel(task) {
             currentTaskDocs = [];
             currentDocIndex = 0;
