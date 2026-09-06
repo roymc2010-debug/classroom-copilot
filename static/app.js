@@ -1,3 +1,5 @@
+let currentEnrolledCourses = [];
+let currentUserEmail = '';
 let currentTaskContext = null;
 let chatHistory = [];
 const sessionTaskHistories = {};
@@ -301,6 +303,10 @@ async function loadTasks() {
         if (!response.ok) throw new Error('Error fetching tasks');
 
         const data = await response.json();
+        currentUserEmail = data.user_email || '';
+        currentEnrolledCourses = data.enrolled_courses || [];
+        const userEmailEl = document.getElementById('user-email-display');
+        if (userEmailEl) userEmailEl.textContent = currentUserEmail;
         const now = new Date();
         allUpcomingTasks = [];
         allOverdueTasks = [];
@@ -548,11 +554,17 @@ function renderCoursesFilter() {
     if (!listEl) return;
     listEl.innerHTML = '';
 
-    const all = [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks, ...allNoDateTasks];
-    const courses = [...new Set(all.map(t => t.course_name).filter(Boolean))];
+    // Priorizar materias inscritas reales devueltas por Google Classroom
+    let courses = [];
+    if (currentEnrolledCourses && currentEnrolledCourses.length > 0) {
+        courses = currentEnrolledCourses.map(c => typeof c === 'string' ? c : (c.name || '')).filter(Boolean);
+    } else {
+        const all = [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks, ...allNoDateTasks];
+        courses = [...new Set(all.map(t => t.course_name).filter(Boolean))];
+    }
 
     if (courses.length === 0) {
-        listEl.innerHTML = `<p class="text-cantera-600 dark:text-slate-500 italic text-[11px] py-1">Sin materias activas</p>`;
+        listEl.innerHTML = `<p class="text-cantera-600 dark:text-slate-500 italic text-[11px] py-1">Sin materias registradas</p>`;
         return;
     }
 
@@ -793,6 +805,52 @@ function renderTasks(tasks, containerId) {
     container.innerHTML = '';
 
     if (!tasks || tasks.length === 0) {
+        if (containerId === 'timeline') {
+            const allTotal = allUpcomingTasks.length + allCompletedTasks.length + allOverdueTasks.length + allNoDateTasks.length;
+            if (allTotal === 0) {
+                if (currentEnrolledCourses && currentEnrolledCourses.length > 0) {
+                    container.innerHTML = `
+                        <div class="p-8 text-center bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-800 rounded-2xl max-w-lg mx-auto shadow-sm my-6">
+                            <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 flex items-center justify-center mx-auto mb-3 text-2xl">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-cantera-900 dark:text-white">¡Estás al día!</h3>
+                            <p class="text-xs text-cantera-600 dark:text-slate-400 mt-2 leading-relaxed">
+                                No se encontraron tareas pendientes asignadas en Google Classroom para tus <strong>${currentEnrolledCourses.length} materias inscritas</strong>.
+                            </p>
+                            <div class="mt-4 flex flex-wrap justify-center gap-1.5">
+                                ${currentEnrolledCourses.map(c => `<span class="px-2.5 py-1 rounded-lg text-xs bg-cantera-200 dark:bg-slate-800 text-cantera-800 dark:text-slate-300 font-medium">${typeof c === 'string' ? c : c.name}</span>`).join('')}
+                            </div>
+                        </div>
+                    `;
+                    return;
+                } else {
+                    container.innerHTML = `
+                        <div class="p-8 text-center bg-white dark:bg-night-900 border border-amber-500/30 rounded-2xl max-w-lg mx-auto shadow-sm my-6">
+                            <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto mb-3 text-2xl">
+                                <i class="fa-solid fa-graduation-cap"></i>
+                            </div>
+                            <h3 class="text-lg font-bold text-cantera-900 dark:text-white">No se encontraron materias en esta cuenta</h3>
+                            <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+                                Iniciaste sesión con la cuenta de Google:<br>
+                                <span class="inline-block px-3 py-1 mt-1 font-mono text-xs font-semibold text-amber-500 dark:text-amber-400 bg-amber-500/10 rounded-lg border border-amber-500/20">${currentUserEmail || 'Cuenta activa'}</span>
+                            </p>
+                            <div class="p-4 mt-4 text-left bg-slate-950/40 border border-slate-800 rounded-xl text-xs text-slate-300 space-y-2">
+                                <p class="font-semibold text-white flex items-center gap-1.5">
+                                    <i class="fa-solid fa-circle-info text-amber-400"></i> ¿Por qué no aparecen materias?
+                                </p>
+                                <p>• Muchas instituciones educativas asignan Google Classroom en un <strong>correo escolar o institucional</strong> (ej. <code>@alumno.ipn.mx</code>, <code>@escuela.edu.mx</code>) y no en tu Gmail personal.</p>
+                                <p>• Si tus materias están en otra cuenta de Google, cierra sesión e inicia con la cuenta institucional correcta.</p>
+                            </div>
+                            <a href="/logout" class="inline-flex items-center gap-2 mt-5 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all">
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i> Cambiar de cuenta de Google
+                            </a>
+                        </div>
+                    `;
+                    return;
+                }
+            }
+        }
         container.innerHTML = `<p class="text-cantera-600 dark:text-slate-500 italic text-sm py-4 text-center">No hay misiones en esta vista</p>`;
         return;
     }

@@ -45,6 +45,7 @@ def get_gmail_service(creds=None):
         return None
 
 def extract_pdf_text_from_drive(drive_service, file_id: str) -> str:
+    """Extrae texto de un PDF en Drive bajo demanda (para usar en Ignis, no en el listado general)."""
     try:
         request = drive_service.files().get_media(fileId=file_id)
         fh = io.BytesIO()
@@ -62,25 +63,69 @@ def extract_pdf_text_from_drive(drive_service, file_id: str) -> str:
                 text_content.append(t)
         return "\n".join(text_content).strip()
     except Exception as e:
+        print(f"Aviso: no se pudo extraer texto del PDF {file_id}: {e}")
         return ""
 
-def get_all_tasks(creds=None):
-    service = get_classroom_service(creds=creds)
-    drive_service = get_drive_service(creds=creds)
-
-    # Paginación completa para asegurar todas las materias
+def get_active_courses(service):
+    """
+    Obtiene todas las materias del usuario de forma ultra-resiliente.
+    Evita filtros excesivamente restrictivos que causan listas vacías en cuentas institucionales o escolares.
+    """
     courses = []
     page_token = None
+
+    # Intento 1: Consulta amplia sin restricción de studentId ni courseStates
     try:
         while True:
-            courses_res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=100, pageToken=page_token).execute()
-            courses.extend(courses_res.get('courses', []))
-            page_token = courses_res.get('nextPageToken')
+            res = service.courses().list(pageSize=100, pageToken=page_token).execute()
+            batch = res.get('courses', [])
+            courses.extend(batch)
+            page_token = res.get('nextPageToken')
             if not page_token:
                 break
     except Exception as e:
-        print(f"Error listando cursos en get_all_tasks: {e}")
+        print(f"[Classroom API] Intento 1 (sin filtros) falló: {e}. Probando intento 2...")
+        courses = []
 
+    # Intento 2: Si el intento 1 devolvió 0 o falló, probar con studentId='me'
+    if not courses:
+        try:
+            page_token = None
+            while True:
+                res = service.courses().list(studentId='me', pageSize=100, pageToken=page_token).execute()
+                batch = res.get('courses', [])
+                courses.extend(batch)
+                page_token = res.get('nextPageToken')
+                if not page_token:
+                    break
+        except Exception as e2:
+            print(f"[Classroom API] Intento 2 (studentId='me') falló: {e2}")
+
+    # Intento 3: Probar con studentId='me' y courseStates=['ACTIVE'] como último recurso
+    if not courses:
+        try:
+            page_token = None
+            while True:
+                res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=100, pageToken=page_token).execute()
+                batch = res.get('courses', [])
+                courses.extend(batch)
+                page_token = res.get('nextPageToken')
+                if not page_token:
+                    break
+        except Exception as e3:
+            print(f"[Classroom API] Intento 3 falló: {e3}")
+
+    # Filtrar únicamente si hay materias y descartar solo las archivadas si existen materias activas
+    non_archived = [c for c in courses if c.get('courseState') not in ('ARCHIVED', 'DECLINED')]
+    final_list = non_archived if non_archived else courses
+
+    print(f"[Classroom API] Cursos recuperados ({len(final_list)}): {[c.get('name') for c in final_list]}")
+    return final_list
+
+def get_all_tasks(creds=None):
+    service = get_classroom_service(creds=creds)
+
+    courses = get_active_courses(service)
     tasks = []
 
     for course in courses:
@@ -90,12 +135,13 @@ def get_all_tasks(creds=None):
         try:
             cw_res = service.courses().courseWork().list(courseId=course_id).execute()
             course_works = cw_res.get('courseWork', [])
-        except Exception:
+        except Exception as e:
+            print(f"[Classroom API] Error listando tareas para materia {course_name} ({course_id}): {e}")
             course_works = []
 
         for cw in course_works:
             cw_id = cw['id']
-            title = cw.get('title', 'Sin titulo')
+            title = cw.get('title', 'Sin título')
             desc = cw.get('description', '')
             alt_link = cw.get('alternateLink', '')
             max_points = cw.get('maxPoints')
@@ -125,7 +171,7 @@ def get_all_tasks(creds=None):
                 submissions = sub_res.get('studentSubmissions', [])
                 if submissions:
                     sub = submissions[0]
-                    state = sub.get('state')  # 'NEW', 'CREATED', 'TURNED_IN', 'RETURNED'
+                    state = sub.get('state')
                     assigned_grade = sub.get('assignedGrade')
 
                     assignment_sub = sub.get('assignmentSubmission', {})
@@ -146,8 +192,8 @@ def get_all_tasks(creds=None):
                 classroom_status = 'PENDIENTE'
 
             materials = cw.get('materials', [])
-            extracted_docs = []
             attachment_links = []
+            attachment_files = []
 
             for m in materials:
                 drive_file = m.get('driveFile', {}).get('driveFile', {})
@@ -158,17 +204,12 @@ def get_all_tasks(creds=None):
 
                     if f_link:
                         attachment_links.append(f"{f_title} ({f_link})")
-
-                    if f_title.lower().endswith('.pdf') and f_id:
-                        pdf_text = extract_pdf_text_from_drive(drive_service, f_id)
-                        if pdf_text:
-                            extracted_docs.append(f"--- Documento adjunto: {f_title} ---\n{pdf_text}")
+                    if f_id:
+                        attachment_files.append({'id': f_id, 'title': f_title, 'link': f_link})
 
             full_desc = desc
-            if extracted_docs:
-                full_desc += "\n\n" + "\n\n".join(extracted_docs)
             if attachment_links:
-                full_desc += "\n\nArchivos/Enlaces adjuntos:\n" + "\n".join(attachment_links)
+                full_desc += "\n\nArchivos adjuntos:\n" + "\n".join(attachment_links)
 
             tasks.append({
                 'id': str(cw_id),
@@ -180,25 +221,20 @@ def get_all_tasks(creds=None):
                 'due_date': due_date_iso,
                 'classroom_status': classroom_status,
                 'assigned_grade': assigned_grade,
-                'max_points': max_points
+                'max_points': max_points,
+                'attachment_files': attachment_files
             })
 
+    print(f"[Classroom API] Total de tareas procesadas: {len(tasks)}")
     return tasks
 
-# Exportar con ambos nombres para compatibilidad total con main.py
+# Exportar con ambos nombres para compatibilidad total
 fetch_tasks = get_all_tasks
 
 def fetch_courses(creds=None):
     try:
         service = get_classroom_service(creds=creds)
-        courses = []
-        page_token = None
-        while True:
-            courses_res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=100, pageToken=page_token).execute()
-            courses.extend(courses_res.get('courses', []))
-            page_token = courses_res.get('nextPageToken')
-            if not page_token:
-                break
+        courses = get_active_courses(service)
         return [{
             'id': c.get('id'),
             'name': c.get('name', 'Materia sin nombre').replace('_', ' '),
@@ -213,16 +249,9 @@ def get_announcements_and_alerts(creds=None):
     alerts = []
     try:
         service = get_classroom_service(creds=creds)
-        courses = []
-        page_token = None
-        while True:
-            courses_res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=100, pageToken=page_token).execute()
-            courses.extend(courses_res.get('courses', []))
-            page_token = courses_res.get('nextPageToken')
-            if not page_token:
-                break
+        courses = get_active_courses(service)
 
-        cutoff_date = (datetime.datetime.utcnow() - datetime.timedelta(days=3)).isoformat() + "Z"
+        cutoff_date = (datetime.datetime.utcnow() - datetime.timedelta(days=7)).isoformat() + "Z"
 
         for course in courses:
             c_id = course['id']
@@ -249,7 +278,7 @@ def get_announcements_and_alerts(creds=None):
         gmail_service = get_gmail_service(creds=creds)
         if gmail_service:
             try:
-                query = "newer_than:3d (clase OR suspende OR asistencia OR aviso OR cancela OR examen OR práctica)"
+                query = "newer_than:7d (clase OR suspende OR asistencia OR aviso OR cancela OR examen OR práctica)"
                 msgs_res = gmail_service.users().messages().list(userId='me', q=query, maxResults=5).execute()
                 messages = msgs_res.get('messages', [])
 
@@ -267,7 +296,7 @@ def get_announcements_and_alerts(creds=None):
             except Exception:
                 pass
 
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Error en get_announcements_and_alerts: {e}")
 
     return alerts

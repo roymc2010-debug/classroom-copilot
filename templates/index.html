@@ -73,8 +73,57 @@
                 <button onclick="toggleMainMenu()" aria-label="Menú principal" class="w-9 h-9 rounded-xl bg-white dark:bg-night-800 border border-cantera-300 dark:border-slate-700 flex items-center justify-center text-cantera-800 dark:text-slate-200 hover:border-indigo-500 transition-all shadow-sm">
                     <i class="fa-solid fa-bars text-sm"></i>
                 </button>
-                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 dark:text-indigo-400">
-                    <i class="fa-solid fa-landmark text-lg"></i>
+                <div class="w-10 h-10 rounded-xl overflow-hidden shadow-md shrink-0 border border-sky-500/30">
+                    <svg viewBox="0 0 512 512" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <radialGradient id="hdrBgGrad" cx="50%" cy="30%" r="75%">
+                                <stop offset="0%" stop-color="#1A365D" />
+                                <stop offset="60%" stop-color="#0E213D" />
+                                <stop offset="100%" stop-color="#081326" />
+                            </radialGradient>
+                            <linearGradient id="hdrGoldLight" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#FBBF24" />
+                                <stop offset="100%" stop-color="#F59E0B" />
+                            </linearGradient>
+                            <linearGradient id="hdrGoldBronze" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stop-color="#D97706" />
+                                <stop offset="100%" stop-color="#92400E" />
+                            </linearGradient>
+                            <linearGradient id="hdrFlameGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+                                <stop offset="0%" stop-color="#EA580C" />
+                                <stop offset="40%" stop-color="#F59E0B" />
+                                <stop offset="85%" stop-color="#FEF08A" />
+                                <stop offset="100%" stop-color="#FFFFFF" />
+                            </linearGradient>
+                        </defs>
+                        <rect width="512" height="512" fill="url(#hdrBgGrad)" />
+                        <g transform="translate(0, 12)">
+                            <rect x="76" y="372" width="360" height="14" rx="3" fill="url(#hdrGoldBronze)" />
+                            <rect x="92" y="356" width="328" height="16" rx="2" fill="url(#hdrGoldLight)" />
+                            <rect x="164" y="224" width="22" height="132" rx="3" fill="url(#hdrGoldBronze)" />
+                            <rect x="326" y="224" width="22" height="132" rx="3" fill="url(#hdrGoldBronze)" />
+                            <rect x="110" y="224" width="26" height="132" rx="3" fill="url(#hdrGoldLight)" />
+                            <rect x="204" y="224" width="26" height="132" rx="3" fill="url(#hdrGoldLight)" />
+                            <rect x="282" y="224" width="26" height="132" rx="3" fill="url(#hdrGoldLight)" />
+                            <rect x="376" y="224" width="26" height="132" rx="3" fill="url(#hdrGoldLight)" />
+                            <rect x="100" y="196" width="312" height="22" rx="2" fill="url(#hdrGoldLight)" />
+                            <rect x="106" y="174" width="300" height="22" fill="url(#hdrGoldBronze)" />
+                            <polygon points="256,76 96,168 416,168" fill="url(#hdrGoldBronze)" />
+                            <polygon points="256,66 84,166 98,172 256,80 414,172 428,166" fill="url(#hdrGoldLight)" />
+                            <g transform="translate(256, 126)">
+                                <polygon points="0,-36 -8,-36 -46,30 -28,30 -16,10 0,10" fill="#78350F" opacity="0.75" />
+                                <polygon points="0,-36 -4,-36 -42,30 -30,30 -14,10 0,10" fill="#FEF3C7" />
+                                <polygon points="0,-36 8,-36 46,30 28,30 16,10 0,10" fill="#78350F" opacity="0.45" />
+                                <polygon points="0,-36 4,-36 42,30 30,30 14,10 0,10" fill="#FDE68A" />
+                                <polygon points="-22,12 22,12 19,20 -19,20" fill="#92400E" opacity="0.8" />
+                                <polygon points="-21,11 21,11 18,17 -18,17" fill="#FEF3C7" />
+                                <polygon points="-12,-36 12,-36 8,-30 -8,-30" fill="#FEF3C7" />
+                            </g>
+                            <ellipse cx="256" cy="286" rx="28" ry="34" fill="#F59E0B" opacity="0.25" />
+                            <path d="M 256,236 C 268,260 282,274 282,296 C 282,316 269,332 256,332 C 243,332 230,316 230,296 C 230,274 244,260 256,236 Z" fill="url(#hdrFlameGrad)" />
+                            <path d="M 256,260 C 262,276 270,286 270,302 C 270,316 263,326 256,326 C 249,326 242,316 242,302 C 242,286 250,276 256,260 Z" fill="#FFFFFF" opacity="0.9" />
+                        </g>
+                    </svg>
                 </div>
                 <div>
                     <h1 class="text-xl md:text-2xl font-black tracking-tight leading-none text-cantera-900 dark:text-white">Ágora</h1>
@@ -574,7 +623,11 @@
                 </nav>
             </div>
 
-            <div class="pt-6 border-t border-cantera-200 dark:border-slate-800">
+            <div class="pt-6 border-t border-cantera-200 dark:border-slate-800 space-y-2">
+                <div class="px-2 text-[11px] text-cantera-600 dark:text-slate-400">
+                    <span>Cuenta activa:</span>
+                    <p id="user-email-display" class="font-mono text-xs font-semibold text-amber-500 dark:text-amber-400 truncate">alexmunoz918@gmail.com</p>
+                </div>
                 <a href="/auth/logout" class="w-full p-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-2 font-bold text-xs transition-colors">
                     <i class="fa-solid fa-right-from-bracket"></i>
                     <span>Cerrar Sesión</span>

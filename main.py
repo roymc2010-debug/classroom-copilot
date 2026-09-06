@@ -270,6 +270,7 @@ async def get_tasks(request: Request):
         tasks_without_dates = [t for t in tasks if not t.get('due_date')]
         return {
             "user_email": user_email,
+            "enrolled_courses": alex_data.get("courses", []),
             "mock_stage_id": alex_data["id"],
             "mock_stage_name": alex_data["name"],
             "mock_streak_weeks": alex_data["streak_weeks"],
@@ -279,6 +280,7 @@ async def get_tasks(request: Request):
         }
 
     try:
+        courses = fetch_courses(creds=creds)
         tasks = fetch_tasks(creds=creds)
         try:
             from db.database import get_all_task_states
@@ -295,6 +297,7 @@ async def get_tasks(request: Request):
         tasks_without_dates = [t for t in tasks if not t.get('due_date')]
         return {
             "user_email": user_email,
+            "enrolled_courses": courses,
             "tasks_with_dates": tasks_with_dates,
             "tasks_without_dates": tasks_without_dates
         }
