@@ -68,15 +68,24 @@ def get_all_tasks(creds=None):
     service = get_classroom_service(creds=creds)
     drive_service = get_drive_service(creds=creds)
 
-    # pageSize=50 para que no se corte Control I
-    courses_res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=50).execute()
-    courses = courses_res.get('courses', [])
+    # Paginación completa para asegurar todas las materias
+    courses = []
+    page_token = None
+    try:
+        while True:
+            courses_res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=100, pageToken=page_token).execute()
+            courses.extend(courses_res.get('courses', []))
+            page_token = courses_res.get('nextPageToken')
+            if not page_token:
+                break
+    except Exception as e:
+        print(f"Error listando cursos en get_all_tasks: {e}")
 
     tasks = []
 
     for course in courses:
         course_id = course['id']
-        course_name = course['name']
+        course_name = course.get('name', 'Materia').replace('_', ' ')
 
         try:
             cw_res = service.courses().courseWork().list(courseId=course_id).execute()
@@ -182,14 +191,20 @@ fetch_tasks = get_all_tasks
 def fetch_courses(creds=None):
     try:
         service = get_classroom_service(creds=creds)
-        courses_res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=50).execute()
-        raw_courses = courses_res.get('courses', [])
+        courses = []
+        page_token = None
+        while True:
+            courses_res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=100, pageToken=page_token).execute()
+            courses.extend(courses_res.get('courses', []))
+            page_token = courses_res.get('nextPageToken')
+            if not page_token:
+                break
         return [{
             'id': c.get('id'),
-            'name': c.get('name', 'Materia sin nombre'),
+            'name': c.get('name', 'Materia sin nombre').replace('_', ' '),
             'section': c.get('section', ''),
             'alternateLink': c.get('alternateLink', '')
-        } for c in raw_courses]
+        } for c in courses]
     except Exception as e:
         print(f"Error en fetch_courses: {e}")
         return []
@@ -198,14 +213,20 @@ def get_announcements_and_alerts(creds=None):
     alerts = []
     try:
         service = get_classroom_service(creds=creds)
-        courses_res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=50).execute()
-        courses = courses_res.get('courses', [])
+        courses = []
+        page_token = None
+        while True:
+            courses_res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=100, pageToken=page_token).execute()
+            courses.extend(courses_res.get('courses', []))
+            page_token = courses_res.get('nextPageToken')
+            if not page_token:
+                break
 
         cutoff_date = (datetime.datetime.utcnow() - datetime.timedelta(days=3)).isoformat() + "Z"
 
         for course in courses:
             c_id = course['id']
-            c_name = course['name']
+            c_name = course.get('name', 'Materia').replace('_', ' ')
 
             try:
                 ann_res = service.courses().announcements().list(courseId=c_id).execute()

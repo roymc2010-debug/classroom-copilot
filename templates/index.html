@@ -123,7 +123,10 @@
                     <div id="bell-dropdown" style="display: none;" class="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 shadow-2xl p-4 z-50 text-xs space-y-2.5">
                         <div class="flex items-center justify-between font-bold text-cantera-900 dark:text-white border-b border-cantera-200 dark:border-slate-800 pb-2">
                             <span class="flex items-center gap-1.5"><i class="fa-solid fa-bell text-amber-500"></i> Avisos de Profesores</span>
-                            <button onclick="toggleAnnouncementsDropdown()" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button>
+                            <div class="flex items-center gap-2">
+                                <button onclick="markAllAnnouncementsRead()" class="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer">Marcar leídos</button>
+                                <button onclick="toggleAnnouncementsDropdown()" class="text-slate-400 hover:text-red-500 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
                         </div>
                         <div id="bell-announcements-list" class="space-y-2 max-h-64 overflow-y-auto custom-scroll">
                             <p class="text-slate-500 italic text-center py-3">No hay avisos recientes</p>
@@ -250,10 +253,19 @@
                     <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Aviso</span>
                 </div>
             </div>
+
+            <!-- Botón de Acceso al Simulador Socrático -->
+            <button onclick="openSocratesModal()" class="shrink-0 w-full py-2.5 px-3.5 rounded-xl bg-white dark:bg-night-800/80 border border-cantera-300 dark:border-slate-700 hover:border-indigo-500 flex items-center justify-between text-xs font-bold text-cantera-800 dark:text-slate-200 transition-all shadow-sm group cursor-pointer">
+                <span class="flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap text-indigo-500 text-sm group-hover:scale-110 transition-transform"></i>
+                    <span>Simulador Socrático</span>
+                </span>
+                <i class="fa-solid fa-chevron-right text-[10px] text-cantera-500 dark:text-slate-500"></i>
+            </button>
         </aside>
 
         <!-- Contenedor Central Dinámico (Timeline) -->
-        <main id="main-content-area" class="flex-1 h-full overflow-y-auto custom-scroll p-6 md:p-8">
+        <main id="main-content-area" class="flex-1 h-full overflow-y-auto custom-scroll p-6 md:p-8 2xl:pr-[340px]">
             <div id="loading" class="text-center py-16">
                 <i class="fa-solid fa-spinner fa-spin text-3xl text-indigo-500 mb-4"></i>
                 <p class="text-cantera-600 dark:text-slate-400 text-sm">Sincronizando con Classroom...</p>
@@ -278,7 +290,7 @@
                 </div>
             </div>
 
-            <div id="timeline-view" class="max-w-3xl mx-auto space-y-6">
+            <div id="timeline-view" class="w-full max-w-4xl xl:max-w-5xl mx-auto space-y-6">
                 <div class="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-cantera-200 dark:border-slate-800">
                     <div class="flex items-center gap-2.5">
                         <h2 id="current-view-title" class="text-xl font-bold tracking-tight text-cantera-900 dark:text-white">Próximas entregas</h2>
@@ -339,61 +351,86 @@
         </main>
 
         <!-- VENTANA SIMÉTRICA DE IGNIS -->
-        <div id="ignis-workspace-modal" style="display: none;" class="fixed inset-y-4 left-[360px] right-[360px] z-40 flex-col bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
-            <div class="p-3.5 px-5 border-b border-cantera-300 dark:border-slate-700 flex justify-between items-center bg-cantera-50 dark:bg-night-800 shrink-0">
-                <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
-                        <i class="fa-solid fa-fire text-amber-500"></i>
-                    </div>
-                    <span class="font-extrabold text-sm tracking-tight text-cantera-900 dark:text-white">Ignis</span>
-                    <span class="text-cantera-400 dark:text-slate-600">|</span>
-                    <select id="mentor-select" class="bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-indigo-700 dark:text-indigo-300 font-medium">
-                        <option value="newton">Isaac Newton (Exactas / Cálculo)</option>
-                        <option value="lovelace">Ada Lovelace (Código / Algoritmos)</option>
-                        <option value="turing">Alan Turing (Sistemas / Lógica)</option>
-                        <option value="sorjuana">Sor Juana (Reportes / Redacción)</option>
-                        <option value="osler">William Osler (Salud / Clínica)</option>
-                        <option value="ciceron">Cicerón (Derecho / Debate)</option>
-                        <option value="smith">Adam Smith (Negocios / Finanzas)</option>
-                        <option value="socrates">Sócrates (Simulador de Examen)</option>
-                        <option value="franklin">B. Franklin (Estratega de Agenda)</option>
-                    </select>
-                    <p id="modal-task-title" class="text-xs text-cantera-600 dark:text-slate-400 truncate max-w-xs"></p>
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <div class="hidden sm:flex gap-1 border border-cantera-300 dark:border-slate-700 rounded p-1 bg-white dark:bg-slate-900">
-                        <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="gemini" checked class="hidden"><span>Gemini</span></label>
-                        <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="groq" class="hidden"><span>Groq</span></label>
-                        <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="openrouter" class="hidden"><span>OpenRouter</span></label>
-                    </div>
-                    <button onclick="closeIgnisWorkspace()" class="text-cantera-600 dark:text-slate-400 hover:text-red-500 w-8 h-8 rounded-lg flex items-center justify-center">
-                        <i class="fa-solid fa-xmark text-lg"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
-                <div class="w-full md:w-1/2 border-b md:border-b-0 md:border-r border-cantera-300 dark:border-slate-700 flex flex-col bg-cantera-50/70 dark:bg-slate-900/50">
-                    <div class="p-2.5 px-4 border-b border-cantera-300 dark:border-slate-700 flex items-center justify-between text-xs bg-cantera-100 dark:bg-slate-900">
-                        <span id="doc-carousel-title" class="font-medium truncate text-cantera-900 dark:text-slate-200">Documento adjunto</span>
-                        <div class="flex items-center gap-1.5">
-                            <button onclick="prevDoc()" id="doc-prev-btn" class="w-6 h-6 rounded bg-white dark:bg-slate-800 border border-cantera-300 dark:border-slate-700 flex items-center justify-center"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
-                            <span id="doc-carousel-counter" class="text-[11px] font-mono px-1">1/1</span>
-                            <button onclick="nextDoc()" id="doc-next-btn" class="w-6 h-6 rounded bg-white dark:bg-slate-800 border border-cantera-300 dark:border-slate-700 flex items-center justify-center"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
-                            <a id="doc-external-link" href="#" target="_blank" class="ml-1 text-indigo-600 dark:text-indigo-400 p-1"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+        <div id="ignis-workspace-backdrop" style="display: none;" onclick="if(event.target === this) closeIgnisWorkspace()" class="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-6">
+            <div id="ignis-workspace-modal" class="w-full max-w-6xl h-[92vh] flex flex-col bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+                <!-- Fila 1: Encabezado -->
+                <div class="p-3 px-5 border-b border-cantera-300 dark:border-slate-700 flex justify-between items-center bg-cantera-50 dark:bg-night-800 shrink-0">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-fire text-amber-500"></i>
                         </div>
+                        <span class="font-extrabold text-sm tracking-tight text-cantera-900 dark:text-white">Ignis</span>
+                        <span class="text-cantera-400 dark:text-slate-600">|</span>
+                        <select id="mentor-select" class="bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-indigo-700 dark:text-indigo-300 font-medium">
+                            <option value="newton">Isaac Newton (Exactas / Cálculo)</option>
+                            <option value="lovelace">Ada Lovelace (Código / Algoritmos)</option>
+                            <option value="turing">Alan Turing (Sistemas / Lógica)</option>
+                            <option value="sorjuana">Sor Juana (Reportes / Redacción)</option>
+                            <option value="osler">William Osler (Salud / Clínica)</option>
+                            <option value="ciceron">Cicerón (Derecho / Debate)</option>
+                            <option value="smith">Adam Smith (Negocios / Finanzas)</option>
+                            <option value="socrates">Sócrates (Simulador de Examen)</option>
+                            <option value="franklin">B. Franklin (Estratega de Agenda)</option>
+                        </select>
                     </div>
-                    <div id="doc-viewer-container" class="flex-1 p-2 overflow-y-auto custom-scroll text-xs leading-relaxed"></div>
+
+                    <div class="flex items-center gap-3">
+                        <div class="hidden sm:flex gap-1 border border-cantera-300 dark:border-slate-700 rounded p-1 bg-white dark:bg-slate-900">
+                            <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="gemini" checked class="hidden"><span>Gemini</span></label>
+                            <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="groq" class="hidden"><span>Groq</span></label>
+                            <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="openrouter" class="hidden"><span>OpenRouter</span></label>
+                        </div>
+                        <button onclick="closeIgnisWorkspace()" class="text-cantera-600 dark:text-slate-400 hover:text-red-500 w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="w-full md:w-1/2 flex flex-col bg-white dark:bg-slate-900/20">
-                    <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
-                    <div class="p-3 border-t border-cantera-300 dark:border-slate-700 bg-cantera-50 dark:bg-slate-800">
-                        <form id="chat-form" onsubmit="handleChatSubmit(event)" class="flex gap-2">
-                            <input type="text" id="chat-input" placeholder="Pregunta a Ignis sobre el documento..." autocomplete="off" class="flex-1 bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-600 rounded-lg px-3.5 py-2 text-sm text-cantera-900 dark:text-white focus:outline-none focus:border-indigo-500">
-                            <button type="submit" id="chat-submit-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold"><i class="fa-solid fa-paper-plane text-sm"></i></button>
-                        </form>
+                <!-- Fila 2: Barra de herramientas, controles y título -->
+                <div class="p-2.5 px-5 border-b border-cantera-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-cantera-100/60 dark:bg-night-900 shrink-0 text-xs">
+                    <!-- Izquierda: Botones de Alternancia [ 📄 PDF ] [ 🔥 Ignis ] -->
+                    <div class="flex items-center gap-1.5">
+                        <button id="btn-view-pdf" onclick="toggleIgnisView('pdf')" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-300 hover:bg-cantera-300 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer" title="Expandir visor de PDF">
+                            <i class="fa-regular fa-file-pdf text-red-500"></i>
+                            <span>PDF</span>
+                        </button>
+                        <button id="btn-view-chat" onclick="toggleIgnisView('chat')" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-300 hover:bg-cantera-300 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer" title="Expandir chat de Ignis">
+                            <i class="fa-solid fa-fire text-amber-500"></i>
+                            <span>Ignis</span>
+                        </button>
+                    </div>
+
+                    <!-- Centro: Título de la tarea -->
+                    <div class="flex-1 text-center min-w-0 px-2">
+                        <p id="modal-task-title" class="text-xs font-bold text-cantera-800 dark:text-slate-200 truncate"></p>
+                    </div>
+
+                    <!-- Derecha: Carrusel de Documentos -->
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <span id="doc-carousel-title" class="font-medium truncate max-w-[160px] text-cantera-700 dark:text-slate-300 hidden md:inline">Documento</span>
+                        <button onclick="prevDoc()" id="doc-prev-btn" class="w-6 h-6 rounded bg-white dark:bg-slate-800 border border-cantera-300 dark:border-slate-700 flex items-center justify-center hover:bg-cantera-100 dark:hover:bg-slate-700 cursor-pointer"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
+                        <span id="doc-carousel-counter" class="text-[11px] font-mono px-1">1/1</span>
+                        <button onclick="nextDoc()" id="doc-next-btn" class="w-6 h-6 rounded bg-white dark:bg-slate-800 border border-cantera-300 dark:border-slate-700 flex items-center justify-center hover:bg-cantera-100 dark:hover:bg-slate-700 cursor-pointer"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+                        <a id="doc-external-link" href="#" target="_blank" class="text-indigo-600 dark:text-indigo-400 p-1 hover:text-indigo-500" title="Abrir en pestaña nueva"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+                    </div>
+                </div>
+
+                <!-- Paneles Divididos -->
+                <div class="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+                    <!-- Panel Izquierdo: Documento / PDF -->
+                    <div id="ignis-doc-pane" class="w-full md:w-1/2 border-b md:border-b-0 md:border-r border-cantera-300 dark:border-slate-700 flex flex-col bg-cantera-50/70 dark:bg-slate-900/50">
+                        <div id="doc-viewer-container" class="flex-1 p-2 overflow-y-auto custom-scroll text-xs leading-relaxed"></div>
+                    </div>
+
+                    <!-- Panel Derecho: Chat Ignis -->
+                    <div id="ignis-chat-pane" class="w-full md:w-1/2 flex flex-col bg-white dark:bg-slate-900/20">
+                        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+                        <div class="p-3 border-t border-cantera-300 dark:border-slate-700 bg-cantera-50 dark:bg-slate-800">
+                            <form id="chat-form" onsubmit="handleChatSubmit(event)" class="flex gap-2">
+                                <input type="text" id="chat-input" placeholder="Pregunta a Ignis sobre el documento..." autocomplete="off" class="flex-1 bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-600 rounded-lg px-3.5 py-2 text-sm text-cantera-900 dark:text-white focus:outline-none focus:border-indigo-500">
+                                <button type="submit" id="chat-submit-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold cursor-pointer"><i class="fa-solid fa-paper-plane text-sm"></i></button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -424,6 +461,10 @@
                 </div>
 
                 <nav class="space-y-2 text-sm font-medium">
+                    <button onclick="openSocratesModal(); toggleMainMenu();" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-graduation-cap text-indigo-500 w-5"></i>
+                        <span>Simulador Socrático</span>
+                    </button>
                     <button onclick="openMentorsModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors">
                         <i class="fa-solid fa-user-graduate text-indigo-500 w-5"></i>
                         <span>Profesores de Ignis</span>
@@ -609,6 +650,80 @@
         </div>
     </div>
 
+    <!-- Modal Simulador Socrático -->
+    <div id="modal-socrates" style="display: none;" onclick="if(event.target === this) closeSocratesModal()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 md:p-6">
+        <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl max-w-2xl w-full h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="p-4 px-5 border-b border-cantera-200 dark:border-slate-800 flex justify-between items-center bg-cantera-50 dark:bg-night-800 shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-graduation-cap text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-black text-cantera-900 dark:text-white tracking-tight">Simulador Socrático de Exámenes</h3>
+                        <p class="text-[10px] text-cantera-600 dark:text-slate-400">Evaluación oral dialéctica para medir tu dominio real</p>
+                    </div>
+                </div>
+                <button onclick="closeSocratesModal()" class="text-cantera-600 dark:text-slate-400 hover:text-red-500 w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Configuration Toolbar -->
+            <div class="p-3 px-5 border-b border-cantera-200 dark:border-slate-800 bg-cantera-100/50 dark:bg-slate-900/50 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
+                <div class="flex items-center gap-2 flex-1 min-w-[200px]">
+                    <span class="font-bold text-cantera-800 dark:text-slate-300">Materia:</span>
+                    <select id="socrates-course-select" class="flex-1 bg-white dark:bg-night-800 border border-cantera-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-cantera-900 dark:text-slate-100 font-semibold focus:outline-none focus:border-indigo-500 truncate">
+                        <option value="">Cargando materias...</option>
+                    </select>
+                </div>
+
+                <!-- Mode Selector: [ Teórico ] [ Práctico ] [ Híbrido ] -->
+                <div class="flex items-center gap-1">
+                    <button type="button" onclick="selectSocratesMode('teorico')" id="btn-soc-mode-teorico" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-300 transition-colors cursor-pointer">Teórico</button>
+                    <button type="button" onclick="selectSocratesMode('practico')" id="btn-soc-mode-practico" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-300 transition-colors cursor-pointer">Práctico</button>
+                    <button type="button" onclick="selectSocratesMode('hibrido')" id="btn-soc-mode-hibrido" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-sm transition-colors cursor-pointer">Híbrido</button>
+                </div>
+
+                <button type="button" onclick="startSocratesExam()" class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+                    <i class="fa-solid fa-play text-[10px]"></i> Iniciar
+                </button>
+            </div>
+
+            <!-- Chat Container -->
+            <div id="socrates-messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scroll text-xs">
+                <div class="p-6 text-center text-cantera-600 dark:text-slate-400 space-y-2">
+                    <i class="fa-solid fa-landmark text-3xl text-indigo-500/50"></i>
+                    <p class="font-medium text-sm text-cantera-800 dark:text-slate-200">Bienvenido al Simulador Socrático</p>
+                    <p class="text-xs max-w-md mx-auto">Selecciona tu materia y la modalidad del examen (teórico, práctico o híbrido), luego presiona <strong>Iniciar</strong> para comenzar tu evaluación.</p>
+                </div>
+            </div>
+
+            <!-- Input Form -->
+            <div class="p-3 border-t border-cantera-300 dark:border-slate-700 bg-cantera-50 dark:bg-slate-800 shrink-0">
+                <form id="socrates-form" onsubmit="handleSocratesSubmit(event)" class="flex gap-2">
+                    <input type="text" id="socrates-input" placeholder="Escribe tu respuesta a Sócrates..." autocomplete="off" disabled class="flex-1 bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-600 rounded-lg px-3.5 py-2 text-sm text-cantera-900 dark:text-white focus:outline-none focus:border-indigo-500 disabled:opacity-50">
+                    <button type="submit" id="socrates-submit-btn" disabled class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold disabled:opacity-50 cursor-pointer"><i class="fa-solid fa-paper-plane text-sm"></i></button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Detalle de Avisos -->
+    <div id="modal-announcement-detail" style="display: none;" onclick="if(event.target === this) closeAnnouncementDetailModal()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[85vh] overflow-y-auto custom-scroll flex flex-col">
+            <div class="flex justify-between items-start mb-4 border-b border-cantera-200 dark:border-slate-800 pb-3 shrink-0">
+                <div>
+                    <span id="ann-modal-course" class="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider block"></span>
+                    <span id="ann-modal-date" class="text-[11px] text-cantera-500 dark:text-slate-400 font-medium mt-0.5 block"></span>
+                </div>
+                <button onclick="closeAnnouncementDetailModal()" class="text-slate-400 hover:text-red-500 cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="ann-modal-content" class="text-xs text-cantera-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap flex-1"></div>
+            <div id="ann-modal-footer" class="mt-4 pt-3 border-t border-cantera-200 dark:border-slate-800 flex justify-end shrink-0"></div>
+        </div>
+    </div>
+
     <!-- JAVASCRIPT DIRECTO INTEGRADO (Garantiza ejecución instantánea sin fallos de carga) -->
     <script>
         let currentTaskContext = null;
@@ -620,6 +735,7 @@
         let allOverdueTasks = [];
         let allNoDateTasks = [];
         let allCompletedTasks = [];
+        let allEnrolledCourses = [];
         let cachedAnnouncements = [];
 
         let selectedCourses = new Set();
@@ -631,6 +747,12 @@
         let currentTaskDocs = [];
         let currentDocIndex = 0;
         let docViewMode = 'pdf';
+        let ignisViewMode = 'split';
+
+        let currentSocratesMode = 'hibrido';
+        let socratesChatHistory = [];
+        let socratesActiveCourse = '';
+        let socratesExamActive = false;
 
         let timerInterval = null;
         let timerSeconds = 25 * 60;
@@ -805,6 +927,8 @@
             }
             if (e.key === 'Escape') {
                 closeIgnisWorkspace();
+                closeSocratesModal();
+                closeAnnouncementDetailModal();
                 closeMentorsModal();
                 closeTechniquesModal();
                 closeGradesModal();
@@ -895,7 +1019,11 @@
             if (authWarning) authWarning.style.display = 'none';
 
             try {
-                const response = await fetch('/api/tasks');
+                const [response, coursesResponse] = await Promise.all([
+                    fetch('/api/tasks'),
+                    fetch('/api/courses').catch(() => null)
+                ]);
+
                 if (response.status === 401) {
                     if (authWarning) authWarning.style.display = 'flex';
                     if (loading) loading.style.display = 'none';
@@ -903,6 +1031,11 @@
                 }
 
                 if (!response.ok) throw new Error('Error fetching tasks');
+
+                if (coursesResponse && coursesResponse.ok) {
+                    const cData = await coursesResponse.json();
+                    allEnrolledCourses = (cData.courses || []).map(c => (c.name || '').replace(/_/g, ' ')).filter(Boolean);
+                }
 
                 const data = await response.json();
                 const now = new Date();
@@ -913,6 +1046,7 @@
                 tasksMap.clear();
 
                 (data.tasks_with_dates || []).forEach(task => {
+                    task.course_name = (task.course_name || '').replace(/_/g, ' ');
                     const dueDate = new Date(task.due_date);
                     if (task.classroom_status === 'ENTREGADA' || task.classroom_status === 'CALIFICADA') {
                         task.status = 'done';
@@ -933,6 +1067,7 @@
                 });
 
                 (data.tasks_without_dates || []).forEach(task => {
+                    task.course_name = (task.course_name || '').replace(/_/g, ' ');
                     if (task.classroom_status === 'ENTREGADA' || task.classroom_status === 'CALIFICADA') {
                         task.status = 'done';
                     }
@@ -1014,7 +1149,7 @@
             task.estimated_hours = 1.5;
         }
 
-        // Campana
+        // Campana y Avisos con Persistencia y Modal de Detalle
         function toggleAnnouncementsDropdown() {
             const dd = document.getElementById('bell-dropdown');
             if (!dd) return;
@@ -1031,6 +1166,87 @@
             }
         });
 
+        function formatAnnouncementDate(dateStr) {
+            if (!dateStr) return '';
+            try {
+                const d = new Date(dateStr);
+                return d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+            } catch (e) {
+                return dateStr;
+            }
+        }
+
+        function getReadAnnouncements() {
+            try {
+                return JSON.parse(localStorage.getItem('agora_read_announcements') || '[]');
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function markAnnouncementAsRead(annId) {
+            const read = getReadAnnouncements();
+            const idStr = String(annId);
+            if (!read.includes(idStr)) {
+                read.push(idStr);
+                localStorage.setItem('agora_read_announcements', JSON.stringify(read));
+            }
+            updateAnnouncementBadge();
+        }
+
+        function markAllAnnouncementsRead() {
+            const ids = cachedAnnouncements.map(a => String(a.id || a.content));
+            localStorage.setItem('agora_read_announcements', JSON.stringify(ids));
+            updateAnnouncementBadge();
+            const container = document.getElementById('bell-announcements-list');
+            if (container) {
+                Array.from(container.children).forEach(el => {
+                    el.classList.add('opacity-70');
+                });
+            }
+        }
+
+        function updateAnnouncementBadge() {
+            const read = getReadAnnouncements();
+            const unreadCount = cachedAnnouncements.filter(a => !read.includes(String(a.id || a.content))).length;
+            const badge = document.getElementById('bell-badge');
+            if (badge) {
+                if (unreadCount > 0) {
+                    badge.textContent = unreadCount;
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }
+
+        function openAnnouncementDetail(a) {
+            markAnnouncementAsRead(a.id || a.content);
+            const modal = document.getElementById('modal-announcement-detail');
+            const courseEl = document.getElementById('ann-modal-course');
+            const dateEl = document.getElementById('ann-modal-date');
+            const contentEl = document.getElementById('ann-modal-content');
+            const footerEl = document.getElementById('ann-modal-footer');
+
+            if (courseEl) courseEl.textContent = (a.course_name || 'Aviso').replace(/_/g, ' ');
+            if (dateEl) dateEl.textContent = formatAnnouncementDate(a.date);
+            if (contentEl) contentEl.textContent = a.content || 'Sin contenido de aviso.';
+            if (footerEl) {
+                footerEl.innerHTML = a.link ? `
+                    <a href="${a.link}" target="_blank" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition-all">
+                        Ver aviso en Classroom <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </a>
+                ` : '';
+            }
+
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeAnnouncementDetailModal() {
+            const modal = document.getElementById('modal-announcement-detail');
+            if (modal) modal.style.display = 'none';
+        }
+
         async function loadAnnouncements() {
             try {
                 const res = await fetch('/api/announcements');
@@ -1038,29 +1254,45 @@
                 const data = await res.json();
                 const list = data.announcements || [];
                 cachedAnnouncements = list;
-                const badge = document.getElementById('bell-badge');
                 const container = document.getElementById('bell-announcements-list');
 
-                if (!badge || !container) return;
+                if (!container) return;
 
                 if (list.length > 0) {
-                    badge.textContent = list.length;
-                    badge.style.display = 'flex';
                     container.innerHTML = '';
+                    const read = getReadAnnouncements();
                     list.forEach(a => {
-                        container.innerHTML += `
-                            <div class="p-2.5 rounded-xl bg-cantera-50 dark:bg-slate-800/80 border border-cantera-200 dark:border-slate-700 flex flex-col gap-1 shadow-sm">
-                                <div class="flex justify-between items-center">
-                                    <span class="font-bold text-amber-700 dark:text-amber-300 truncate pr-1">${a.course_name}</span>
-                                    <span class="text-[10px] text-slate-400 shrink-0">${a.source}</span>
-                                </div>
-                                <p class="text-cantera-800 dark:text-slate-200 text-xs leading-relaxed">${a.content}</p>
-                                ${a.link ? `<a href="${a.link}" target="_blank" class="self-end text-indigo-600 dark:text-indigo-400 hover:underline text-[10px] font-semibold mt-0.5 flex items-center gap-1">Ver aviso <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i></a>` : ''}
+                        const cleanCourse = (a.course_name || '').replace(/_/g, ' ');
+                        const dateFormatted = formatAnnouncementDate(a.date);
+                        const aId = String(a.id || a.content);
+                        const isRead = read.includes(aId);
+
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = `p-2.5 rounded-xl border flex flex-col gap-1 shadow-sm cursor-pointer transition-all ${
+                            isRead 
+                                ? 'bg-cantera-50/60 dark:bg-slate-800/50 border-cantera-200 dark:border-slate-800 opacity-70' 
+                                : 'bg-cantera-50 dark:bg-slate-800/90 border-amber-300 dark:border-amber-700/60 hover:border-amber-400'
+                        }`;
+
+                        itemDiv.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <span class="font-bold text-amber-700 dark:text-amber-300 truncate pr-1">${cleanCourse}</span>
+                                <span class="text-[10px] text-cantera-500 dark:text-slate-400 font-medium shrink-0">${dateFormatted}</span>
                             </div>
+                            <p class="text-cantera-800 dark:text-slate-200 text-xs leading-relaxed line-clamp-3">${a.content}</p>
                         `;
+
+                        itemDiv.onclick = () => {
+                            openAnnouncementDetail(a);
+                            itemDiv.className = 'p-2.5 rounded-xl border flex flex-col gap-1 shadow-sm cursor-pointer transition-all bg-cantera-50/60 dark:bg-slate-800/50 border-cantera-200 dark:border-slate-800 opacity-70';
+                        };
+
+                        container.appendChild(itemDiv);
                     });
+                    updateAnnouncementBadge();
                 } else {
-                    badge.style.display = 'none';
+                    const badge = document.getElementById('bell-badge');
+                    if (badge) badge.style.display = 'none';
                     container.innerHTML = `<p class="text-slate-500 italic text-center py-3">No hay avisos recientes</p>`;
                 }
                 renderMiniCalendar();
@@ -1120,7 +1352,7 @@
             }
 
             if (selectedCourses.size > 0) {
-                filtered = filtered.filter(t => selectedCourses.has(t.course_name));
+                filtered = filtered.filter(t => selectedCourses.has((t.course_name || '').replace(/_/g, ' ')));
             }
 
             if (currentMissionFilter !== 'all' && currentMissionFilter !== 'open') {
@@ -1137,7 +1369,7 @@
                 const priority = { 'main': 1, 'daily': 2, 'secondary': 3, 'special': 4, 'rescue': 5, 'open': 6 };
                 filtered.sort((a, b) => (priority[a.mission_type] || 3) - (priority[b.mission_type] || 3));
             } else if (currentSortMode === 'course') {
-                filtered.sort((a, b) => (a.course_name || '').localeCompare(b.course_name || ''));
+                filtered.sort((a, b) => (a.course_name || '').replace(/_/g, ' ').localeCompare((b.course_name || '').replace(/_/g, ' ')));
             }
 
             renderTasks(filtered, 'timeline');
@@ -1149,7 +1381,9 @@
             listEl.innerHTML = '';
 
             const all = [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks, ...allNoDateTasks];
-            const courses = [...new Set(all.map(t => t.course_name).filter(Boolean))];
+            const taskCourses = all.map(t => (t.course_name || '').replace(/_/g, ' ')).filter(Boolean);
+            const enrolled = allEnrolledCourses.map(c => (c || '').replace(/_/g, ' ')).filter(Boolean);
+            const courses = [...new Set([...enrolled, ...taskCourses])].sort((a, b) => a.localeCompare(b));
 
             if (courses.length === 0) {
                 listEl.innerHTML = `<p class="text-cantera-600 dark:text-slate-500 italic text-[11px] py-1">Sin materias activas</p>`;
@@ -1160,7 +1394,7 @@
                 const isSelected = selectedCourses.has(course);
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = `w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between ${
+                btn.className = `w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${
                     isSelected 
                         ? 'bg-indigo-900/30 text-indigo-700 dark:text-indigo-200 border border-indigo-500 shadow-sm' 
                         : 'text-cantera-700 dark:text-slate-400 hover:text-cantera-900 dark:hover:text-slate-200 hover:bg-cantera-200/50 dark:hover:bg-slate-800/60'
@@ -1206,7 +1440,7 @@
         function updateMissionCounts() {
             let base = allUpcomingTasks;
             if (selectedCourses.size > 0) {
-                base = base.filter(t => selectedCourses.has(t.course_name));
+                base = base.filter(t => selectedCourses.has((t.course_name || '').replace(/_/g, ' ')));
             }
             const cAll = document.getElementById('count-all');
             const cMain = document.getElementById('count-main');
@@ -1605,8 +1839,11 @@
                 };
             }
 
-            const modal = document.getElementById('ignis-workspace-modal');
-            if (modal) modal.style.display = 'flex';
+            ignisViewMode = 'split';
+            updateIgnisPanes();
+
+            const backdrop = document.getElementById('ignis-workspace-backdrop');
+            if (backdrop) backdrop.style.display = 'flex';
             setTimeout(() => {
                 const inp = document.getElementById('chat-input');
                 if (inp) inp.focus();
@@ -1614,18 +1851,49 @@
         }
 
         function closeIgnisWorkspace() {
-            const modal = document.getElementById('ignis-workspace-modal');
-            if (modal) modal.style.display = 'none';
+            const backdrop = document.getElementById('ignis-workspace-backdrop');
+            if (backdrop) backdrop.style.display = 'none';
             currentTaskContext = null;
         }
 
-        document.addEventListener('mousedown', (e) => {
-            const modal = document.getElementById('ignis-workspace-modal');
-            if (!modal || modal.style.display === 'none') return;
-            if (!modal.contains(e.target) && !e.target.closest('button[onclick*="openIgnisWorkspace"]')) {
-                closeIgnisWorkspace();
+        function toggleIgnisView(view) {
+            if (ignisViewMode === view) {
+                ignisViewMode = 'split';
+            } else {
+                ignisViewMode = view;
             }
-        });
+            updateIgnisPanes();
+        }
+
+        function updateIgnisPanes() {
+            const docPane = document.getElementById('ignis-doc-pane');
+            const chatPane = document.getElementById('ignis-chat-pane');
+            const btnPdf = document.getElementById('btn-view-pdf');
+            const btnChat = document.getElementById('btn-view-chat');
+
+            if (!docPane || !chatPane) return;
+
+            if (ignisViewMode === 'pdf') {
+                docPane.style.display = 'flex';
+                docPane.className = "w-full h-full flex flex-col bg-cantera-50/70 dark:bg-slate-900/50";
+                chatPane.style.display = 'none';
+                if (btnPdf) btnPdf.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-sm flex items-center gap-1.5 cursor-pointer";
+                if (btnChat) btnChat.className = "px-2.5 py-1 rounded-lg text-xs font-medium bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-300 hover:bg-cantera-300 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer";
+            } else if (ignisViewMode === 'chat') {
+                docPane.style.display = 'none';
+                chatPane.style.display = 'flex';
+                chatPane.className = "w-full h-full flex flex-col bg-white dark:bg-slate-900/20";
+                if (btnPdf) btnPdf.className = "px-2.5 py-1 rounded-lg text-xs font-medium bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-300 hover:bg-cantera-300 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer";
+                if (btnChat) btnChat.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-sm flex items-center gap-1.5 cursor-pointer";
+            } else { // split
+                docPane.style.display = 'flex';
+                docPane.className = "w-full md:w-1/2 border-b md:border-b-0 md:border-r border-cantera-300 dark:border-slate-700 flex flex-col bg-cantera-50/70 dark:bg-slate-900/50";
+                chatPane.style.display = 'flex';
+                chatPane.className = "w-full md:w-1/2 flex flex-col bg-white dark:bg-slate-900/20";
+                if (btnPdf) btnPdf.className = "px-2.5 py-1 rounded-lg text-xs font-medium bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-300 hover:bg-cantera-300 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer";
+                if (btnChat) btnChat.className = "px-2.5 py-1 rounded-lg text-xs font-medium bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-300 hover:bg-cantera-300 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer";
+            }
+        }
 
         function autoSelectMentor(courseName) {
             const name = (courseName || '').toLowerCase();
@@ -1694,14 +1962,31 @@
 
             const container = document.getElementById('doc-viewer-container');
 
-            if (docViewMode === 'pdf' && doc.link && doc.link.includes('drive.google.com/file/d/')) {
-                const fileId = doc.link.split('/d/').at(1).split('/')[0];
+            let fileId = null;
+            if (doc.link) {
+                if (doc.link.includes('/file/d/')) {
+                    fileId = doc.link.split('/file/d/')[1].split('/')[0].split('?')[0];
+                } else if (doc.link.includes('id=')) {
+                    const m = doc.link.match(/id=([a-zA-Z0-9_-]+)/);
+                    if (m) fileId = m[1];
+                }
+            }
+
+            if (docViewMode === 'pdf' && fileId) {
                 const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
                 container.innerHTML = `
-                    <iframe src="${previewUrl}" class="w-full h-full min-h-[500px] border-0 rounded-xl bg-white" allow="autoplay"></iframe>
+                    <div class="w-full h-full flex flex-col">
+                        <iframe src="${previewUrl}" class="w-full flex-1 min-h-[460px] border-0 rounded-xl bg-white shadow-inner" allow="autoplay"></iframe>
+                        <div class="pt-2 px-1 flex items-center justify-between text-[11px] text-cantera-600 dark:text-slate-400">
+                            <span>¿El visor no carga tu cuenta escolar?</span>
+                            <a href="${doc.link}" target="_blank" class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center gap-1">
+                                Abrir en Drive <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                            </a>
+                        </div>
+                    </div>
                 `;
             } else {
-                container.innerHTML = `<div class="whitespace-pre-wrap p-3 text-xs leading-relaxed text-cantera-900 dark:text-slate-300">${doc.content}</div>`;
+                container.innerHTML = `<div class="whitespace-pre-wrap p-3 text-xs leading-relaxed text-cantera-900 dark:text-slate-300 font-sans">${doc.content || 'Sin contenido de texto adjunto.'}</div>`;
             }
 
             document.getElementById('doc-prev-btn').disabled = currentDocIndex === 0;
@@ -1946,6 +2231,193 @@
                     </details>
                 `;
             });
+        }
+
+        // Simulador Socrático de Exámenes
+        function openSocratesModal() {
+            const modal = document.getElementById('modal-socrates');
+            if (!modal) return;
+
+            const select = document.getElementById('socrates-course-select');
+            if (select) {
+                select.innerHTML = '';
+                const courses = getActiveCoursesList();
+                if (courses.length === 0) {
+                    select.innerHTML = '<option value="">No hay materias detectadas</option>';
+                } else {
+                    courses.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c;
+                        opt.textContent = c;
+                        select.appendChild(opt);
+                    });
+                }
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function closeSocratesModal() {
+            const modal = document.getElementById('modal-socrates');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function selectSocratesMode(mode) {
+            currentSocratesMode = mode;
+            ['teorico', 'practico', 'hibrido'].forEach(m => {
+                const btn = document.getElementById(`btn-soc-mode-${m}`);
+                if (!btn) return;
+                if (m === mode) {
+                    btn.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-sm transition-colors cursor-pointer";
+                } else {
+                    btn.className = "px-2.5 py-1 rounded-lg text-xs font-semibold bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-300 transition-colors cursor-pointer";
+                }
+            });
+        }
+
+        function getActiveCoursesList() {
+            const all = [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks, ...allNoDateTasks];
+            const taskCourses = all.map(t => (t.course_name || '').replace(/_/g, ' ')).filter(Boolean);
+            const enrolled = allEnrolledCourses.map(c => (c || '').replace(/_/g, ' ')).filter(Boolean);
+            const set = new Set([...enrolled, ...taskCourses]);
+            return [...set].sort((a, b) => a.localeCompare(b));
+        }
+
+        function getActiveProvider() {
+            const checked = document.querySelector('input[name="ai_provider"]:checked');
+            return checked ? checked.value : 'gemini';
+        }
+
+        async function startSocratesExam() {
+            const select = document.getElementById('socrates-course-select');
+            const courseName = select ? select.value : 'Materia Universitaria';
+            if (!courseName) {
+                alert("Por favor selecciona una materia.");
+                return;
+            }
+
+            socratesActiveCourse = courseName;
+            socratesChatHistory = [];
+            socratesExamActive = true;
+
+            const container = document.getElementById('socrates-messages');
+            container.innerHTML = `
+                <div class="text-center py-6">
+                    <i class="fa-solid fa-spinner fa-spin text-2xl text-indigo-500 mb-2"></i>
+                    <p class="text-xs text-cantera-600 dark:text-slate-400">Sócrates está formulando la primera pregunta diagnóstica para ${courseName}...</p>
+                </div>
+            `;
+
+            const input = document.getElementById('socrates-input');
+            const submitBtn = document.getElementById('socrates-submit-btn');
+            if (input) input.disabled = false;
+            if (submitBtn) submitBtn.disabled = false;
+
+            const provider = getActiveProvider();
+            try {
+                const res = await fetch('/api/socrates/exam', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider: provider,
+                        course_name: courseName,
+                        mode: currentSocratesMode,
+                        messages: [
+                            { role: 'user', content: `Comienza la simulación del examen oral en modalidad ${currentSocratesMode} para la materia ${courseName}. Preséntate brevemente con rigor socrático y formula la primera pregunta diagnóstica.` }
+                        ]
+                    })
+                });
+
+                const data = await res.json();
+                container.innerHTML = '';
+                const responseText = data.response || 'Iniciando examen oral...';
+                appendSocratesMessage('assistant', responseText);
+                socratesChatHistory.push({ role: 'assistant', content: responseText });
+                if (input) {
+                    input.value = '';
+                    input.focus();
+                }
+            } catch (err) {
+                container.innerHTML = `<p class="text-xs text-rose-500 p-4">Error conectando con Sócrates: ${err.message}</p>`;
+            }
+        }
+
+        async function handleSocratesSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('socrates-input');
+            const userText = input ? input.value.trim() : '';
+            if (!userText || !socratesExamActive) return;
+
+            appendSocratesMessage('user', userText);
+            socratesChatHistory.push({ role: 'user', content: userText });
+            input.value = '';
+
+            const container = document.getElementById('socrates-messages');
+            const typingId = 'soc-typing-' + Date.now();
+            const typingDiv = document.createElement('div');
+            typingDiv.id = typingId;
+            typingDiv.className = "flex items-start gap-3";
+            typingDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-500/30">
+                    <i class="fa-solid fa-graduation-cap text-xs"></i>
+                </div>
+                <div class="bg-cantera-50 dark:bg-slate-900 p-3 rounded-2xl rounded-tl-none border border-cantera-300 dark:border-slate-700 text-xs text-cantera-900 dark:text-slate-200">
+                    <i class="fa-solid fa-ellipsis fa-fade"></i> Sócrates está analizando tu respuesta...
+                </div>
+            `;
+            container.appendChild(typingDiv);
+            container.scrollTop = container.scrollHeight;
+
+            const provider = getActiveProvider();
+            try {
+                const res = await fetch('/api/socrates/exam', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider: provider,
+                        course_name: socratesActiveCourse,
+                        mode: currentSocratesMode,
+                        messages: socratesChatHistory
+                    })
+                });
+
+                const typingEl = document.getElementById(typingId);
+                if (typingEl) typingEl.remove();
+
+                const data = await res.json();
+                const responseText = data.response || '...';
+                appendSocratesMessage('assistant', responseText);
+                socratesChatHistory.push({ role: 'assistant', content: responseText });
+            } catch (err) {
+                const typingEl = document.getElementById(typingId);
+                if (typingEl) typingEl.remove();
+                appendSocratesMessage('assistant', `Error procesando la respuesta: ${err.message}`);
+            }
+        }
+
+        function appendSocratesMessage(role, content) {
+            const container = document.getElementById('socrates-messages');
+            if (!container) return;
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = "flex items-start gap-3 " + (role === 'user' ? "flex-row-reverse" : "");
+
+            const icon = role === 'user' ?
+                `<div class="w-8 h-8 rounded-full bg-cantera-200 dark:bg-slate-700 flex items-center justify-center shrink-0 border border-cantera-300 dark:border-slate-600 text-cantera-800 dark:text-slate-300"><i class="fa-solid fa-user text-xs"></i></div>` :
+                `<div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-500/30"><i class="fa-solid fa-graduation-cap text-indigo-500 text-xs"></i></div>`;
+
+            const bubbleClass = role === 'user' ?
+                "bg-indigo-600 text-white rounded-2xl rounded-tr-none shadow-sm" :
+                "bg-cantera-50 dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 text-cantera-900 dark:text-slate-200 rounded-2xl rounded-tl-none shadow-sm";
+
+            msgDiv.innerHTML = `
+                ${icon}
+                <div class="${bubbleClass} p-3.5 max-w-[85%] text-xs leading-relaxed whitespace-pre-wrap">
+                    ${content}
+                </div>
+            `;
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
         }
     </script>
 </body>
