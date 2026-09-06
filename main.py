@@ -97,6 +97,20 @@ app = FastAPI(title="Agora")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+
+ALEX_EMAIL = "alexmunoz918@gmail.com"
+
+def get_session_user_email(creds) -> str:
+    if not creds:
+        return ""
+    try:
+        from googleapiclient.discovery import build
+        service = build('classroom', 'v1', credentials=creds)
+        profile = service.userProfiles().get(userId='me').execute()
+        return profile.get('emailAddress', '').lower().strip()
+    except Exception:
+        return ""
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
@@ -169,6 +183,14 @@ async def auth_callback(request: Request, code: str = None, error: str = None):
 
         print(f"Autenticacion completada con exito para sesion: {session_id}")
 
+        try:
+            from services.mock_data_service import cycle_alex_stage
+            user_em = get_session_user_email(creds)
+            if user_em == ALEX_EMAIL:
+                cycle_alex_stage()
+        except Exception:
+            pass
+
         is_https = "https" in redirect_uri
         response = RedirectResponse(url="/", status_code=303)
         response.set_cookie(
@@ -212,6 +234,12 @@ async def get_courses(request: Request):
     if not creds:
         return JSONResponse(status_code=401, content={"error": "Not authenticated"})
 
+    user_email = get_session_user_email(creds)
+    if user_email == ALEX_EMAIL:
+        from services.mock_data_service import get_alex_stage_data
+        alex_data = get_alex_stage_data()
+        return {"courses": alex_data["courses"]}
+
     try:
         courses = fetch_courses(creds=creds)
         return {"courses": courses}
@@ -231,6 +259,25 @@ async def get_tasks(request: Request):
     if not creds:
         return JSONResponse(status_code=401, content={"error": "Not authenticated"})
 
+    user_email = get_session_user_email(creds)
+
+    # Si es Alex, servir paquete de datos falsos de la etapa activa
+    if user_email == ALEX_EMAIL:
+        from services.mock_data_service import get_alex_stage_data
+        alex_data = get_alex_stage_data()
+        tasks = alex_data["tasks"]
+        tasks_with_dates = [t for t in tasks if t.get('due_date')]
+        tasks_without_dates = [t for t in tasks if not t.get('due_date')]
+        return {
+            "user_email": user_email,
+            "mock_stage_id": alex_data["id"],
+            "mock_stage_name": alex_data["name"],
+            "mock_streak_weeks": alex_data["streak_weeks"],
+            "mock_streak_days": alex_data["streak_days"],
+            "tasks_with_dates": tasks_with_dates,
+            "tasks_without_dates": tasks_without_dates
+        }
+
     try:
         tasks = fetch_tasks(creds=creds)
         try:
@@ -243,15 +290,6 @@ async def get_tasks(request: Request):
                     t['notes'] = states[t_id].get('notes', '')
         except Exception:
             pass
-
-        user_email = ""
-        try:
-            from googleapiclient.discovery import build
-            service = build('classroom', 'v1', credentials=creds)
-            profile = service.userProfiles().get(userId='me').execute()
-            user_email = profile.get('emailAddress', '')
-        except Exception as e:
-            print(f"No se pudo obtener email de perfil: {e}")
 
         tasks_with_dates = [t for t in tasks if t.get('due_date')]
         tasks_without_dates = [t for t in tasks if not t.get('due_date')]
@@ -298,12 +336,27 @@ async def api_announcements(request: Request):
     if not creds:
         return {"announcements": []}
 
+    user_email = get_session_user_email(creds)
+    if user_email == ALEX_EMAIL:
+        from services.mock_data_service import get_alex_stage_data
+        alex_data = get_alex_stage_data()
+        return {"announcements": alex_data["announcements"]}
+
     try:
         alerts = get_announcements_and_alerts(creds=creds)
         return {"announcements": alerts}
     except Exception as e:
         print(f"Error obteniendo avisos: {e}")
         return {"announcements": []}
+
+@app.post("/api/alex/stage/cycle")
+async def cycle_alex_semester_stage(request: Request):
+    """
+    Permite rotar o cambiar la etapa del semestre de prueba para Alex.
+    """
+    from services.mock_data_service import cycle_alex_stage
+    new_stage = cycle_alex_stage()
+    return {"ok": True, "stage": new_stage}
 
 @app.post("/api/copilot/ask")
 async def ask_ai(request: Request):
