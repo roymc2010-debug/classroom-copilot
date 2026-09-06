@@ -9,12 +9,12 @@ PROVIDERS = {
     "gemini": {
         "api_key": os.getenv("GEMINI_API_KEY"),
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
-        "model": "gemini-2.0-flash"
+        "model": "gemini-3.6-flash"
     },
     "groq": {
         "api_key": os.getenv("GROQ_API_KEY"),
         "base_url": "https://api.groq.com/openai/v1",
-        "model": "llama-3.1-8b-instant"
+        "model": "openai/gpt-oss-20b"
     },
     "openrouter": {
         "api_key": os.getenv("OPENROUTER_API_KEY"),
