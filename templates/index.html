@@ -67,6 +67,45 @@
 </head>
 <body class="h-screen overflow-hidden font-sans flex flex-col transition-colors duration-300">
 
+    <!-- Splash Screen Inicial: Logo Centralizado Escalable -->
+    <div id="splash-screen" class="fixed inset-0 z-[100] bg-[#081326] flex flex-col items-center justify-center p-6 transition-opacity duration-700 select-none">
+        <!-- Glow ambiental de fondo -->
+        <div class="absolute w-96 h-96 rounded-full bg-sky-500/10 blur-3xl pointer-events-none"></div>
+        <div class="absolute w-80 h-80 rounded-full bg-amber-500/10 blur-3xl pointer-events-none translate-y-10"></div>
+
+        <div class="relative flex flex-col items-center text-center max-w-sm w-full z-10">
+            <!-- Ícono Maestro Oficial con sutil animación de respiración -->
+            <div class="relative mb-6">
+                <img src="/static/agora_logo_512.png" alt="Ágora" class="w-32 h-32 md:w-44 md:h-44 rounded-[36px] shadow-2xl border-2 border-sky-500/30 object-contain transform transition-transform duration-500 hover:scale-105">
+                <div class="absolute inset-0 rounded-[36px] shadow-[0_0_50px_rgba(245,158,11,0.25)] pointer-events-none"></div>
+            </div>
+
+            <!-- Título y subtítulo -->
+            <h1 class="text-3xl md:text-4xl font-extrabold tracking-wider text-white mb-1.5 font-serif" style="letter-spacing: 0.18em;">ÁGORA</h1>
+            <p class="text-xs font-semibold uppercase tracking-widest text-amber-400 mb-6">Santuario de Enfoque Académico</p>
+
+            <!-- Estado de Carga Inicial -->
+            <div id="splash-loading-state" class="flex flex-col items-center gap-3 w-full">
+                <div class="w-48 h-1.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
+                    <div class="h-full bg-gradient-to-r from-amber-500 via-sky-400 to-amber-500 rounded-full animate-pulse w-full"></div>
+                </div>
+                <p class="text-[11px] text-slate-400 font-medium tracking-wide">Sincronizando santuario...</p>
+            </div>
+
+            <!-- Estado de Login (Si no tiene sesión activa) -->
+            <div id="splash-auth-state" style="display: none;" class="flex flex-col items-center gap-3.5 w-full mt-2">
+                <p class="text-xs text-slate-300 leading-relaxed mb-2">
+                    Conecta tu cuenta de Google Classroom para sincronizar tus materias, organizar tus misiones y consultar a Ignis.
+                </p>
+                <a href="/auth/login" class="w-full py-3.5 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-3 shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 transition-all cursor-pointer">
+                    <i class="fa-brands fa-google text-sm"></i>
+                    <span>Iniciar sesión con Google</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Encabezado Superior -->
     <header class="sticky top-0 z-30 backdrop-blur-md bg-cantera-100/90 dark:bg-night-900/90 border-b border-cantera-300 dark:border-slate-800 transition-colors shrink-0">
         <div class="w-full px-6 py-3 flex justify-between items-center">

@@ -295,7 +295,11 @@ async function loadTasks() {
     try {
         const response = await fetch('/api/tasks');
         if (response.status === 401) {
-            if (authWarning) authWarning.style.display = 'flex';
+            const splashLoading = document.getElementById('splash-loading-state');
+            const splashAuth = document.getElementById('splash-auth-state');
+            if (splashLoading) splashLoading.style.display = 'none';
+            if (splashAuth) splashAuth.style.display = 'flex';
+            if (authWarning) authWarning.style.display = 'none'; // Usar el splash centralizado
             if (loading) loading.style.display = 'none';
             return;
         }
@@ -378,8 +382,25 @@ async function loadTasks() {
 
         if (timelineView) timelineView.style.display = 'block';
 
+        // Desvanecimiento suave del Splash Screen hacia la página principal
+        setTimeout(() => {
+            const splash = document.getElementById('splash-screen');
+            if (splash) {
+                splash.style.opacity = '0';
+                splash.style.pointerEvents = 'none';
+                setTimeout(() => splash.remove(), 750);
+            }
+        }, 600);
+
     } catch (error) {
         console.error("Error loading tasks:", error);
+        // Si hay un error imprevisto de red, desvanecer splash para no congelar la pantalla
+        const splash = document.getElementById('splash-screen');
+        if (splash) {
+            splash.style.opacity = '0';
+            splash.style.pointerEvents = 'none';
+            setTimeout(() => splash.remove(), 500);
+        }
     } finally {
         if (loading) loading.style.display = 'none';
     }
