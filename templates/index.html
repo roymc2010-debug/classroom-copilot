@@ -1,4 +1,1084 @@
 <!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ágora — Espacio de estudio y misiones</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cantera: {
+                            50: '#FDFBF7',
+                            100: '#FBF8F3',
+                            200: '#F4EFE6',
+                            300: '#ECE6DB',
+                            400: '#DCD5C9',
+                            500: '#BDB3A1',
+                            600: '#8C7F6B'
+                        },
+                        noche: {
+                            900: '#121316',
+                            800: '#18191D',
+                            700: '#1E1F24',
+                            600: '#282B33',
+                            500: '#383C47'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Tipografía y scrollbar elegante */
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(150, 140, 125, 0.3); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(150, 140, 125, 0.5); }
+    </style>
+</head>
+<body class="h-full bg-[#F4EFE6] dark:bg-[#121316] text-gray-800 dark:text-gray-100 flex flex-col transition-colors duration-200 select-none">
+
+    <!-- ========================================================================= -->
+    <!-- BARRA SUPERIOR (HEADER PRINCIPAL)                                         -->
+    <!-- ========================================================================= -->
+    <header class="w-full bg-[#FBF8F3] dark:bg-[#1E1F24] border-b border-[#E6E0D4] dark:border-[#2D3039] px-4 py-2.5 flex items-center justify-between shadow-sm z-30 flex-shrink-0">
+        <!-- Logo y Branding -->
+        <div class="flex items-center gap-3">
+            <button id="btn-toggle-sidebar" class="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 md:hidden">
+                ☰
+            </button>
+            <div class="w-8 h-8 rounded-xl bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/30 flex items-center justify-center text-lg shadow-inner">
+                🏛️
+            </div>
+            <div>
+                <h1 class="text-base font-black tracking-tight text-gray-900 dark:text-white leading-none">Ágora</h1>
+                <span class="text-[10px] font-medium text-gray-500 dark:text-gray-400 tracking-wider">Espacio de estudio y misiones</span>
+            </div>
+        </div>
+
+        <!-- Centro / Derecha: Barra de Semestre, Helios/Selene, Notificaciones y Racha -->
+        <div class="flex items-center gap-3 md:gap-5">
+            
+            <!-- Barra Tripartita del Semestre -->
+            <div class="hidden lg:flex flex-col items-end w-48 xl:w-64">
+                <div class="flex items-center justify-between w-full text-[10px] font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                    <span>Progreso del Semestre</span>
+                    <span id="semestre-porcentaje" class="text-blue-600 dark:text-blue-400 font-bold">23%</span>
+                </div>
+                <div class="w-full h-2 rounded-full bg-gray-200 dark:bg-[#282B33] overflow-hidden flex shadow-inner">
+                    <div id="barra-calificadas" style="width: 15%" class="h-full bg-emerald-500 transition-all duration-500" title="Calificadas"></div>
+                    <div id="barra-revision" style="width: 8%" class="h-full bg-blue-500 transition-all duration-500" title="En revisión"></div>
+                    <div id="barra-pendientes" style="width: 77%" class="h-full bg-gray-300 dark:bg-gray-600 transition-all duration-500" title="Pendientes"></div>
+                </div>
+                <div class="flex gap-2 text-[9px] text-gray-400 mt-0.5">
+                    <span><strong id="conteo-calificadas" class="text-emerald-600 dark:text-emerald-400">2</strong> calificadas</span>
+                    <span><strong id="conteo-revision" class="text-blue-600 dark:text-blue-400">3</strong> en revisión</span>
+                </div>
+            </div>
+
+            <!-- Interruptor Cincelado Helios (Sol) y Selene (Luna) -->
+            <button onclick="toggleTemaHeliosSelene()" 
+                    id="btn-tema-cincelado"
+                    title="Alternar entre Helios (Cantera) y Selene (Noche Estrellada)"
+                    class="relative flex items-center p-0.5 rounded-xl transition-all
+                           bg-[#EAE3D6] dark:bg-[#16181D]
+                           border border-[#D4CBBF] dark:border-[#282B33]
+                           shadow-[inset_1.5px_1.5px_3px_rgba(0,0,0,0.15),inset_-1px_-1px_2px_rgba(255,255,255,0.8)]
+                           dark:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.7),inset_-1px_-1px_2px_rgba(255,255,255,0.05)]">
+                <div id="indicador-helios" class="px-2 py-1 rounded-lg flex items-center gap-1 text-[11px] font-bold bg-[#FAF7F2] text-amber-700 shadow-sm dark:bg-transparent dark:text-gray-500 transition-all">
+                    ☀️ <span class="hidden sm:inline">Helios</span>
+                </div>
+                <div id="indicador-selene" class="px-2 py-1 rounded-lg flex items-center gap-1 text-[11px] font-bold text-gray-400 dark:bg-[#23262F] dark:text-blue-300 dark:shadow-[inset_1px_1px_2px_rgba(255,255,255,0.1)] transition-all">
+                    🌙 <span class="hidden sm:inline">Selene</span>
+                </div>
+            </button>
+
+            <!-- Campana de Avisos (Popover) -->
+            <div class="relative">
+                <button onclick="togglePopoverAvisos()" class="p-2 rounded-xl bg-[#ECE6DB] dark:bg-[#282B33] border border-[#DCD5C9] dark:border-[#383C47] text-gray-700 dark:text-gray-200 hover:text-amber-700 transition relative">
+                    🔔
+                    <span id="avisos-badge" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-600 text-white text-[10px] font-bold flex items-center justify-center shadow-md animate-pulse hidden">
+                        1
+                    </span>
+                </button>
+
+                <!-- Menú Desplegable de Avisos -->
+                <div id="popover-avisos" class="hidden absolute right-0 mt-2 w-80 md:w-96 rounded-2xl bg-[#FBF8F3] dark:bg-[#1E1F24] border border-[#DCD5C9] dark:border-[#383C47] shadow-2xl p-3 z-50">
+                    <div class="flex items-center justify-between border-b border-[#E6E0D4] dark:border-[#2D3039] pb-2 mb-2">
+                        <span class="text-xs font-bold text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
+                            🔔 Avisos de Profesores
+                        </span>
+                        <button onclick="togglePopoverAvisos()" class="text-gray-400 hover:text-gray-600 text-xs">✕</button>
+                    </div>
+                    <div id="lista-avisos" class="space-y-2 max-h-80 overflow-y-auto pr-1">
+                        <!-- Se llena vía JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- La Antorcha (Racha Estricta) -->
+            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#ECE6DB] dark:bg-[#282B33] border border-[#DCD5C9] dark:border-[#383C47] text-xs font-bold text-gray-700 dark:text-gray-200 shadow-inner">
+                <span class="text-base text-amber-500">🔥</span>
+                <span id="contador-racha">0</span>
+                <span class="hidden sm:inline font-normal text-gray-500 dark:text-gray-400 text-[10px]">días racha</span>
+            </div>
+
+            <!-- Cerrar Sesión -->
+            <a href="/logout" title="Cerrar sesión de Google" class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition text-sm">
+                🚪
+            </a>
+        </div>
+    </header>
+
+    <!-- ========================================================================= -->
+    <!-- CUERPO PRINCIPAL (LAYOUT LATERAL + CONTENIDO)                              -->
+    <!-- ========================================================================= -->
+    <div class="flex-1 flex overflow-hidden">
+
+        <!-- BARRA LATERAL IZQUIERDA -->
+        <aside id="sidebar-principal" class="w-64 md:w-72 bg-[#FBF8F3] dark:bg-[#1E1F24] border-r border-[#E6E0D4] dark:border-[#2D3039] flex flex-col justify-between overflow-y-auto flex-shrink-0 p-3 space-y-4">
+            <div class="space-y-4">
+                
+                <!-- SECCIÓN: MATERIAS -->
+                <div class="bg-[#F4EFE6] dark:bg-[#18191D] rounded-xl p-2.5 border border-[#E6E0D4] dark:border-[#2D3039]">
+                    <button onclick="toggleAcordeon('seccion-materias')" class="w-full flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                        <span class="flex items-center gap-1.5">📖 Materias</span>
+                        <span id="chevron-materias">▲</span>
+                    </button>
+                    <ul id="seccion-materias" class="mt-2 space-y-1 text-xs">
+                        <li class="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 truncate font-semibold text-amber-800 dark:text-amber-400">SISTEMAS INTELIGENTES 2</li>
+                        <li class="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 truncate font-semibold text-amber-800 dark:text-amber-400">TEORIA DE SISTEMAS II 2026B 9am</li>
+                        <li class="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 truncate font-semibold text-amber-800 dark:text-amber-400">SEMINARIO DE PROBLEMAS DE MODEL...</li>
+                        <li class="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 truncate font-semibold text-amber-800 dark:text-amber-400">TUTORIAS_2026B_SEMINARIO_</li>
+                    </ul>
+                </div>
+
+                <!-- SECCIÓN: CENTRO DE MISIONES (FILTROS) -->
+                <div class="bg-[#F4EFE6] dark:bg-[#18191D] rounded-xl p-2.5 border border-[#E6E0D4] dark:border-[#2D3039]">
+                    <div class="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1.5">
+                        🎯 Centro de Misiones
+                    </div>
+                    <div class="space-y-1 text-xs font-medium">
+                        <button onclick="filtrarMisiones('todas')" class="w-full flex items-center justify-between p-1.5 rounded-lg bg-amber-500/10 text-amber-800 dark:text-amber-300 font-bold">
+                            <span>Todas las misiones</span>
+                            <span id="badge-total-misiones" class="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-[10px]">5</span>
+                        </button>
+                        <button onclick="filtrarMisiones('principal')" class="w-full flex items-center justify-between p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300">
+                            <span>🛡️ Principal</span>
+                            <span class="text-[10px] text-gray-400">1</span>
+                        </button>
+                        <button onclick="filtrarMisiones('secundarias')" class="w-full flex items-center justify-between p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300">
+                            <span>🛡️ Secundarias</span>
+                            <span class="text-[10px] text-gray-400">4</span>
+                        </button>
+                        <button onclick="filtrarMisiones('rescate')" class="w-full flex items-center justify-between p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300">
+                            <span>🎯 Rescate</span>
+                            <span class="text-[10px] text-gray-400">5</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN: SIMULADOR SOCRÁTICO (EXÁMENES UNIVERSALES) -->
+                <button onclick="abrirModalSocrates()" 
+                        class="w-full flex items-center justify-between px-3.5 py-3 rounded-xl bg-[#F4EFE6] dark:bg-[#18191D] border border-[#E6E0D4] dark:border-[#2D3039] hover:border-amber-500/50 hover:bg-amber-500/10 transition text-left group shadow-sm">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-xl group-hover:scale-110 transition-transform">🏛️</span>
+                        <div>
+                            <span class="text-xs font-bold text-gray-800 dark:text-gray-100 block">Simulador Socrático</span>
+                            <span class="text-[10px] text-gray-500 dark:text-gray-400 block">Exámenes orales departamentales</span>
+                        </div>
+                    </div>
+                    <span class="text-xs text-amber-600 dark:text-amber-400 font-bold opacity-0 group-hover:opacity-100 transition-opacity">Iniciar →</span>
+                </button>
+
+                <!-- SECCIÓN: TEMPORIZADOR POMODORO (2 Fases: Foco y Descanso Esmeralda) -->
+                <div class="bg-[#F4EFE6] dark:bg-[#18191D] rounded-xl p-3 border border-[#E6E0D4] dark:border-[#2D3039] text-center">
+                    <div class="flex items-center justify-between text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                        <span id="pomo-fase" class="text-emerald-600 dark:text-emerald-400 uppercase">Foco Esmeralda</span>
+                        <span class="text-[9px] text-gray-400">Espacio = Play/Pausa</span>
+                    </div>
+                    <div id="pomo-reloj" class="text-3xl font-black font-mono tracking-wider text-gray-900 dark:text-white my-1">
+                        25:00
+                    </div>
+                    <div class="flex justify-center gap-2 mt-2">
+                        <button onclick="toggleTemporizador()" id="btn-pomo-toggle" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow transition">
+                            Iniciar
+                        </button>
+                        <button onclick="resetTemporizador()" class="px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold hover:bg-gray-300">
+                            Reiniciar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN: DÍAS DE CLASE (CALENDARIO DE 4 PUNTOS SEMÁNTICOS) -->
+                <div class="bg-[#F4EFE6] dark:bg-[#18191D] rounded-xl p-3 border border-[#E6E0D4] dark:border-[#2D3039]">
+                    <div class="flex items-center justify-between text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">
+                        <span>DÍAS DE CLASE</span>
+                        <span class="text-blue-600 font-mono text-[10px]">SEPT</span>
+                    </div>
+                    <!-- Cuadrícula del Calendario -->
+                    <div class="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-gray-500 mb-1">
+                        <span>D</span><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span>
+                    </div>
+                    <div id="grid-calendario" class="grid grid-cols-7 gap-1 text-center text-xs">
+                        <!-- Generado dinámicamente con puntos semánticos -->
+                    </div>
+                    <!-- Leyenda de 4 puntos semánticos -->
+                    <div class="grid grid-cols-2 gap-1 mt-2.5 pt-2 border-t border-[#E6E0D4] dark:border-[#2D3039] text-[9px] text-gray-500 dark:text-gray-400">
+                        <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Pendiente</span>
+                        <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Entregada</span>
+                        <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Examen</span>
+                        <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Aviso</span>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- ÁREA CENTRAL DE MISIONES -->
+        <main class="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-[#E6E0D4] dark:border-[#2D3039]">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900 dark:text-white">Próximas entregas</h2>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Misiones activas sincronizadas desde Google Classroom</p>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                    <span class="text-gray-400">Filtrado:</span>
+                    <span id="filtro-activo-nombre" class="font-bold text-amber-700 dark:text-amber-400">Todas</span>
+                </div>
+            </div>
+
+            <!-- Contenedor de Tarjetas de Misiones -->
+            <div id="contenedor-misiones" class="space-y-3">
+                <p class="text-xs text-gray-500 text-center py-10">Cargando misiones de Google Classroom...</p>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- COMPONENTES FLOTANTES (FRANKLIN CINCELADO Y RELOJ DIGITAL)                -->
+    <!-- ========================================================================= -->
+    <div class="fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2">
+        
+        <!-- Tarjeta Desplegable de Franklin -->
+        <div id="franklin-card" class="hidden w-80 p-4 rounded-2xl bg-[#FBF8F3] dark:bg-[#1E1F24] border border-[#DCD5C9] dark:border-[#383C47] shadow-2xl mb-1 transition-all">
+            <div class="flex items-center justify-between border-b border-[#E6E0D4] dark:border-[#2D3039] pb-2 mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 flex items-center gap-1.5">
+                    <span>⏳</span> Estratega Franklin
+                </span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold">
+                    La Antorcha
+                </span>
+            </div>
+            <p id="franklin-mensaje" class="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                Revisando calendario: Tienes entregas próximas de Teoría de Sistemas. Dedica un bloque de 25 min en el Temporizador para mantener la Antorcha encendida.
+            </p>
+        </div>
+
+        <!-- Botón Cincelado de Franklin (Reloj de Arena) -->
+        <div class="relative">
+            <button onclick="toggleFranklinCard()" 
+                    title="Estratega de Rutina - Benjamin Franklin"
+                    class="w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-95
+                           bg-[#F0EAE1] dark:bg-[#1C1E24]
+                           border border-[#D6CDBD] dark:border-[#2C303B]
+                           shadow-[inset_1.5px_1.5px_3px_rgba(0,0,0,0.18),inset_-1.5px_-1.5px_3px_rgba(255,255,255,0.9)]
+                           dark:shadow-[inset_2px_2px_4px_rgba(0,0,0,0.6),inset_-1px_-1px_2px_rgba(255,255,255,0.06)] group">
+                <svg class="w-5 h-5 text-[#7A6F5D] dark:text-[#A8A29E] group-hover:text-amber-700 dark:group-hover:text-amber-400 transition-colors drop-shadow-[0_1px_0_rgba(255,255,255,0.7)] dark:drop-shadow-[0_1px_0_rgba(0,0,0,0.8)]" 
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 22h14"/><path d="M5 2h14"/>
+                    <path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/>
+                    <path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>
+                </svg>
+            </button>
+            <span id="franklin-badge" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-600 text-white text-[10px] font-bold flex items-center justify-center shadow-md">
+                1
+            </span>
+        </div>
+
+        <!-- Reloj Digital Flotante -->
+        <div class="px-3.5 py-1.5 rounded-xl bg-[#FBF8F3]/90 dark:bg-[#1E1F24]/90 backdrop-blur-md border border-[#DCD5C9] dark:border-[#383C47] shadow-lg flex items-center gap-2 text-xs font-mono font-bold text-gray-700 dark:text-gray-200">
+            <span>🕒</span>
+            <span id="reloj-hora">00:00:00</span>
+            <span id="reloj-fecha" class="text-[10px] text-gray-400 uppercase font-sans">SÁB, 5 SEPT</span>
+        </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL DE IGNIS (VISOR OFICIAL Y TUTOR DE TAREA CON 2 RENGLONES)           -->
+    <!-- ========================================================================= -->
+    <div id="modal-ignis" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 md:p-4">
+        <div class="bg-[#FBF8F3] dark:bg-[#1E1F24] border border-[#E6E0D4] dark:border-[#2D3039] rounded-2xl w-full max-w-7xl h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+            
+            <!-- RENGLÓN 1: SUPERIOR GLOBAL -->
+            <div class="w-full px-4 py-2.5 border-b border-[#E6E0D4] dark:border-[#2D3039] bg-[#FBF8F3] dark:bg-[#1E1F24] flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-1.5 font-bold text-gray-800 dark:text-gray-100">
+                        <span class="text-amber-500 text-lg">🔥</span>
+                        <span>Ignis</span>
+                    </div>
+                    <div class="h-4 w-[1px] bg-gray-300 dark:bg-gray-700"></div>
+                    <select id="mentor-select" class="text-xs font-semibold bg-[#ECE6DB] dark:bg-[#282B33] border border-[#DCD5C9] dark:border-[#383C47] text-gray-800 dark:text-gray-200 rounded-lg px-2.5 py-1 cursor-pointer">
+                        <option value="auto">Selección Automática por Materia</option>
+                        <option value="newton">Isaac Newton (Exactas / Laplace)</option>
+                        <option value="tesla">Nikola Tesla (Hardware / Arduino)</option>
+                        <option value="lovelace">Ada Lovelace (Software / Código)</option>
+                        <option value="turing">Alan Turing (Sistemas / Lógica)</option>
+                        <option value="gropius">Walter Gropius (Diseño Web / UI)</option>
+                        <option value="worth">Charles Worth (Diseño de Moda)</option>
+                        <option value="dewolfe">Elsie de Wolfe (Diseño de Interiores)</option>
+                        <option value="artemisia">Artemisia Gentileschi (Artes Visuales)</option>
+                        <option value="vitruvio">Marco Vitruvio (Arquitectura)</option>
+                        <option value="curie">Marie Curie (Química / Farmacia)</option>
+                        <option value="pasteur">Louis Pasteur (Biología / Biotec)</option>
+                        <option value="osler">William Osler (Medicina / Salud)</option>
+                        <option value="sorjuana">Sor Juana (Redacción Académica)</option>
+                        <option value="ciceron">Marco Tulio Cicerón (Derecho)</option>
+                        <option value="wundt">Wilhelm Wundt (Psicología)</option>
+                        <option value="smith">Adam Smith (Economía / Finanzas)</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center bg-[#ECE6DB] dark:bg-[#282B33] p-0.5 rounded-lg text-[11px] font-medium border border-[#DCD5C9] dark:border-[#383C47]">
+                        <button onclick="setProvider('gemini')" id="btn-prov-gemini" class="px-2.5 py-1 rounded-md text-gray-600 dark:text-gray-300">Gemini</button>
+                        <button onclick="setProvider('groq')" id="btn-prov-groq" class="px-2.5 py-1 rounded-md text-gray-600 dark:text-gray-300">Groq</button>
+                        <button onclick="setProvider('openrouter')" id="btn-prov-openrouter" class="px-2.5 py-1 rounded-md bg-white dark:bg-[#1E1F24] text-blue-600 dark:text-blue-400 font-bold shadow-sm">OpenRouter</button>
+                    </div>
+                    <button onclick="cerrarModalIgnis()" class="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm font-bold">✕</button>
+                </div>
+            </div>
+
+            <!-- RENGLÓN 2: SUB-BARRA EXTENDIDA DE LADO A LADO -->
+            <div class="w-full px-4 py-2 border-b border-[#E6E0D4] dark:border-[#2D3039] bg-[#F4EFE6] dark:bg-[#18191D] flex items-center justify-between gap-4">
+                <div class="flex items-center flex-shrink-0">
+                    <div class="flex items-center bg-[#ECE6DB] dark:bg-[#282B33] p-0.5 rounded-lg border border-[#DCD5C9] dark:border-[#383C47] text-xs font-semibold shadow-inner">
+                        <button id="btn-toggle-pdf" onclick="toggleVistaIgnis('pdf')" class="px-3 py-1 rounded-md text-gray-700 dark:text-gray-300 hover:text-amber-800 flex items-center gap-1.5 transition">
+                            <span>📄</span> PDF
+                        </button>
+                        <button id="btn-toggle-chat" onclick="toggleVistaIgnis('chat')" class="px-3 py-1 rounded-md text-gray-700 dark:text-gray-300 hover:text-amber-800 flex items-center gap-1.5 transition">
+                            <span>🔥</span> Ignis
+                        </button>
+                    </div>
+                </div>
+                <div class="flex-1 text-center min-w-0 px-2">
+                    <span id="subbarra-tarea-titulo" class="text-xs md:text-sm font-bold text-gray-800 dark:text-gray-200 truncate block">
+                        Cargando documento...
+                    </span>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0 justify-end">
+                    <button id="btn-adjuntar-archivo" class="hidden text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline flex items-center gap-1">
+                        <span>📎</span> Adjuntar
+                    </button>
+                    <div class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 bg-[#ECE6DB] dark:bg-[#282B33] px-2 py-0.5 rounded-lg border border-[#DCD5C9] dark:border-[#383C47]">
+                        <button id="btn-pdf-prev" class="px-1 hover:text-amber-700">&lt;</button>
+                        <span id="pdf-pagina-actual" class="font-mono">1/1</span>
+                        <button id="btn-pdf-next" class="px-1 hover:text-amber-700">&gt;</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANELES DIVIDIDOS (VISOR DE DOCUMENTO + CHAT IGNIS) -->
+            <div class="flex-1 flex overflow-hidden">
+                <div id="ignis-panel-pdf" class="w-1/2 h-full border-r border-[#E6E0D4] dark:border-[#2D3039] bg-gray-100 dark:bg-[#121316] relative transition-all duration-200">
+                    <iframe id="iframe-pdf-visor" class="w-full h-full border-0" src=""></iframe>
+                </div>
+                <div id="ignis-panel-chat" class="w-1/2 h-full flex flex-col bg-[#FBF8F3] dark:bg-[#1E1F24] transition-all duration-200">
+                    <div id="ignis-chat-mensajes" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+                    <div class="p-3 border-t border-[#E6E0D4] dark:border-[#2D3039] bg-[#F4EFE6] dark:bg-[#18191D]">
+                        <form id="form-chat-ignis" onsubmit="enviarMensajeIgnis(event)" class="flex items-center gap-2">
+                            <input id="input-chat-ignis" type="text" placeholder="Pregunta sobre la consigna o indica en qué ejercicio requieres apoyo..." 
+                                   class="flex-1 text-sm bg-white dark:bg-[#282B33] border border-[#DCD5C9] dark:border-[#383C47] text-gray-800 dark:text-gray-100 px-4 py-2.5 rounded-xl focus:outline-none focus:border-amber-500">
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl transition">➤</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL DE SÓCRATES (SIMULADOR UNIVERSAL DE EXÁMENES DEPARTAMENTALES)       -->
+    <!-- ========================================================================= -->
+    <div id="modal-socrates" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm flex items-center justify-center p-2 md:p-4">
+        <div class="bg-[#FBF8F3] dark:bg-[#1E1F24] border border-[#E6E0D4] dark:border-[#2D3039] rounded-2xl w-full max-w-4xl h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-4 border-b border-[#E6E0D4] dark:border-[#2D3039] flex items-center justify-between bg-[#F4EFE6] dark:bg-[#18191D]">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🏛️</span>
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">Sócrates — Simulador de Examen Departamental</h3>
+                        <p class="text-[10px] text-gray-500">Evaluación oral rigurosa por materia</p>
+                    </div>
+                </div>
+                <button onclick="cerrarModalSocrates()" class="text-gray-400 hover:text-gray-600 text-sm font-bold p-1">✕</button>
+            </div>
+
+            <!-- Paso 1: Configurar Examen -->
+            <div id="socrates-config" class="p-6 space-y-4 border-b border-[#E6E0D4] dark:border-[#2D3039]">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">1. Selecciona la Materia:</label>
+                        <select id="socrates-materia-select" class="w-full text-xs font-semibold bg-white dark:bg-[#282B33] border border-[#DCD5C9] dark:border-[#383C47] text-gray-800 dark:text-gray-200 rounded-xl px-3 py-2">
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">2. Modalidad de Evaluación:</label>
+                        <div class="grid grid-cols-3 gap-2 text-xs font-semibold">
+                            <button type="button" onclick="setModoSocrates('teorico')" id="btn-modo-teorico" class="py-2 rounded-xl border border-amber-500 bg-white dark:bg-[#282B33] text-amber-700">📖 Teórico</button>
+                            <button type="button" onclick="setModoSocrates('practico')" id="btn-modo-practico" class="py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400">⚙️ Práctico</button>
+                            <button type="button" onclick="setModoSocrates('hibrido')" id="btn-modo-hibrido" class="py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400">⚖️ Híbrido</button>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="iniciarExamenSocrates()" class="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow transition">
+                    Comenzar Simulación de Examen Oral
+                </button>
+            </div>
+
+            <!-- Paso 2: Interrogatorio Socrático -->
+            <div id="socrates-chat-area" class="flex-1 flex flex-col overflow-hidden hidden">
+                <div id="socrates-mensajes" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+                <div class="p-3 border-t border-[#E6E0D4] dark:border-[#2D3039] bg-[#F4EFE6] dark:bg-[#18191D]">
+                    <form id="form-socrates" onsubmit="enviarRespuestaSocrates(event)" class="flex items-center gap-2">
+                        <input id="input-socrates" type="text" placeholder="Escribe tu respuesta y fundamenta tu postura técnica..." 
+                               class="flex-1 text-sm bg-white dark:bg-[#282B33] border border-[#DCD5C9] dark:border-[#383C47] text-gray-800 dark:text-gray-100 px-4 py-2.5 rounded-xl focus:outline-none focus:border-amber-500">
+                        <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-xl transition font-semibold">Defender</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- MODAL DE DETALLE DE AVISOS (A MEDIA PANTALLA)                             -->
+    <!-- ========================================================================= -->
+    <div id="modal-aviso-detalle" class="fixed inset-0 z-50 hidden bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-[#FBF8F3] dark:bg-[#1E1F24] border border-[#E6E0D4] dark:border-[#2D3039] rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-5 border-b border-[#E6E0D4] dark:border-[#2D3039] flex items-start justify-between bg-[#F4EFE6] dark:bg-[#18191D]">
+                <div>
+                    <span id="detalle-aviso-materia" class="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400"></span>
+                    <h3 class="text-base font-bold text-gray-800 dark:text-gray-100 mt-1">Aviso del Profesor</h3>
+                    <p id="detalle-aviso-fecha" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5"></p>
+                </div>
+                <button onclick="cerrarModalAviso()" class="text-gray-400 hover:text-gray-600 text-sm p-1.5 font-bold">✕</button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed" id="detalle-aviso-texto"></div>
+            <div id="detalle-aviso-adjuntos" class="px-6 py-3 bg-amber-500/5 border-t border-[#E6E0D4] dark:border-[#2D3039] hidden">
+                <span class="text-xs font-semibold text-gray-600 dark:text-gray-400 block mb-2">Documentos y carteles adjuntos:</span>
+                <div id="lista-adjuntos-aviso" class="space-y-1.5"></div>
+            </div>
+            <div class="p-4 border-t border-[#E6E0D4] dark:border-[#2D3039] flex items-center justify-between bg-[#F4EFE6] dark:bg-[#18191D]">
+                <a id="detalle-aviso-link" href="#" target="_blank" class="text-xs font-medium text-amber-700 dark:text-amber-400 hover:underline">Abrir en Classroom ↗</a>
+                <button onclick="cerrarModalAviso()" class="px-4 py-2 text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-xl">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- LOGICA JAVASCRIPT COMPLETA                                                -->
+    <!-- ========================================================================= -->
+    <script>
+        // --- VARIABLES GLOBALES ---
+        let tareasGlobales = [];
+        let avisosGlobales = [];
+        let proveedorActual = 'openrouter';
+        let tareaActivaContext = {};
+        let ignisHistorial = [];
+        let vistaActual = 'split';
+
+        // --- INICIALIZACIÓN AL CARGAR ---
+        document.addEventListener('DOMContentLoaded', () => {
+            inicializarTema();
+            iniciarReloj();
+            generarCalendario(9, 2026); // Septiembre 2026
+            cargarDatosClassroom();
+        });
+
+        // --- TEMA HELIOS / SELENE ---
+        function inicializarTema() {
+            const guardado = localStorage.getItem('agora_tema');
+            if (guardado === 'selene') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        function toggleTemaHeliosSelene() {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            localStorage.setItem('agora_tema', html.classList.contains('dark') ? 'selene' : 'helios');
+        }
+
+        // --- RELOJ DIGITAL ---
+        function iniciarReloj() {
+            function actualizar() {
+                const ahora = new Date();
+                const horaStr = ahora.toLocaleTimeString('es-MX');
+                const fechaStr = ahora.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+                document.getElementById('reloj-hora').innerText = horaStr;
+                document.getElementById('reloj-fecha').innerText = fechaStr;
+            }
+            actualizar();
+            setInterval(actualizar, 1000);
+        }
+
+        // --- CARGA DE DATOS DESDE FASTAPI ---
+        async function cargarDatosClassroom() {
+            try {
+                // 1. Tareas
+                const resTasks = await fetch('/api/tasks');
+                if (resTasks.status === 401) {
+                    document.getElementById('contenedor-misiones').innerHTML = `
+                        <div class="p-8 text-center bg-white dark:bg-[#1E1F24] rounded-2xl border border-amber-500/30">
+                            <p class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">Tu sesión no está activa o expiró.</p>
+                            <a href="/login" class="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow">
+                                Iniciar sesión con Google Classroom
+                            </a>
+                        </div>
+                    `;
+                    return;
+                }
+                const dataTasks = await resTasks.json();
+                tareasGlobales = [...(dataTasks.tasks_with_dates || []), ...(dataTasks.tasks_without_dates || [])];
+                renderizarMisiones(tareasGlobales);
+
+                // 2. Avisos
+                const resAvisos = await fetch('/api/announcements');
+                const dataAvisos = await resAvisos.json();
+                avisosGlobales = dataAvisos.announcements || [];
+                renderizarAvisos(avisosGlobales);
+
+            } catch (err) {
+                console.error("Error cargando Ágora:", err);
+            }
+        }
+
+        // --- RENDERIZADO DE MISIONES ---
+        function renderizarMisiones(lista) {
+            const cont = document.getElementById('contenedor-misiones');
+            cont.innerHTML = '';
+
+            if (lista.length === 0) {
+                cont.innerHTML = '<p class="text-xs text-gray-500 text-center py-8">No hay misiones pendientes para este filtro.</p>';
+                return;
+            }
+
+            lista.forEach(t => {
+                const card = document.createElement('div');
+                card.className = "p-4 rounded-2xl bg-[#FBF8F3] dark:bg-[#1E1F24] border border-[#E6E0D4] dark:border-[#2D3039] shadow-sm hover:border-amber-500/50 transition space-y-2.5";
+                
+                let fechaTxt = t.due_date ? `🕒 ${t.due_date}` : 'Sin fecha límite';
+                let esPrincipal = t.hierarchy === 'Principal';
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">${t.course_name || 'Materia'}</span>
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${esPrincipal ? 'bg-amber-500/10 text-amber-700 border border-amber-500/30' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}">
+                                ${esPrincipal ? '🛡️ Principal' : '🛡️ Secundaria'}
+                            </span>
+                            <span class="px-2 py-0.5 rounded-md text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 font-medium">
+                                ${t.status || 'Sin entregar'}
+                            </span>
+                        </div>
+                        <span class="text-[11px] font-medium text-gray-500 dark:text-gray-400">${fechaTxt}</span>
+                    </div>
+                    <h3 class="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                        ${t.title}
+                        ${t.alternateLink ? `<a href="${t.alternateLink}" target="_blank" class="text-gray-400 hover:text-amber-600 text-xs">↗</a>` : ''}
+                    </h3>
+                    ${t.description ? `<p class="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">${t.description}</p>` : ''}
+                    <div class="pt-2 border-t border-[#E6E0D4] dark:border-[#2D3039] flex items-center justify-between flex-wrap gap-2">
+                        <button onclick='abrirModalIgnisConTarea(${JSON.stringify(t)})' class="px-3.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 dark:text-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
+                            <span>🔥</span> Abrir en Ignis
+                        </button>
+                        <label class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+                            <span>Pendiente</span>
+                            <input type="checkbox" class="rounded text-amber-600 focus:ring-0">
+                        </label>
+                    </div>
+                `;
+                cont.appendChild(card);
+            });
+        }
+
+        // --- FILTROS DE MISIONES ---
+        function filtrarMisiones(tipo) {
+            document.getElementById('filtro-activo-nombre').innerText = tipo.toUpperCase();
+            if (tipo === 'todas') {
+                renderizarMisiones(tareasGlobales);
+            } else if (tipo === 'principal') {
+                renderizarMisiones(tareasGlobales.filter(t => t.hierarchy === 'Principal'));
+            } else if (tipo === 'secundarias') {
+                renderizarMisiones(tareasGlobales.filter(t => t.hierarchy !== 'Principal'));
+            } else {
+                renderizarMisiones(tareasGlobales);
+            }
+        }
+
+        // --- CALENDARIO INTERACTIVO (4 PUNTOS SEMÁNTICOS) ---
+        function generarCalendario(mes, anio) {
+            const grid = document.getElementById('grid-calendario');
+            grid.innerHTML = '';
+            // Primer día del mes y total de días (Septiembre 2026 arranca en Martes = 2)
+            const diasMes = 30;
+            const primerDiaIndex = 2; 
+
+            // Espacios vacíos previos
+            for (let i = 0; i < primerDiaIndex; i++) {
+                grid.innerHTML += `<div class="py-1 text-transparent">0</div>`;
+            }
+
+            for (let d = 1; d <= diasMes; d++) {
+                const esHoy = (d === 5);
+                let puntos = '';
+                
+                // Puntos semánticos
+                if (d === 1) puntos = '<span class="w-1 h-1 rounded-full bg-blue-500"></span><span class="w-1 h-1 rounded-full bg-amber-500"></span>';
+                if (d === 8) puntos = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>';
+                if (d === 17) puntos = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>';
+                if (d === 25) puntos = '<span class="w-1 h-1 rounded-full bg-emerald-500"></span><span class="w-1 h-1 rounded-full bg-amber-500"></span>';
+
+                const celda = document.createElement('div');
+                celda.className = `py-1 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-amber-500/20 transition ${
+                    esHoy ? 'bg-blue-600 text-white font-bold shadow-sm' : 'text-gray-700 dark:text-gray-300'
+                }`;
+                celda.onclick = () => filtrarTareasPorDia(d);
+                celda.innerHTML = `
+                    <span>${d}</span>
+                    <div class="flex gap-0.5 mt-0.5 h-1.5 items-center">${puntos}</div>
+                `;
+                grid.appendChild(celda);
+            }
+        }
+
+        function filtrarTareasPorDia(dia) {
+            document.getElementById('filtro-activo-nombre').innerText = `DÍA ${dia} SEPT`;
+            // Filtrar misiones que coincidan con la fecha
+            const coincidencia = tareasGlobales.filter(t => t.due_date && t.due_date.includes(`${dia} sept`));
+            if (coincidencia.length > 0) {
+                renderizarMisiones(coincidencia);
+            } else {
+                renderizarMisiones(tareasGlobales);
+            }
+        }
+
+        // --- SISTEMA DE AVISOS Y MODAL ---
+        function togglePopoverAvisos() {
+            document.getElementById('popover-avisos').classList.toggle('hidden');
+        }
+
+        function renderizarAvisos(avisos) {
+            const contenedor = document.getElementById('lista-avisos');
+            const badge = document.getElementById('avisos-badge');
+            const leidos = JSON.parse(localStorage.getItem('agora_avisos_leidos') || '[]');
+
+            if (!contenedor) return;
+            contenedor.innerHTML = '';
+
+            const noLeidos = avisos.filter(a => !leidos.includes(a.id));
+            if (badge) {
+                if (noLeidos.length > 0) {
+                    badge.innerText = noLeidos.length;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+
+            if (avisos.length === 0) {
+                contenedor.innerHTML = '<p class="text-xs text-gray-400 p-4 text-center">No hay avisos recientes</p>';
+                return;
+            }
+
+            avisos.forEach(aviso => {
+                const estaLeido = leidos.includes(aviso.id);
+                let fechaFormateada = aviso.date || '';
+                if (aviso.creationTime) {
+                    const f = new Date(aviso.creationTime);
+                    fechaFormateada = f.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' });
+                }
+
+                let previewTexto = aviso.text;
+                if (previewTexto.length > 120) previewTexto = previewTexto.substring(0, 120) + '...';
+
+                const tarjeta = document.createElement('div');
+                tarjeta.className = `p-3 rounded-xl border transition cursor-pointer ${
+                    estaLeido ? 'bg-transparent border-gray-200 dark:border-gray-800 opacity-60' : 'bg-white dark:bg-[#25272F] border-amber-500/40 shadow-sm hover:border-amber-500'
+                }`;
+                tarjeta.onclick = () => abrirModalAviso(aviso.id);
+                tarjeta.innerHTML = `
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-[11px] font-bold text-amber-700 dark:text-amber-400 uppercase truncate max-w-[200px]">${aviso.course_name}</span>
+                        <span class="text-[10px] text-gray-400">${fechaFormateada}</span>
+                    </div>
+                    <p class="text-xs text-gray-700 dark:text-gray-200 line-clamp-2 leading-snug">${previewTexto}</p>
+                    <div class="mt-2 flex items-center justify-between">
+                        <span class="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Ver aviso completo →</span>
+                        ${!estaLeido ? '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>' : ''}
+                    </div>
+                `;
+                contenedor.appendChild(tarjeta);
+            });
+        }
+
+        function abrirModalAviso(avisoId) {
+            const aviso = avisosGlobales.find(a => a.id === avisoId);
+            if (!aviso) return;
+
+            let leidos = JSON.parse(localStorage.getItem('agora_avisos_leidos') || '[]');
+            if (!leidos.includes(avisoId)) {
+                leidos.push(avisoId);
+                localStorage.setItem('agora_avisos_leidos', JSON.stringify(leidos));
+            }
+            renderizarAvisos(avisosGlobales);
+
+            document.getElementById('detalle-aviso-materia').innerText = aviso.course_name;
+            let fechaTxt = aviso.date || '';
+            if (aviso.creationTime) {
+                const f = new Date(aviso.creationTime);
+                fechaTxt = `Publicado: ${f.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}`;
+            }
+            document.getElementById('detalle-aviso-fecha').innerText = fechaTxt;
+            document.getElementById('detalle-aviso-texto').innerText = aviso.text;
+
+            const linkBtn = document.getElementById('detalle-aviso-link');
+            if (aviso.alternateLink) {
+                linkBtn.href = aviso.alternateLink;
+                linkBtn.classList.remove('hidden');
+            } else {
+                linkBtn.classList.add('hidden');
+            }
+
+            const adjuntosContenedor = document.getElementById('detalle-aviso-adjuntos');
+            const listaAdjuntos = document.getElementById('lista-adjuntos-aviso');
+            listaAdjuntos.innerHTML = '';
+            if (aviso.materials && aviso.materials.length > 0) {
+                adjuntosContenedor.classList.remove('hidden');
+                aviso.materials.forEach(mat => {
+                    if (mat.driveFile) {
+                        const f = mat.driveFile.driveFile;
+                        listaAdjuntos.innerHTML += `<a href="${f.alternateLink}" target="_blank" class="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400 hover:underline">📄 ${f.title}</a>`;
+                    }
+                });
+            } else {
+                adjuntosContenedor.classList.add('hidden');
+            }
+
+            document.getElementById('modal-aviso-detalle').classList.remove('hidden');
+        }
+
+        function cerrarModalAviso() {
+            document.getElementById('modal-aviso-detalle').classList.add('hidden');
+        }
+
+        // --- CONTROL DE IGNIS (VISOR OFICIAL + CHAT) ---
+        function abrirModalIgnisConTarea(tarea) {
+            tareaActivaContext = tarea;
+            document.getElementById('subbarra-tarea-titulo').innerText = `${tarea.course_name}: ${tarea.title}`;
+            
+            // Cargar iframe de Google Drive preview si tiene enlace
+            const iframe = document.getElementById('iframe-pdf-visor');
+            if (tarea.drive_preview_url) {
+                iframe.src = tarea.drive_preview_url;
+            } else {
+                iframe.src = "about:blank";
+            }
+
+            ignisHistorial = [];
+            const chatCont = document.getElementById('ignis-chat-mensajes');
+            chatCont.innerHTML = `
+                <div class="p-3.5 rounded-2xl bg-white dark:bg-[#25272F] border border-[#E6E0D4] dark:border-[#2D3039] text-xs text-gray-800 dark:text-gray-200 leading-relaxed shadow-sm">
+                    <strong>Consigna analizada:</strong> ${tarea.title}.<br>
+                    El documento está cargado en el visor oficial izquierdo. ¿En qué ejercicio o apartado específico requieres asesoría para enfocar la sesión directamente ahí?
+                </div>
+            `;
+
+            document.getElementById('modal-ignis').classList.remove('hidden');
+        }
+
+        function cerrarModalIgnis() {
+            document.getElementById('modal-ignis').classList.add('hidden');
+        }
+
+        function toggleVistaIgnis(modo) {
+            const panelPdf = document.getElementById('ignis-panel-pdf');
+            const panelChat = document.getElementById('ignis-panel-chat');
+            const btnPdf = document.getElementById('btn-toggle-pdf');
+            const btnChat = document.getElementById('btn-toggle-chat');
+            const activoClasses = ['bg-white', 'dark:bg-[#1E1F24]', 'text-amber-800', 'dark:text-amber-300', 'shadow-sm'];
+
+            if (vistaActual === modo) {
+                vistaActual = 'split';
+            } else {
+                vistaActual = modo;
+            }
+
+            btnPdf.classList.remove(...activoClasses);
+            btnChat.classList.remove(...activoClasses);
+
+            if (vistaActual === 'pdf') {
+                panelPdf.classList.remove('hidden', 'w-1/2');
+                panelPdf.classList.add('w-full');
+                panelChat.classList.add('hidden');
+                panelChat.classList.remove('w-full', 'w-1/2', 'flex');
+                btnPdf.classList.add(...activoClasses);
+            } else if (vistaActual === 'chat') {
+                panelPdf.classList.add('hidden');
+                panelPdf.classList.remove('w-full', 'w-1/2');
+                panelChat.classList.remove('hidden', 'w-1/2');
+                panelChat.classList.add('w-full', 'flex');
+                btnChat.classList.add(...activoClasses);
+            } else {
+                panelPdf.classList.remove('hidden', 'w-full');
+                panelPdf.classList.add('w-1/2');
+                panelChat.classList.remove('hidden', 'w-full');
+                panelChat.classList.add('w-1/2', 'flex');
+            }
+        }
+
+        function setProvider(prov) {
+            proveedorActual = prov;
+            ['gemini', 'groq', 'openrouter'].forEach(p => {
+                const btn = document.getElementById(`btn-prov-${p}`);
+                if (p === prov) {
+                    btn.className = "px-2.5 py-1 rounded-md bg-white dark:bg-[#1E1F24] text-blue-600 dark:text-blue-400 font-bold shadow-sm transition";
+                } else {
+                    btn.className = "px-2.5 py-1 rounded-md text-gray-600 dark:text-gray-300 transition";
+                }
+            });
+        }
+
+        async function enviarMensajeIgnis(e) {
+            e.preventDefault();
+            const input = document.getElementById('input-chat-ignis');
+            const txt = input.value.trim();
+            if (!txt) return;
+
+            input.value = '';
+            const chatCont = document.getElementById('ignis-chat-mensajes');
+            chatCont.innerHTML += `
+                <div class="p-3 rounded-2xl bg-amber-600 text-white text-xs ml-10 leading-relaxed shadow-sm">
+                    ${txt}
+                </div>
+            `;
+            ignisHistorial.push({ role: 'user', content: txt });
+
+            const mentorSeleccionado = document.getElementById('mentor-select').value;
+
+            try {
+                const res = await fetch('/api/copilot/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider: proveedorActual,
+                        mentor: mentorSeleccionado,
+                        task_context: tareaActivaContext,
+                        messages: ignisHistorial
+                    })
+                });
+                const data = await res.json();
+                ignisHistorial.push({ role: 'assistant', content: data.response });
+                chatCont.innerHTML += `
+                    <div class="p-3.5 rounded-2xl bg-white dark:bg-[#25272F] border border-[#E6E0D4] dark:border-[#2D3039] text-xs text-gray-800 dark:text-gray-200 leading-relaxed shadow-sm whitespace-pre-wrap">
+                        ${data.response}
+                    </div>
+                `;
+                chatCont.scrollTop = chatCont.scrollHeight;
+            } catch (err) {
+                chatCont.innerHTML += `<div class="text-xs text-red-500">Error conectando con el asesor.</div>`;
+            }
+        }
+
+        // --- SIMULADOR SOCRÁTICO DE EXÁMENES ---
+        let modoSocrates = 'teorico';
+        let socratesHistorial = [];
+
+        function setModoSocrates(m) {
+            modoSocrates = m;
+            ['teorico', 'practico', 'hibrido'].forEach(id => {
+                const b = document.getElementById(`btn-modo-${id}`);
+                if (id === m) {
+                    b.className = 'py-2 rounded-xl border border-amber-500 bg-white dark:bg-[#282B33] text-amber-700 font-bold';
+                } else {
+                    b.className = 'py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400';
+                }
+            });
+        }
+
+        function abrirModalSocrates() {
+            const sel = document.getElementById('socrates-materia-select');
+            sel.innerHTML = '';
+            
+            // Obtener materias activas únicas
+            const materias = [...new Set(tareasGlobales.map(t => t.course_name).filter(Boolean))];
+            if (materias.length > 0) {
+                materias.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.innerText = m;
+                    sel.appendChild(opt);
+                });
+            } else {
+                sel.innerHTML = '<option value="Teoría de Sistemas II">Teoría de Sistemas II</option><option value="Sistemas Inteligentes 2">Sistemas Inteligentes 2</option>';
+            }
+
+            document.getElementById('socrates-config').classList.remove('hidden');
+            document.getElementById('socrates-chat-area').classList.add('hidden');
+            document.getElementById('modal-socrates').classList.remove('hidden');
+        }
+
+        function cerrarModalSocrates() {
+            document.getElementById('modal-socrates').classList.add('hidden');
+        }
+
+        async function iniciarExamenSocrates() {
+            const materia = document.getElementById('socrates-materia-select').value;
+            document.getElementById('socrates-config').classList.add('hidden');
+            document.getElementById('socrates-chat-area').classList.remove('hidden');
+
+            socratesHistorial = [];
+            const container = document.getElementById('socrates-mensajes');
+            container.innerHTML = `<div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-800 dark:text-amber-300">
+                Iniciando simulación de examen departamental para <strong>${materia}</strong> [Modalidad: ${modoSocrates.toUpperCase()}]...
+            </div>`;
+
+            try {
+                const resp = await fetch('/api/socrates/exam', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        course_name: materia,
+                        mode: modoSocrates,
+                        messages: [{ role: 'user', content: 'Inicia la simulación de examen con la primera pregunta.' }]
+                    })
+                });
+                const res = await resp.json();
+                socratesHistorial.push({ role: 'assistant', content: res.response });
+                container.innerHTML += `<div class="p-3.5 rounded-xl bg-white dark:bg-[#25272F] border border-[#E6E0D4] dark:border-[#2D3039] text-xs text-gray-800 dark:text-gray-200 leading-relaxed shadow-sm">
+                    ${res.response}
+                </div>`;
+            } catch (e) {
+                container.innerHTML += `<div class="text-xs text-red-500">Error al iniciar el simulador.</div>`;
+            }
+        }
+
+        async function enviarRespuestaSocrates(event) {
+            event.preventDefault();
+            const input = document.getElementById('input-socrates');
+            const texto = input.value.trim();
+            if (!texto) return;
+
+            input.value = '';
+            const container = document.getElementById('socrates-mensajes');
+            container.innerHTML += `<div class="p-3 rounded-xl bg-amber-600 text-white text-xs ml-8 leading-relaxed shadow">
+                ${texto}
+            </div>`;
+            socratesHistorial.push({ role: 'user', content: texto });
+
+            const materia = document.getElementById('socrates-materia-select').value;
+
+            try {
+                const resp = await fetch('/api/socrates/exam', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        course_name: materia,
+                        mode: modoSocrates,
+                        messages: socratesHistorial
+                    })
+                });
+                const res = await resp.json();
+                socratesHistorial.push({ role: 'assistant', content: res.response });
+                container.innerHTML += `<div class="p-3.5 rounded-xl bg-white dark:bg-[#25272F] border border-[#E6E0D4] dark:border-[#2D3039] text-xs text-gray-800 dark:text-gray-200 leading-relaxed shadow-sm whitespace-pre-wrap">
+                    ${res.response}
+                </div>`;
+                container.scrollTop = container.scrollHeight;
+            } catch (e) {
+                container.innerHTML += `<div class="text-xs text-red-500">Error en la evaluación.</div>`;
+            }
+        }
+
+        // --- ESTRATEGA FRANKLIN ---
+        function toggleFranklinCard() {
+            const card = document.getElementById('franklin-card');
+            card.classList.toggle('hidden');
+            const badge = document.getElementById('franklin-badge');
+            if (badge) badge.classList.add('hidden');
+        }
+
+        // --- TEMPORIZADOR POMODORO CON BARRA ESPACIADORA ---
+        let pomoTiempo = 25 * 60;
+        let pomoCorriendo = false;
+        let pomoInterval = null;
+        let esFoco = true;
+
+        function toggleTemporizador() {
+            const btn = document.getElementById('btn-pomo-toggle');
+            if (pomoCorriendo) {
+                clearInterval(pomoInterval);
+                pomoCorriendo = false;
+                btn.innerText = "Reanudar";
+            } else {
+                pomoCorriendo = true;
+                btn.innerText = "Pausa";
+                pomoInterval = setInterval(() => {
+                    if (pomoTiempo > 0) {
+                        pomoTiempo--;
+                        actualizarDisplayPomo();
+                    } else {
+                        // Cambiar fase (25 min Foco -> 5 min Descanso)
+                        esFoco = !esFoco;
+                        pomoTiempo = esFoco ? 25 * 60 : 5 * 60;
+                        document.getElementById('pomo-fase').innerText = esFoco ? "Foco Esmeralda" : "Descanso Esmeralda";
+                        document.getElementById('pomo-fase').className = esFoco ? "text-emerald-600 dark:text-emerald-400 uppercase" : "text-blue-500 uppercase";
+                        actualizarDisplayPomo();
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetTemporizador() {
+            clearInterval(pomoInterval);
+            pomoCorriendo = false;
+            esFoco = true;
+            pomoTiempo = 25 * 60;
+            document.getElementById('pomo-fase').innerText = "Foco Esmeralda";
+            document.getElementById('btn-pomo-toggle').innerText = "Iniciar";
+            actualizarDisplayPomo();
+        }
+
+        function actualizarDisplayPomo() {
+            const m = Math.floor(pomoTiempo / 60).toString().padStart(2, '0');
+            const s = (pomoTiempo % 60).toString().padStart(2, '0');
+            document.getElementById('pomo-reloj').innerText = `${m}:${s}`;
+        }
+
+        // Atajo de Barra Espaciadora para Play/Pausa
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                toggleTemporizador();
+            }
+        });
+
+        // --- COLAPSAR ACORDEÓN ---
+        function toggleAcordeon(id) {
+            const el = document.getElementById(id);
+            el.classList.toggle('hidden');
+        }
+    </script>
+</body>
+</html><!DOCTYPE html>
 <html lang="es" class="dark">
 <head>
     <meta charset="UTF-8">
