@@ -2138,13 +2138,13 @@
                     card.style.borderLeft = `5px solid #10B981`;
                     card.innerHTML = `
                         <div class="flex items-center gap-3 min-w-0 pr-4">
-                            <input type="checkbox" checked onchange="toggleStatus('${taskId}', false)" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer" title="Marcar como pendiente">
+                            <i class="fa-solid fa-circle-check text-emerald-500 text-base shrink-0" title="Entregada en Classroom"></i>
                             <span class="text-xs px-2 py-0.5 rounded bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-400 truncate">${task.course_name}</span>
                             <span class="text-sm line-through text-cantera-500 dark:text-slate-500 truncate">${task.title}</span>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
                             ${classroomBadge}
-                            <button onclick="openIgnisWorkspace('${taskId}')" class="text-xs text-cantera-700 dark:text-slate-400 hover:text-indigo-600 px-2.5 py-1 rounded bg-cantera-100 dark:bg-slate-800 border border-cantera-300 dark:border-slate-700 flex items-center gap-1.5">
+                            <button onclick="openIgnisWorkspace('${taskId}')" class="text-xs text-cantera-700 dark:text-slate-400 hover:text-indigo-600 px-2.5 py-1 rounded bg-cantera-100 dark:bg-slate-800 border border-cantera-300 dark:border-slate-700 flex items-center gap-1.5 cursor-pointer">
                                 <i class="fa-solid fa-fire text-amber-500"></i> Ignis
                             </button>
                         </div>
@@ -2189,15 +2189,15 @@
                             </div>
                         </details>
 
-                        <div class="flex items-center justify-between gap-3 pt-3 border-t border-cantera-200 dark:border-slate-700/60 mt-auto">
-                            <button onclick="openIgnisWorkspace('${taskId}')" class="text-sm font-semibold bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+                        <div class="flex items-center justify-between gap-3 pt-3 border-t border-cantera-200 dark:border-slate-700/60 mt-auto flex-wrap">
+                            <button onclick="openIgnisWorkspace('${taskId}')" class="text-sm font-semibold bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-xs cursor-pointer">
                                 <i class="fa-solid fa-fire text-amber-500"></i> Abrir en Ignis
                             </button>
 
-                            <label class="flex items-center gap-2 cursor-pointer text-sm text-cantera-800 dark:text-slate-300 select-none font-medium">
-                                <span>Pendiente</span>
-                                <input type="checkbox" onchange="toggleStatus('${taskId}', true)" class="w-5 h-5 accent-emerald-500 rounded cursor-pointer">
-                            </label>
+                            <a href="${task.link}" target="_blank" class="text-xs font-semibold text-cantera-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-3.5 py-2 rounded-lg bg-cantera-100 dark:bg-slate-800 border border-cantera-300 dark:border-slate-700 flex items-center gap-1.5 transition-all shadow-xs hover:border-indigo-400 cursor-pointer" title="Abrir entrega en Google Classroom">
+                                <span>Subir en Classroom</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-70"></i>
+                            </a>
                         </div>
                     </div>
                 `;
@@ -2207,39 +2207,80 @@
 
         function formatTaskDescriptionBlock(task) {
             const raw = task.description || '';
+            const courseName = task.course_name || '';
+            const taskTitle = task.title || '';
+
             if (!raw) {
-                return '<p class="text-sm text-cantera-700 dark:text-slate-300 whitespace-pre-line line-clamp-3 mb-4 leading-relaxed italic text-slate-400">Sin descripción asignada.</p>';
+                return '<p class="text-xs text-cantera-600 dark:text-slate-400 italic mb-4">Sin descripción asignada para esta tarea.</p>';
             }
 
-            // Extraer nombre de documento si existe
+            // Extraer nombre de documento adjunto si existe
             const docMatch = raw.match(/--- Documento adjunto:\s*(.*?)\s*---/);
             const docTitle = docMatch ? docMatch[1].trim() : '';
 
-            // Limpiar separadores técnicos para dejar solo el texto útil de la consigna/PDF
-            let cleanText = raw
+            // Limpiar separadores técnicos
+            let text = raw
                 .replace(/--- Documento adjunto:.*?---\s*/g, '')
                 .replace(/Archivos\/Enlaces adjuntos:[\s\S]*$/g, '')
                 .trim();
 
+            function normalizeStr(str) {
+                return (str || '')
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]/g, '');
+            }
+
+            const normCourse = normalizeStr(courseName);
+            const normTitle = normalizeStr(taskTitle);
+            const normDoc = normalizeStr(docTitle.replace(/\.pdf$/i, ''));
+
+            const rawLines = text.split('\n').map(l => l.trim()).filter(Boolean);
+            const cleanedLines = [];
+
+            for (const line of rawLines) {
+                const normL = normalizeStr(line);
+                if (!normL) continue;
+
+                // Omitir líneas redundantes que solo repiten la materia, el título de la tarea o el archivo
+                if (normCourse && (normL.includes(normCourse) || normCourse.includes(normL))) continue;
+                if (normTitle && (normL.includes(normTitle) || normTitle.includes(normL))) continue;
+                if (normDoc && (normL.includes(normDoc) || normDoc.includes(normL))) continue;
+
+                // Omitir encabezados genéricos institucionales
+                if (['programa', 'universidaddeguadalajara', 'cucei', 'actividades', 'actividads', 'materia'].includes(normL)) continue;
+
+                cleanedLines.push(line);
+            }
+
+            // Unir líneas continuas para aprovechar todo el ancho de la tarjeta
+            let cleanParagraph = cleanedLines.join(' ').replace(/\s+/g, ' ').trim();
+
             let docBadge = '';
             if (docTitle) {
                 docBadge = `
-                    <div class="flex items-center gap-1.5 text-xs text-cantera-700 dark:text-slate-300 mb-2 font-medium">
-                        <i class="fa-regular fa-file-pdf text-red-500"></i>
-                        <span class="truncate max-w-md font-semibold text-cantera-800 dark:text-slate-200">${docTitle}</span>
+                    <div class="flex items-center gap-2 text-xs text-cantera-800 dark:text-slate-200 mb-2.5 font-medium bg-cantera-50 dark:bg-slate-900/60 px-3 py-1.5 rounded-lg border border-cantera-200 dark:border-slate-800 w-fit max-w-full">
+                        <i class="fa-regular fa-file-pdf text-red-500 text-sm"></i>
+                        <span class="truncate font-semibold">${docTitle}</span>
                     </div>
                 `;
             }
 
-            if (!cleanText && docTitle) {
-                cleanText = 'Consigna y ejercicios adjuntos en el archivo. Abre el visor de Ignis para consultar el contenido y resolver tus dudas.';
-            } else if (!cleanText) {
-                cleanText = 'Sin descripción detallada para esta tarea.';
+            if (!cleanParagraph && docTitle) {
+                cleanParagraph = 'Consigna y ejercicios adjuntos en el archivo. Abre el visor de Ignis para consultar el contenido y resolver tus dudas con tu tutor.';
+            } else if (!cleanParagraph) {
+                cleanParagraph = 'Sin instrucciones adicionales para esta entrega.';
             }
 
             return `
                 ${docBadge}
-                <p class="text-sm text-cantera-700 dark:text-slate-300 whitespace-pre-line line-clamp-3 mb-4 leading-relaxed">${cleanText}</p>
+                <div class="text-xs sm:text-sm text-cantera-800 dark:text-slate-200 mb-4 leading-relaxed bg-cantera-50/50 dark:bg-slate-900/40 p-3 rounded-xl border border-cantera-200 dark:border-slate-800">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 block mb-1">
+                        <i class="fa-solid fa-list-check mr-1"></i> Resumen de la Tarea:
+                    </span>
+                    <p class="text-cantera-700 dark:text-slate-300 line-clamp-4 leading-relaxed">${cleanParagraph}</p>
+                </div>
             `;
         }
 
