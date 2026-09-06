@@ -2,7 +2,6 @@ import os
 import io
 import datetime
 from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
@@ -28,34 +27,20 @@ def get_credentials():
             creds = Credentials.from_authorized_user_file('token.json', SCOPES)
         except Exception:
             creds = None
-
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            try:
-                creds.refresh(Request())
-            except Exception:
-                creds = None
-
-        if not creds:
-            if not os.path.exists('credentials.json'):
-                raise FileNotFoundError("No se encontro credentials.json en la raiz del proyecto.")
-            flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
-
     return creds
 
-def get_classroom_service():
-    return build('classroom', 'v1', credentials=get_credentials())
+def get_classroom_service(creds=None):
+    c = creds if creds else get_credentials()
+    return build('classroom', 'v1', credentials=c)
 
-def get_drive_service():
-    return build('drive', 'v3', credentials=get_credentials())
+def get_drive_service(creds=None):
+    c = creds if creds else get_credentials()
+    return build('drive', 'v3', credentials=c)
 
-def get_gmail_service():
+def get_gmail_service(creds=None):
     try:
-        return build('gmail', 'v1', credentials=get_credentials())
+        c = creds if creds else get_credentials()
+        return build('gmail', 'v1', credentials=c)
     except Exception:
         return None
 
@@ -79,9 +64,9 @@ def extract_pdf_text_from_drive(drive_service, file_id: str) -> str:
     except Exception as e:
         return ""
 
-def get_all_tasks():
-    service = get_classroom_service()
-    drive_service = get_drive_service()
+def get_all_tasks(creds=None):
+    service = get_classroom_service(creds=creds)
+    drive_service = get_drive_service(creds=creds)
 
     # pageSize=50 para que no se corte Control I
     courses_res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=50).execute()
@@ -194,10 +179,25 @@ def get_all_tasks():
 # Exportar con ambos nombres para compatibilidad total con main.py
 fetch_tasks = get_all_tasks
 
-def get_announcements_and_alerts():
+def fetch_courses(creds=None):
+    try:
+        service = get_classroom_service(creds=creds)
+        courses_res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=50).execute()
+        raw_courses = courses_res.get('courses', [])
+        return [{
+            'id': c.get('id'),
+            'name': c.get('name', 'Materia sin nombre'),
+            'section': c.get('section', ''),
+            'alternateLink': c.get('alternateLink', '')
+        } for c in raw_courses]
+    except Exception as e:
+        print(f"Error en fetch_courses: {e}")
+        return []
+
+def get_announcements_and_alerts(creds=None):
     alerts = []
     try:
-        service = get_classroom_service()
+        service = get_classroom_service(creds=creds)
         courses_res = service.courses().list(studentId='me', courseStates=['ACTIVE'], pageSize=50).execute()
         courses = courses_res.get('courses', [])
 
@@ -225,7 +225,7 @@ def get_announcements_and_alerts():
             except Exception:
                 pass
 
-        gmail_service = get_gmail_service()
+        gmail_service = get_gmail_service(creds=creds)
         if gmail_service:
             try:
                 query = "newer_than:3d (clase OR suspende OR asistencia OR aviso OR cancela OR examen OR práctica)"

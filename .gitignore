@@ -18,3 +18,5 @@ __pycache__/
 # Google Auth Tokens
 credentials.json
 token.json
+sessions.json
+

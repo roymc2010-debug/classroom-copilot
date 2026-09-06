@@ -11,27 +11,24 @@ from fastapi.templating import Jinja2Templates
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request as GoogleRequest
 
-try:
-    from services.classroom_service import fetch_tasks, get_announcements_and_alerts
-except ImportError:
-    from classroom_service import fetch_tasks, get_announcements_and_alerts
-
+from services.classroom_service import fetch_tasks, fetch_courses, get_announcements_and_alerts
 from services.ai_service import ask_copilot
 
-# Persistencia de sesiones en disco para evitar cierres de sesión al reiniciar Render
+# Persistencia de sesiones en disco para mantener logins entre reinicios de Render
 SESSIONS_FILE = "sessions.json"
 user_sessions = {}
 
 if os.path.exists(SESSIONS_FILE):
     try:
-        with open(SESSIONS_FILE, "r") as f:
+        with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
             user_sessions = json.load(f)
-    except Exception:
+    except Exception as e:
+        print(f"Error cargando sessions.json: {e}")
         user_sessions = {}
 
 def save_sessions():
     try:
-        with open(SESSIONS_FILE, "w") as f:
+        with open(SESSIONS_FILE, "w", encoding="utf-8") as f:
             json.dump(user_sessions, f)
     except Exception as e:
         print(f"No se pudo persistir sessions.json: {e}")
@@ -47,12 +44,36 @@ SCOPES = [
 ]
 
 def load_client_secrets():
-    with open('credentials.json', 'r') as f:
-        data = json.load(f)
-        cfg = data.get('web') or data.get('installed') or {}
-        return cfg.get('client_id'), cfg.get('client_secret')
+    # 1. Prioridad: Variables de entorno (ideal para despliegue seguro en Render)
+    env_client_id = os.getenv("GOOGLE_CLIENT_ID")
+    env_client_secret = os.getenv("GOOGLE_CLIENT_SECRET")
+    if env_client_id and env_client_secret:
+        return env_client_id.strip(), env_client_secret.strip()
 
-def restore_and_refresh_credentials(creds_json: str):
+    # 2. Respaldo: Archivo físico credentials.json (para desarrollo local)
+    if os.path.exists('credentials.json'):
+        try:
+            with open('credentials.json', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                cfg = data.get('web') or data.get('installed') or {}
+                return cfg.get('client_id'), cfg.get('client_secret')
+        except Exception as e:
+            print(f"Error leyendo credentials.json: {e}")
+
+    return None, None
+
+def get_redirect_uri(request: Request):
+    # Permite especificar una URL de callback fija mediante variable de entorno
+    env_redirect = os.getenv("GOOGLE_REDIRECT_URI")
+    if env_redirect:
+        return env_redirect.strip()
+
+    base = str(request.base_url).rstrip('/')
+    if "onrender.com" in base:
+        return "https://agora-app-leox.onrender.com/auth/callback"
+    return f"{base}/auth/callback"
+
+def restore_and_refresh_credentials(creds_json: str, session_id: str = None):
     if not creds_json:
         return None
     try:
@@ -61,8 +82,11 @@ def restore_and_refresh_credentials(creds_json: str):
         if creds and creds.expired and creds.refresh_token:
             try:
                 creds.refresh(GoogleRequest())
+                if session_id and session_id in user_sessions:
+                    user_sessions[session_id] = creds.to_json()
+                    save_sessions()
             except Exception as e:
-                print(f"No se pudo refrescar el token: {e}")
+                print(f"No se pudo refrescar el token de Google: {e}")
         return creds
     except Exception as e:
         print(f"Error restaurando credenciales: {e}")
@@ -81,9 +105,13 @@ async def read_root(request: Request):
 @app.get("/login")
 async def auth_login(request: Request):
     client_id, _ = load_client_secrets()
-    base = str(request.base_url).rstrip('/')
-    redirect_uri = "https://agora-app-leox.onrender.com/auth/callback" if "onrender.com" in base else f"{base}/auth/callback"
-    
+    if not client_id:
+        return HTMLResponse(
+            "<h2>Error de Configuración</h2><p>No se encontró GOOGLE_CLIENT_ID ni archivo credentials.json.</p>",
+            status_code=500
+        )
+
+    redirect_uri = get_redirect_uri(request)
     scopes_str = "%20".join(SCOPES)
     auth_url = (
         f"https://accounts.google.com/o/oauth2/v2/auth?"
@@ -99,12 +127,14 @@ async def auth_login(request: Request):
 @app.get("/auth/callback")
 async def auth_callback(request: Request, code: str = None, error: str = None):
     if error or not code:
-        print(f"Error de Google OAuth: {error}")
+        print(f"Error o cancelación de Google OAuth: {error}")
         return RedirectResponse(url="/")
 
     client_id, client_secret = load_client_secrets()
-    base = str(request.base_url).rstrip('/')
-    redirect_uri = "https://agora-app-leox.onrender.com/auth/callback" if "onrender.com" in base else f"{base}/auth/callback"
+    if not client_id or not client_secret:
+        return RedirectResponse(url="/?error=oauth_config_missing")
+
+    redirect_uri = get_redirect_uri(request)
 
     try:
         token_url = "https://oauth2.googleapis.com/token"
@@ -116,7 +146,11 @@ async def auth_callback(request: Request, code: str = None, error: str = None):
             "grant_type": "authorization_code"
         }).encode("utf-8")
 
-        req = urllib.request.Request(token_url, data=payload, headers={"Content-Type": "application/x-www-form-urlencoded"})
+        req = urllib.request.Request(
+            token_url,
+            data=payload,
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
         with urllib.request.urlopen(req) as resp:
             token_data = json.loads(resp.read().decode("utf-8"))
 
@@ -133,46 +167,34 @@ async def auth_callback(request: Request, code: str = None, error: str = None):
         user_sessions[session_id] = creds.to_json()
         save_sessions()
 
-        try:
-            with open("token.json", "w") as f:
-                f.write(creds.to_json())
-        except Exception:
-            pass
+        print(f"Autenticacion completada con exito para sesion: {session_id}")
 
-        print(f"Autenticacion completada con exito en Render: {session_id}")
-
+        is_https = "https" in redirect_uri
         response = RedirectResponse(url="/", status_code=303)
         response.set_cookie(
             key="agora_session",
             value=session_id,
             max_age=30 * 24 * 3600,
             httponly=True,
-            samesite="lax"
+            samesite="lax",
+            secure=is_https
         )
         return response
     except Exception as e:
-        print(f"Error en canje directo de token: {e}")
+        print(f"Error en canje de token: {e}")
         traceback.print_exc()
-        return RedirectResponse(url="/", status_code=303)
+        return RedirectResponse(url="/?error=token_exchange_failed", status_code=303)
 
 @app.get("/auth/logout")
 @app.get("/logout")
 async def auth_logout(request: Request):
     """
-    Cierre de sesión total: borra la cookie, invalida la sesión en memoria y elimina token.json
-    para evitar que vuelva a autologuearse solo.
+    Cierre de sesión total para el usuario activo: borra la cookie e invalida la sesión.
     """
     session_id = request.cookies.get("agora_session")
     if session_id and session_id in user_sessions:
         del user_sessions[session_id]
         save_sessions()
-
-    # Eliminar token en disco para que no reviva la sesión
-    if os.path.exists("token.json"):
-        try:
-            os.remove("token.json")
-        except Exception:
-            pass
 
     response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie("agora_session", path="/")
@@ -181,53 +203,36 @@ async def auth_logout(request: Request):
 @app.get("/api/courses")
 async def get_courses(request: Request):
     """
-    Devuelve rápidamente las materias inscritas para pintar la barra lateral de inmediato.
+    Devuelve las materias inscritas del usuario autenticado para la barra lateral.
     """
     session_id = request.cookies.get("agora_session")
     creds_json = user_sessions.get(session_id)
-    creds = restore_and_refresh_credentials(creds_json)
-
-    if not creds and os.path.exists('token.json'):
-        try:
-            creds = restore_and_refresh_credentials(open('token.json').read())
-        except Exception:
-            creds = None
+    creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
 
     if not creds:
         return JSONResponse(status_code=401, content={"error": "Not authenticated"})
 
     try:
-        try:
-            from services.classroom_service import fetch_courses
-            courses = fetch_courses(creds=creds)
-            return {"courses": courses}
-        except (ImportError, AttributeError):
-            return {"courses": []}
+        courses = fetch_courses(creds=creds)
+        return {"courses": courses}
     except Exception as e:
+        traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.get("/api/tasks")
 async def get_tasks(request: Request):
+    """
+    Devuelve las tareas y misiones exclusivas del usuario autenticado.
+    """
     session_id = request.cookies.get("agora_session")
     creds_json = user_sessions.get(session_id)
-    creds = restore_and_refresh_credentials(creds_json)
-
-    if not creds:
-        if os.path.exists('token.json'):
-            try:
-                creds = restore_and_refresh_credentials(open('token.json').read())
-            except Exception:
-                creds = None
+    creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
 
     if not creds:
         return JSONResponse(status_code=401, content={"error": "Not authenticated"})
 
     try:
-        try:
-            tasks = fetch_tasks(creds=creds)
-        except TypeError:
-            tasks = fetch_tasks()
-
+        tasks = fetch_tasks(creds=creds)
         tasks_with_dates = [t for t in tasks if t.get('due_date')]
         tasks_without_dates = [t for t in tasks if not t.get('due_date')]
         return {
@@ -240,30 +245,28 @@ async def get_tasks(request: Request):
 
 @app.get("/api/announcements")
 async def api_announcements(request: Request):
+    """
+    Devuelve avisos de Classroom y Gmail del usuario autenticado.
+    """
     session_id = request.cookies.get("agora_session")
     creds_json = user_sessions.get(session_id)
-    creds = restore_and_refresh_credentials(creds_json)
-
-    if not creds and os.path.exists('token.json'):
-        try:
-            creds = restore_and_refresh_credentials(open('token.json').read())
-        except Exception:
-            creds = None
+    creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
 
     if not creds:
         return {"announcements": []}
 
     try:
-        try:
-            alerts = get_announcements_and_alerts(creds=creds)
-        except TypeError:
-            alerts = get_announcements_and_alerts()
+        alerts = get_announcements_and_alerts(creds=creds)
         return {"announcements": alerts}
-    except Exception:
+    except Exception as e:
+        print(f"Error obteniendo avisos: {e}")
         return {"announcements": []}
 
 @app.post("/api/copilot/ask")
 async def ask_ai(request: Request):
+    """
+    Copiloto Ignis: Asesoría académica sobria con andamiaje y selección de mentor.
+    """
     data = await request.json()
     provider = data.get("provider", "openrouter")
     mentor = data.get("mentor", "auto")
