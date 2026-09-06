@@ -134,20 +134,51 @@
                     </div>
                 </div>
 
-                <!-- Antorcha de Prometeo limpia -->
-                <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-night-800 border border-cantera-300 dark:border-slate-700 select-none shadow-sm">
-                    <svg class="w-7 h-7 shrink-0" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Antorcha de Prometeo (Racha por Semanas Académicas y Niveles de Fuego) -->
+                <div onclick="cycleTestStreak()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-night-800 border border-cantera-300 dark:border-slate-700 select-none shadow-sm cursor-pointer hover:border-amber-500/50 transition-all group" title="La Antorcha de Prometeo (Racha por Semanas) — Clic para probar siguiente nivel">
+                    <svg class="w-7 h-7 shrink-0 transition-transform group-hover:scale-110 duration-300" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <defs>
-                            <linearGradient id="flame-gradient" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
-                                <stop stop-color="#F59E0B"/>
+                            <!-- Nivel 0: Apagada (0 semanas) -->
+                            <linearGradient id="flame-off" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#A8A29E"/>
+                                <stop offset="1" stop-color="#78716C"/>
+                            </linearGradient>
+                            <!-- Nivel 1: Ámbar / Chispa Inicial (1 a 2 semanas) -->
+                            <linearGradient id="flame-amber" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#FBBF24"/>
+                                <stop offset="1" stop-color="#EA580C"/>
+                            </linearGradient>
+                            <!-- Nivel 2: Rubí / Fuego Firme (3 a 5 semanas) -->
+                            <linearGradient id="flame-ruby" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#F87171"/>
                                 <stop offset="1" stop-color="#DC2626"/>
                             </linearGradient>
+                            <!-- Nivel 3: Amatista / Flujo Intelectual (6 a 9 semanas) -->
+                            <linearGradient id="flame-violet" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#C084FC"/>
+                                <stop offset="1" stop-color="#6366F1"/>
+                            </linearGradient>
+                            <!-- Nivel 4: Zafiro / Fuego Azul de Alta Frecuencia (10 a 14 semanas) -->
+                            <linearGradient id="flame-sapphire" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#38BDF8"/>
+                                <stop offset="1" stop-color="#2563EB"/>
+                            </linearGradient>
+                            <!-- Nivel 5: Oro Solar Legendario (15+ semanas / Semestre Invicto) -->
+                            <linearGradient id="flame-gold" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#FDE047"/>
+                                <stop offset="0.6" stop-color="#F59E0B"/>
+                                <stop offset="1" stop-color="#10B981"/>
+                            </linearGradient>
+                            <filter id="flame-glow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="1.2" result="blur" />
+                                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                            </filter>
                         </defs>
                         <path d="M16 26L15 32H21L20 26H16Z" fill="#78716C"/>
                         <path d="M14 24H22V26H14V24Z" fill="#A8A29E"/>
-                        <path id="torch-flame" d="M18 2C15 8 9 12 9 19C9 24.5 13 26.5 18 26.5C23 26.5 27 24.5 27 19C27 12 21 8 18 2Z" fill="#A8A29E"/>
+                        <path id="torch-flame" d="M18 2C15 8 9 12 9 19C9 24.5 13 26.5 18 26.5C23 26.5 27 24.5 27 19C27 12 21 8 18 2Z" fill="url(#flame-off)"/>
                     </svg>
-                    <span id="streak-text" class="text-xs font-bold text-cantera-700 dark:text-slate-400 tracking-tight">0 días de racha</span>
+                    <span id="streak-text" class="text-xs font-bold text-cantera-700 dark:text-slate-400 tracking-tight">0 semanas de racha</span>
                 </div>
             </div>
         </div>
@@ -996,7 +1027,81 @@
         };
         let activePresetKey = 'pomodoro';
 
+        // Niveles de Racha por Semanas Académicas (Modo de Prueba Temporal)
+        const testWeeksPool = [1, 2, 4, 7, 12, 16]; // 1-2: Ámbar, 3-5: Rubí, 6-9: Amatista, 10-14: Zafiro, 15+: Oro Legendario
+        let currentTestStreakIndex = Math.floor(Math.random() * testWeeksPool.length);
+        let activeStreakWeeks = testWeeksPool[currentTestStreakIndex];
+
+        function setStreakLevel(weeks) {
+            const flameEl = document.getElementById('torch-flame');
+            const streakText = document.getElementById('streak-text');
+            if (!flameEl || !streakText) return;
+
+            let gradientId = 'flame-off';
+            let textColor = 'text-cantera-600 dark:text-slate-400';
+            let label = `${weeks} semanas de racha`;
+
+            if (weeks === 0) {
+                gradientId = 'flame-off';
+                textColor = 'text-cantera-600 dark:text-slate-400';
+                label = '0 semanas de racha';
+            } else if (weeks <= 2) {
+                // Nivel 1 (1 a 2 semanas): Ámbar
+                gradientId = 'flame-amber';
+                textColor = 'text-amber-600 dark:text-amber-400';
+                label = weeks === 1 ? '1 sem. de racha' : `${weeks} sem. de racha`;
+            } else if (weeks <= 5) {
+                // Nivel 2 (3 a 5 semanas): Rubí
+                gradientId = 'flame-ruby';
+                textColor = 'text-rose-600 dark:text-rose-400';
+                label = `${weeks} sem. de racha`;
+            } else if (weeks <= 9) {
+                // Nivel 3 (6 a 9 semanas): Amatista
+                gradientId = 'flame-violet';
+                textColor = 'text-purple-600 dark:text-indigo-400';
+                label = `${weeks} sem. de racha`;
+            } else if (weeks <= 14) {
+                // Nivel 4 (10 a 14 semanas): Zafiro
+                gradientId = 'flame-sapphire';
+                textColor = 'text-sky-600 dark:text-sky-400';
+                label = `${weeks} sem. de racha`;
+            } else {
+                // Nivel 5 (15+ semanas): Oro Solar Legendario
+                gradientId = 'flame-gold';
+                textColor = 'text-amber-500 dark:text-yellow-400 font-extrabold';
+                label = `${weeks} sem. ¡Legendaria!`;
+            }
+
+            flameEl.setAttribute('fill', `url(#${gradientId})`);
+            if (weeks > 0) {
+                flameEl.setAttribute('filter', 'url(#flame-glow)');
+            } else {
+                flameEl.removeAttribute('filter');
+            }
+
+            streakText.textContent = label;
+            streakText.className = `text-xs font-bold ${textColor} tracking-tight`;
+
+            // Sincronizar con el panel de Franklin
+            const fPct = document.getElementById('franklin-streak-pct');
+            const fStatus = document.getElementById('franklin-streak-status');
+            if (fPct) {
+                fPct.textContent = `${weeks} sem`;
+                fPct.className = `text-xl font-black font-mono ${textColor}`;
+            }
+            if (fStatus && weeks > 0) {
+                fStatus.innerHTML = `<span class="${textColor} font-bold">La Antorcha Activa:</span> ${weeks} semana(s) consecutivas cumplidas.`;
+            }
+        }
+
+        function cycleTestStreak() {
+            currentTestStreakIndex = (currentTestStreakIndex + 1) % testWeeksPool.length;
+            activeStreakWeeks = testWeeksPool[currentTestStreakIndex];
+            setStreakLevel(activeStreakWeeks);
+        }
+
         function initApp() {
+            setStreakLevel(activeStreakWeeks);
             renderMiniCalendar();
             loadTasks();
             loadAnnouncements();
@@ -1755,19 +1860,8 @@
             if (lblGraded) lblGraded.textContent = `${countGraded} calificadas`;
             if (lblSub) lblSub.textContent = `${countSubmitted} en revisión`;
 
-            const flameEl = document.getElementById('torch-flame');
-            const streakText = document.getElementById('streak-text');
-            if (flameEl && streakText) {
-                if (todayTotal > 0 && todayPct === 100) {
-                    flameEl.setAttribute('fill', 'url(#flame-gradient)');
-                    streakText.textContent = '1 día de racha';
-                    streakText.className = 'text-xs font-bold text-amber-600 dark:text-amber-400 tracking-tight';
-                } else {
-                    flameEl.setAttribute('fill', '#A8A29E');
-                    streakText.textContent = '0 días de racha';
-                    streakText.className = 'text-xs font-bold text-cantera-600 dark:text-slate-400 tracking-tight';
-                }
-            }
+            // Actualizar La Antorcha con el nivel de racha por semanas académicas
+            setStreakLevel(activeStreakWeeks);
         }
 
         // Calendario con 4 puntos
