@@ -145,6 +145,38 @@ MENTOR_PROMPTS = {
         "Método de asesoría: Plantea escenarios de costos fijos, variables y proyecciones de retorno de inversión para fundamentar la decisión de negocio."
     ),
 
+    # --- INGENIERÍA CIVIL, MECÁNICA, INDUSTRIAL, DATOS, MÚSICA Y COMUNICACIÓN ---
+    "eiffel": (
+        "ENFOQUE METODOLÓGICO: ESTRUCTURAS, RESISTENCIA DE MATERIALES Y OBRAS CIVILES (Gustave Eiffel).\n"
+        "Especialidad: Mecánica de materiales, cálculo de vigas, armaduras, momentos flexionantes, cortante, concreto armado, empuje de tierras y mecánica de suelos.\n"
+        "Método de asesoría: Evalúa los diagramas de cortante y momento flector. Ante fallas por flexión o pandeo, plantea 2 o 3 alternativas de redistribución de cargas o perfiles estructurales justificando la seguridad y sustentación."
+    ),
+    "carnot": (
+        "ENFOQUE METODOLÓGICO: TERMODINÁMICA, FLUIDOS Y TRANSFERENCIA DE CALOR (Sadi Carnot).\n"
+        "Especialidad: Ciclos termodinámicos (Rankine, Otto, Brayton, Carnot), balance de entalpía y entropía, intercambiadores de calor y dinámica de fluidos.\n"
+        "Método de asesoría: Analiza las etapas del ciclo térmico. Si el alumno se traba, plantea 2 rutas de análisis termodinámico explicando las pérdidas irreversibles y la eficiencia térmica esperada."
+    ),
+    "gantt": (
+        "ENFOQUE METODOLÓGICO: OPTIMIZACIÓN DE PROCESOS, LOGÍSTICA Y GESTIÓN DE PROYECTOS (Henry Gantt).\n"
+        "Especialidad: Balanceo de líneas de ensamble, diagramas de flujo de procesos, tiempos y movimientos, ruta crítica (PERT/CPM), cadena de suministro y control estadístico de calidad.\n"
+        "Método de asesoría: Cuestiona los cuellos de botella en la operación y propone opciones de redistribución de estaciones o secuencias de trabajo para optimizar el tiempo de ciclo."
+    ),
+    "nightingale": (
+        "ENFOQUE METODOLÓGICO: ESTADÍSTICA APLICADA Y VISUALIZACIÓN CUANTITATIVA (Florence Nightingale).\n"
+        "Especialidad: Estadística inferencial, pruebas de hipótesis (p-values, ANOVA, chi-cuadrada, regresiones), bioestadística, muestreo y diagramas de distribución.\n"
+        "Método de asesoría: Orienta en la selección rigurosa de la prueba estadística (paramétrica vs no paramétrica) justificando con base en la distribución y tamaño de la muestra."
+    ),
+    "bach": (
+        "ENFOQUE METODOLÓGICO: TEORÍA MUSICAL, ARMONÍA Y ACÚSTICA (Johann Sebastian Bach).\n"
+        "Especialidad: Análisis armónico de partituras, contrapunto, conducción de voces, frecuencias audibles, síntesis de sonido y acústica musical.\n"
+        "Método de asesoría: Señala quintas paralelas o tensiones no resueltas en el cifrado y plantea alternativas de modulación tonal o rearmonización."
+    ),
+    "bly": (
+        "ENFOQUE METODOLÓGICO: PERIODISMO DE INVESTIGACIÓN Y NARRATIVA DOCUMENTAL (Nellie Bly).\n"
+        "Especialidad: Crónica periodística, ética informativa, triangulación de fuentes primarias, reportaje de investigación y redacción para medios.\n"
+        "Método de asesoría: Cuestiona la veracidad y solidez de las fuentes documentales antes de validar cualquier afirmación del reportaje."
+    ),
+
     # --- MÓDULOS ESPECIALES AUTÓNOMOS ---
     "socrates": (
         "ENFOQUE METODOLÓGICO: SIMULADOR UNIVERSAL DE EXÁMENES DEPARTAMENTALES (Sócrates).\n"
@@ -184,6 +216,30 @@ def clasificar_mentor(course_name: str = "", task_title: str = "") -> str:
     # Sistemas Digitales / Redes / Autómatas
     if any(k in texto for k in ["automata", "autómata", "redes", "arquitectura", "logica", "lógica", "sistemas operativos"]):
         return "turing"
+
+    # Estructuras / Civil / Resistencia de materiales
+    if any(k in texto for k in ["civil", "estructura", "estructuras", "viga", "vigas", "suelo", "suelos", "topografia", "topografía", "concreto", "armadura", "cortante", "flexion", "flexión", "pandeo", "cimentacion", "cimentación"]):
+        return "eiffel"
+
+    # Termodinámica / Calor / Fluidos
+    if any(k in texto for k in ["termodinamica", "termodinámica", "fluido", "fluidos", "calor", "entalpia", "entalpía", "entropia", "entropía", "refrigeracion", "refrigeración", "rankine", "ciclo termico"]):
+        return "carnot"
+
+    # Industrial / Logística / Procesos / Gantt
+    if any(k in texto for k in ["industrial", "logistica", "logística", "cadena de suministro", "gantt", "pert", "cpm", "tiempo y movimiento", "balanceo de linea", "manufactura", "operaciones"]):
+        return "gantt"
+
+    # Estadística / Ciencia de datos / Inferencia
+    if any(k in texto for k in ["estadistica", "estadística", "probabilidad", "inferencia", "anova", "regresion", "regresión", "p-value", "hipotesis", "hipótesis", "actuaria", "actuaría", "bioestadistica"]):
+        return "nightingale"
+
+    # Música / Audio / Acústica
+    if any(k in texto for k in ["musica", "música", "audio", "acustica", "acústica", "armonia", "armonía", "partitura", "contrapunto", "sonido", "frecuencia"]):
+        return "bach"
+
+    # Periodismo / Comunicación / Medios
+    if any(k in texto for k in ["periodismo", "reportaje", "cronica", "crónica", "noticia", "comunicacion", "comunicación", "medios", "fuentes"]):
+        return "bly"
 
     # Diseño Web / UI / UX
     if any(k in texto for k in ["web", "ui", "ux", "interfaz", "frontend", "html", "css", "interaccion", "interacción"]):

@@ -361,16 +361,41 @@
                         </div>
                         <span class="font-extrabold text-sm tracking-tight text-cantera-900 dark:text-white">Ignis</span>
                         <span class="text-cantera-400 dark:text-slate-600">|</span>
-                        <select id="mentor-select" class="bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-indigo-700 dark:text-indigo-300 font-medium">
-                            <option value="newton">Isaac Newton (Exactas / Cálculo)</option>
-                            <option value="lovelace">Ada Lovelace (Código / Algoritmos)</option>
-                            <option value="turing">Alan Turing (Sistemas / Lógica)</option>
-                            <option value="sorjuana">Sor Juana (Reportes / Redacción)</option>
-                            <option value="osler">William Osler (Salud / Clínica)</option>
-                            <option value="ciceron">Cicerón (Derecho / Debate)</option>
-                            <option value="smith">Adam Smith (Negocios / Finanzas)</option>
-                            <option value="socrates">Sócrates (Simulador de Examen)</option>
-                            <option value="franklin">B. Franklin (Estratega de Agenda)</option>
+                        <select id="mentor-select" class="bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-indigo-700 dark:text-indigo-300 font-medium max-w-[260px] truncate">
+                            <optgroup label="Exactas, Computación y Hardware">
+                                <option value="newton">Isaac Newton (Exactas / Dinámica / Cálculo)</option>
+                                <option value="tesla">Nikola Tesla (Hardware / Circuitos / Embebidos)</option>
+                                <option value="lovelace">Ada Lovelace (Software / Algoritmos / Código)</option>
+                                <option value="turing">Alan Turing (Sistemas / Lógica / Autómatas)</option>
+                                <option value="eiffel">Gustave Eiffel (Estructuras / Resistencia / Civil)</option>
+                                <option value="carnot">Sadi Carnot (Termodinámica / Fluidos / Calor)</option>
+                                <option value="gantt">Henry Gantt (Procesos / Logística / Proyectos)</option>
+                            </optgroup>
+                            <optgroup label="Diseño, Arquitectura y Expresión Visual">
+                                <option value="gropius">Walter Gropius (Diseño Web / UI-UX / Bauhaus)</option>
+                                <option value="worth">Charles Frederick Worth (Diseño de Moda / Textil)</option>
+                                <option value="dewolfe">Elsie de Wolfe (Diseño de Interiores / Espacios)</option>
+                                <option value="artemisia">Artemisia Gentileschi (Artes Plásticas / Dibujo)</option>
+                                <option value="vitruvio">Marco Vitruvio (Arquitectura / Urbanismo)</option>
+                            </optgroup>
+                            <optgroup label="Ciencias Naturales, Químicas y Salud">
+                                <option value="curie">Marie Curie (Química / Farmacia / Materiales)</option>
+                                <option value="pasteur">Louis Pasteur (Biología / Microbiología)</option>
+                                <option value="osler">William Osler (Salud / Diagnóstico Clínico)</option>
+                                <option value="nightingale">Florence Nightingale (Estadística / Bioestadística)</option>
+                            </optgroup>
+                            <optgroup label="Humanidades, Sociales y Negocios">
+                                <option value="sorjuana">Sor Juana Inés (Reportes / Redacción / Ensayos)</option>
+                                <option value="ciceron">Marco Tulio Cicerón (Derecho / Debate Forense)</option>
+                                <option value="wundt">Wilhelm Wundt (Psicología / Conducta / Metodología)</option>
+                                <option value="smith">Adam Smith (Negocios / Finanzas / Economía)</option>
+                                <option value="bach">J. S. Bach (Música / Teoría / Armonía y Acústica)</option>
+                                <option value="bly">Nellie Bly (Periodismo / Investigación / Medios)</option>
+                            </optgroup>
+                            <optgroup label="Módulos Autónomos">
+                                <option value="socrates">Sócrates (Simulador de Exámenes)</option>
+                                <option value="franklin">Benjamin Franklin (Estratega de Rutina y La Antorcha)</option>
+                            </optgroup>
                         </select>
                     </div>
 
@@ -437,8 +462,14 @@
         </div>
     </div>
 
-    <!-- Reloj Digital en Vivo -->
-    <div class="fixed bottom-5 right-6 z-20 pointer-events-none select-none">
+    <!-- Reloj Digital en Vivo & Botón Cincelado de Franklin -->
+    <div class="fixed bottom-5 right-6 z-20 pointer-events-none select-none flex flex-col items-end gap-2">
+        <!-- Botón Cincelado de Franklin (La Antorcha y Rutina) -->
+        <button onclick="openFranklinModal()" aria-label="El Reloj de Franklin" class="pointer-events-auto w-10 h-10 rounded-2xl bg-white/95 dark:bg-night-900/95 border border-cantera-300 dark:border-slate-700 shadow-xl backdrop-blur-md flex items-center justify-center text-amber-500 hover:text-amber-400 hover:border-amber-500/50 hover:scale-105 active:scale-95 transition-all cursor-pointer group" title="El Reloj de Franklin — Rutina y La Antorcha">
+            <i class="fa-solid fa-hourglass-half text-sm group-hover:rotate-180 transition-transform duration-500"></i>
+        </button>
+
+        <!-- Reloj Digital -->
         <div class="px-4 py-2.5 rounded-2xl bg-white/95 dark:bg-night-900/95 border border-cantera-300 dark:border-slate-700 shadow-2xl backdrop-blur-md flex flex-col items-end">
             <div class="flex items-center gap-2.5">
                 <i class="fa-regular fa-clock text-indigo-500 dark:text-indigo-400 text-base"></i>
@@ -461,6 +492,10 @@
                 </div>
 
                 <nav class="space-y-2 text-sm font-medium">
+                    <button onclick="openFranklinModal(); toggleMainMenu();" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-hourglass-half text-amber-500 w-5"></i>
+                        <span>El Reloj de Franklin (Rutina y Racha)</span>
+                    </button>
                     <button onclick="openSocratesModal(); toggleMainMenu();" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
                         <i class="fa-solid fa-graduation-cap text-indigo-500 w-5"></i>
                         <span>Simulador Socrático</span>
@@ -495,47 +530,241 @@
 
     <!-- Modales -->
     <div id="modal-mentors" style="display: none;" onclick="if(event.target === this) closeMentorsModal()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs items-center justify-center p-4">
-        <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[85vh] overflow-y-auto custom-scroll">
+        <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl max-h-[85vh] overflow-y-auto custom-scroll">
             <div class="flex justify-between items-center mb-4 border-b border-cantera-200 dark:border-slate-800 pb-3">
-                <h3 class="text-base font-bold text-cantera-900 dark:text-white">Panel de Profesores de Ignis</h3>
-                <button onclick="closeMentorsModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <div>
+                    <h3 class="text-base font-bold text-cantera-900 dark:text-white">Panel de Profesores de Ignis</h3>
+                    <p class="text-[11px] text-cantera-600 dark:text-slate-400">Los 24 Mentores Universitarios de Dominio Público organizados por disciplina académica</p>
+                </div>
+                <button onclick="closeMentorsModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-            <div class="space-y-3.5 text-xs text-cantera-700 dark:text-slate-300 leading-relaxed">
-                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
-                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Isaac Newton (Exactas y Físico-Matemáticas)</span>
-                    Creador del cálculo y las leyes del movimiento. Resuelve dudas de álgebra, cálculo y física modelando ejercicios gemelos con números cambiados para que tú resuelvas tu tarea por ti mismo.
+            
+            <div class="space-y-5 text-xs text-cantera-700 dark:text-slate-300 leading-relaxed">
+                <!-- EXACTAS, COMPUTACIÓN Y HARDWARE -->
+                <div class="space-y-2.5">
+                    <h4 class="font-bold text-[11px] uppercase tracking-wider text-indigo-600 dark:text-indigo-400 border-b border-indigo-500/20 pb-1">1. Exactas, Computación y Hardware (7 Mentores)</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-indigo-300 block mb-0.5">Isaac Newton</span>
+                            <span class="text-[10px] text-indigo-500 block mb-1">Ciencias Exactas, Dinámica y Cálculo</span>
+                            Cálculo diferencial/integral, ecuaciones diferenciales, transformada de Laplace, física vectorial y modelado analítico de sistemas dinámicos.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-indigo-300 block mb-0.5">Nikola Tesla</span>
+                            <span class="text-[10px] text-indigo-500 block mb-1">Hardware, Circuitos y Embebidos</span>
+                            Microcontroladores (Arduino, ESP32), circuitos analógicos y digitales, conmutación de potencia (MOSFET vs relevador) y sensores.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-indigo-300 block mb-0.5">Ada Lovelace</span>
+                            <span class="text-[10px] text-indigo-500 block mb-1">Software, Algoritmos y Programación</span>
+                            Lógica de algoritmos, complejidad Big-O, estructuras de datos y depuración metódica con pseudocódigo gemelo sin regalar el código final.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-indigo-300 block mb-0.5">Alan Turing</span>
+                            <span class="text-[10px] text-indigo-500 block mb-1">Arquitectura de Sistemas y Lógica Digital</span>
+                            Máquinas de estado finito, autómatas, tablas de verdad, arquitectura de cómputo, concurrencia y protocolos de redes.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-indigo-300 block mb-0.5">Gustave Eiffel</span>
+                            <span class="text-[10px] text-indigo-500 block mb-1">Estructuras, Resistencia y Obras Civiles</span>
+                            Mecánica de materiales, diagramas de cortante y momento flector, diseño de vigas, armaduras y estabilidad estática.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-indigo-300 block mb-0.5">Sadi Carnot</span>
+                            <span class="text-[10px] text-indigo-500 block mb-1">Termodinámica, Fluidos y Transferencia de Calor</span>
+                            Ciclos de potencia (Rankine, Otto, Brayton, Carnot), balance de entalpía y entropía, transferencia de calor e irreversibilidades.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700 md:col-span-2">
+                            <span class="font-bold text-cantera-900 dark:text-indigo-300 block mb-0.5">Henry Gantt</span>
+                            <span class="text-[10px] text-indigo-500 block mb-1">Optimización de Procesos, Logística y Proyectos</span>
+                            Balanceo de líneas de ensamble, tiempos y movimientos, ruta crítica (PERT/CPM), cuellos de botella y gestión de operaciones.
+                        </div>
+                    </div>
                 </div>
-                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
-                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Ada Lovelace (Software, Algoritmos y Código)</span>
-                    Pionera de la programación. Te ayuda a diseñar la lógica de tus algoritmos, estructuras de datos y depurar errores sin regalarte el código terminado.
+
+                <!-- DISEÑO, ARQUITECTURA Y EXPRESIÓN VISUAL -->
+                <div class="space-y-2.5">
+                    <h4 class="font-bold text-[11px] uppercase tracking-wider text-pink-600 dark:text-pink-400 border-b border-pink-500/20 pb-1">2. Diseño, Arquitectura y Expresión Visual (5 Mentores)</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-pink-300 block mb-0.5">Walter Gropius (Bauhaus)</span>
+                            <span class="text-[10px] text-pink-500 block mb-1">Diseño Web, Interfaces UI/UX y Jerarquía Visual</span>
+                            La forma sigue a la función, retículas modulares, tipografía sobria, contraste y experiencia de usuario limpia.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-pink-300 block mb-0.5">Charles Frederick Worth</span>
+                            <span class="text-[10px] text-pink-500 block mb-1">Diseño de Moda y Confección Textil</span>
+                            Patronaje estructural, caída de telas, densidad de materiales, tensión de costuras y balance entre silueta y función.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-pink-300 block mb-0.5">Elsie de Wolfe</span>
+                            <span class="text-[10px] text-pink-500 block mb-1">Diseño de Interiores y Habitabilidad Espacial</span>
+                            Zonificación, circulación de usuarios, ergonomía, armonía cromática y aprovechamiento de luz natural en planos.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-pink-300 block mb-0.5">Artemisia Gentileschi</span>
+                            <span class="text-[10px] text-pink-500 block mb-1">Artes Plásticas, Ilustración y Narrativa Visual</span>
+                            Técnica de claroscuro, volumetría anatómica, teoría cromática, perspectiva y punto focal compositivo.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700 md:col-span-2">
+                            <span class="font-bold text-cantera-900 dark:text-pink-300 block mb-0.5">Marco Vitruvio</span>
+                            <span class="text-[10px] text-pink-500 block mb-1">Arquitectura Clásica y Urbanismo</span>
+                            La tríada Firmitas (solidez estructural), Utilitas (función del espacio) y Venustas (estética formal y proporción).
+                        </div>
+                    </div>
                 </div>
-                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
-                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Alan Turing (Sistemas, Lógica y Diagramas)</span>
-                    Padre de la ciencia computacional. Te orienta a diagramar máquinas de estado, flujos de sistemas, autómatas y circuitos con razonamiento estructurado.
+
+                <!-- CIENCIAS NATURALES, QUÍMICAS Y SALUD -->
+                <div class="space-y-2.5">
+                    <h4 class="font-bold text-[11px] uppercase tracking-wider text-emerald-600 dark:text-emerald-400 border-b border-emerald-500/20 pb-1">3. Ciencias Naturales, Químicas y Salud (4 Mentores)</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-emerald-300 block mb-0.5">Marie Curie</span>
+                            <span class="text-[10px] text-emerald-500 block mb-1">Química, Farmacia y Materiales</span>
+                            Estequiometría, cinética de reacciones, balances redox, síntesis y seguridad química en protocolos de laboratorio.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-emerald-300 block mb-0.5">Louis Pasteur</span>
+                            <span class="text-[10px] text-emerald-500 block mb-1">Biología, Microbiología y Biotecnología</span>
+                            Cultivos asépticos, control experimental de variables biológicas, hipótesis y validez empírica en laboratorio.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-emerald-300 block mb-0.5">William Osler</span>
+                            <span class="text-[10px] text-emerald-500 block mb-1">Ciencias de la Salud y Razonamiento Clínico</span>
+                            Semiología médica, árboles de diagnóstico diferencial, fisiopatología y análisis sistemático de casos clínicos.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-emerald-300 block mb-0.5">Florence Nightingale</span>
+                            <span class="text-[10px] text-emerald-500 block mb-1">Estadística Aplicada y Bioestadística</span>
+                            Inferencia estadística, pruebas de hipótesis (ANOVA, chi-cuadrada, p-values), regresiones y visualización cuantitativa de datos.
+                        </div>
+                    </div>
                 </div>
-                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
-                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Sor Juana Inés de la Cruz (Reportes y Redacción Académica)</span>
-                    Máxima polímata hispana. Revisa la coherencia, introducción, marco teórico y conclusiones de tus reportes de laboratorio o ensayos técnicos.
+
+                <!-- HUMANIDADES, CIENCIAS SOCIALES Y NEGOCIOS -->
+                <div class="space-y-2.5">
+                    <h4 class="font-bold text-[11px] uppercase tracking-wider text-amber-600 dark:text-amber-400 border-b border-amber-500/20 pb-1">4. Humanidades, Sociales y Negocios (6 Mentores)</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-amber-300 block mb-0.5">Sor Juana Inés de la Cruz</span>
+                            <span class="text-[10px] text-amber-500 block mb-1">Redacción Académica, Reportes y Ensayos</span>
+                            Estructura de introducción, marcos teóricos, metodología, argumentación lógica, síntesis ejecutiva y citación formal.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-amber-300 block mb-0.5">Marco Tulio Cicerón</span>
+                            <span class="text-[10px] text-amber-500 block mb-1">Derecho, Ciencias Jurídicas y Debate</span>
+                            Silogismos jurídicos (Hechos, Derecho y Petitorio), fundamentación legal en jurisprudencia y retórica forense.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-amber-300 block mb-0.5">Wilhelm Wundt</span>
+                            <span class="text-[10px] text-amber-500 block mb-1">Psicología y Ciencias de la Conducta</span>
+                            Diseño experimental conductual, procesos cognitivos, psicometría y control de sesgos metodológicos.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-amber-300 block mb-0.5">Adam Smith</span>
+                            <span class="text-[10px] text-amber-500 block mb-1">Negocios, Economía y Finanzas</span>
+                            Análisis costo-beneficio, viabilidad financiera, microeconomía, evaluación de proyectos y métricas de retorno de inversión.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-amber-300 block mb-0.5">Johann Sebastian Bach</span>
+                            <span class="text-[10px] text-amber-500 block mb-1">Teoría Musical, Armonía y Acústica</span>
+                            Análisis armónico de partituras, conducción de voces, contrapunto, modulación tonal, frecuencias y síntesis auditiva.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-amber-300 block mb-0.5">Nellie Bly</span>
+                            <span class="text-[10px] text-amber-500 block mb-1">Periodismo de Investigación y Medios</span>
+                            Crónica periodística, triangulación rigurosa de fuentes primarias, reportajes documentales y redacción ética.
+                        </div>
+                    </div>
                 </div>
-                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
-                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">William Osler (Salud y Razonamiento Clínico)</span>
-                    Referente de la medicina de cabecera. Convierte la teoría en árboles diagnósticos, interpretación de signos y análisis de casos clínicos.
+
+                <!-- MÓDULOS ESPECIALES AUTÓNOMOS -->
+                <div class="space-y-2.5">
+                    <h4 class="font-bold text-[11px] uppercase tracking-wider text-sky-600 dark:text-sky-400 border-b border-sky-500/20 pb-1">5. Módulos Autónomos Especiales (2 Mentores)</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-sky-300 block mb-0.5">Sócrates (Simulador de Exámenes Departamentales)</span>
+                            <span class="text-[10px] text-sky-500 block mb-1">Evaluación Oral y Mayéutica Universitaria</span>
+                            Sinodal universitario que te evalúa bajo presión en modo teórico, práctico o híbrido a partir de tus documentos y consignas.
+                        </div>
+                        <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                            <span class="font-bold text-cantera-900 dark:text-sky-300 block mb-0.5">Benjamin Franklin (El Reloj de Franklin)</span>
+                            <span class="text-[10px] text-sky-500 block mb-1">Estratega de Rutina y Guardián de La Antorcha</span>
+                            Vive en el botón cincelado de reloj de arena sobre el reloj digital. Relaciona las fechas de entrega con los bloques del Temporizador para asegurar el 100% de la racha diaria.
+                        </div>
+                    </div>
                 </div>
-                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
-                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Marco Tulio Cicerón (Derecho y Debate Forense)</span>
-                    El orador y jurista supremo. Te guía en la fundamentación legal, argumentación de hechos y silogismos para alegatos jurídicos.
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal El Reloj de Franklin (Rutina y La Antorcha) -->
+    <div id="modal-franklin" style="display: none;" onclick="if(event.target === this) closeFranklinModal()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs items-center justify-center p-4">
+        <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl max-h-[85vh] overflow-y-auto custom-scroll flex flex-col">
+            <!-- Encabezado -->
+            <div class="flex justify-between items-center mb-4 border-b border-cantera-200 dark:border-slate-800 pb-3 shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
+                        <i class="fa-solid fa-hourglass-half text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm md:text-base font-bold text-cantera-900 dark:text-white">El Reloj de Benjamin Franklin</h3>
+                        <p class="text-[11px] text-cantera-600 dark:text-slate-400">Estrategia de Rutina y Gestión de Tiempo para asegurar el 100% de la Racha</p>
+                    </div>
                 </div>
-                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
-                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Adam Smith (Negocios, Finanzas y Economía)</span>
-                    Padre de la economía moderna. Te ayuda a evaluar la viabilidad de proyectos, costos, balance financiero y estrategia comercial.
+                <button onclick="closeFranklinModal()" class="text-slate-400 hover:text-red-500 cursor-pointer p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Estado de La Antorcha (Racha Diaria) -->
+            <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between mb-4 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-fire"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider block">La Antorcha de Franklin</span>
+                        <p id="franklin-streak-status" class="text-xs text-cantera-800 dark:text-slate-200 font-medium">Calculando estado de la racha...</p>
+                    </div>
                 </div>
-                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
-                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Sócrates (Simulador de Exámenes bajo Presión)</span>
-                    Maestro de la mayéutica. Te hace preguntas incisivas basadas en los documentos de clase para poner a prueba si realmente estás listo para el parcial.
+                <div class="text-right">
+                    <span id="franklin-streak-pct" class="text-xl font-black font-mono text-amber-600 dark:text-amber-400">100%</span>
+                    <span class="block text-[10px] text-cantera-500 dark:text-slate-400 font-medium">Racha Diaria</span>
                 </div>
-                <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
-                    <span class="font-bold text-cantera-900 dark:text-indigo-400 block mb-1">Benjamin Franklin (Estratega del Tiempo y Agenda)</span>
-                    Genio de la productividad práctica. Te ayuda a fraccionar misiones pesadas en bloques según tus horas libres para evitar entregas de pánico.
+            </div>
+
+            <!-- Diagnóstico de Rutina según Fechas de Entrega -->
+            <div class="space-y-3 mb-4 flex-1">
+                <h4 class="text-xs font-bold text-cantera-800 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-calendar-check text-indigo-500"></i>
+                    <span>Relación de Entregas y Bloques de Enfoque</span>
+                </h4>
+                <div id="franklin-recommendations" class="space-y-2 text-xs">
+                    <!-- Dinámico: Tareas próximas con bloques recomendados -->
+                </div>
+            </div>
+
+            <!-- Botones de Bloques Rápidos para Activar el Temporizador -->
+            <div class="p-3.5 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700 space-y-2 shrink-0">
+                <span class="text-[11px] font-bold text-cantera-700 dark:text-slate-300 block">Activar Bloque en el Temporizador:</span>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-semibold">
+                    <button onclick="applyFranklinPreset('pomodoro')" class="p-2 rounded-lg bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-center cursor-pointer">
+                        <span class="block font-bold">25 min</span>
+                        <span class="text-[10px] text-slate-400 font-normal">Pomodoro</span>
+                    </button>
+                    <button onclick="applyFranklinPreset('52-17')" class="p-2 rounded-lg bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-center cursor-pointer">
+                        <span class="block font-bold">52 min</span>
+                        <span class="text-[10px] text-slate-400 font-normal">Regla 52/17</span>
+                    </button>
+                    <button onclick="applyFranklinPreset('ultradiano')" class="p-2 rounded-lg bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-center cursor-pointer">
+                        <span class="block font-bold">90 min</span>
+                        <span class="text-[10px] text-slate-400 font-normal">Ultradiano</span>
+                    </button>
+                    <button onclick="applyFranklinPreset('5min')" class="p-2 rounded-lg bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-center cursor-pointer">
+                        <span class="block font-bold">5 min</span>
+                        <span class="text-[10px] text-slate-400 font-normal">Inicio Rápido</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -928,6 +1157,7 @@
             if (e.key === 'Escape') {
                 closeIgnisWorkspace();
                 closeSocratesModal();
+                closeFranklinModal();
                 closeAnnouncementDetailModal();
                 closeMentorsModal();
                 closeTechniquesModal();
@@ -1900,18 +2130,93 @@
             const select = document.getElementById('mentor-select');
             if (!select) return;
 
-            if (name.includes('sistema') || name.includes('cálculo') || name.includes('física') || name.includes('circuito') || name.includes('control')) {
+            // Hardware / Circuitos / Embebidos (Tesla)
+            if (name.includes('arduino') || name.includes('circuito') || name.includes('electronica') || name.includes('electrónica') || name.includes('sensor') || name.includes('hardware') || name.includes('embebido') || name.includes('esp32')) {
+                select.value = 'tesla';
+            }
+            // Exactas / Dinámica / Cálculo / Física (Newton)
+            else if (name.includes('laplace') || name.includes('calculo') || name.includes('cálculo') || name.includes('fisica') || name.includes('física') || name.includes('ecuacion') || name.includes('ecuación') || name.includes('algebra') || name.includes('álgebra') || name.includes('control') || name.includes('sistemas dinamicos')) {
                 select.value = 'newton';
-            } else if (name.includes('program') || name.includes('datos') || name.includes('algoritmo') || name.includes('compilador')) {
+            }
+            // Software / Algoritmos / Código (Lovelace)
+            else if (name.includes('program') || name.includes('datos') || name.includes('algoritmo') || name.includes('compilador') || name.includes('codigo') || name.includes('código') || name.includes('python') || name.includes('java')) {
                 select.value = 'lovelace';
-            } else if (name.includes('redes') || name.includes('arquitectura') || name.includes('lógica')) {
+            }
+            // Sistemas / Lógica / Autómatas / Redes (Turing)
+            else if (name.includes('redes') || name.includes('arquitectura') || name.includes('lógica') || name.includes('logica') || name.includes('automata') || name.includes('autómata') || name.includes('sistemas operativos')) {
                 select.value = 'turing';
-            } else if (name.includes('taller') || name.includes('lectura') || name.includes('redacción') || name.includes('metodología')) {
-                select.value = 'sorjuana';
-            } else if (name.includes('salud') || name.includes('médic') || name.includes('anatomía')) {
+            }
+            // Estructuras / Obras Civiles (Eiffel)
+            else if (name.includes('civil') || name.includes('estructura') || name.includes('viga') || name.includes('concreto') || name.includes('suelo') || name.includes('estatica') || name.includes('estática')) {
+                select.value = 'eiffel';
+            }
+            // Termodinámica / Fluidos / Calor (Carnot)
+            else if (name.includes('termodinam') || name.includes('fluido') || name.includes('calor') || name.includes('entalp') || name.includes('entrop')) {
+                select.value = 'carnot';
+            }
+            // Industrial / Logística / Procesos (Gantt)
+            else if (name.includes('industrial') || name.includes('logistica') || name.includes('logística') || name.includes('gantt') || name.includes('cadena') || name.includes('manufactura') || name.includes('operaciones')) {
+                select.value = 'gantt';
+            }
+            // Estadística / Datos Cuantitativos (Nightingale)
+            else if (name.includes('estadistica') || name.includes('estadística') || name.includes('probabilidad') || name.includes('inferencia') || name.includes('bioestadistica')) {
+                select.value = 'nightingale';
+            }
+            // Música / Acústica (Bach)
+            else if (name.includes('musica') || name.includes('música') || name.includes('acustica') || name.includes('acústica') || name.includes('armonia') || name.includes('armonía') || name.includes('audio')) {
+                select.value = 'bach';
+            }
+            // Periodismo / Medios (Bly)
+            else if (name.includes('periodismo') || name.includes('reportaje') || name.includes('cronica') || name.includes('crónica') || name.includes('noticia') || name.includes('comunicacion') || name.includes('comunicación')) {
+                select.value = 'bly';
+            }
+            // Web / UI / UX (Gropius)
+            else if (name.includes('web') || name.includes('ui') || name.includes('ux') || name.includes('interfaz') || name.includes('frontend')) {
+                select.value = 'gropius';
+            }
+            // Moda / Confección (Worth)
+            else if (name.includes('moda') || name.includes('textil') || name.includes('patronaje') || name.includes('confeccion') || name.includes('confección')) {
+                select.value = 'worth';
+            }
+            // Interiores / Espacio (De Wolfe)
+            else if (name.includes('interior') || name.includes('habitabilidad') || name.includes('mobiliario') || name.includes('ergonomia')) {
+                select.value = 'dewolfe';
+            }
+            // Artes Plásticas / Dibujo (Artemisia)
+            else if (name.includes('arte') || name.includes('dibujo') || name.includes('pintura') || name.includes('ilustracion') || name.includes('ilustración')) {
+                select.value = 'artemisia';
+            }
+            // Arquitectura / Urbanismo (Vitruvio)
+            else if (name.includes('arquitectura') || name.includes('urbanismo')) {
+                select.value = 'vitruvio';
+            }
+            // Química / Materiales (Curie)
+            else if (name.includes('quimica') || name.includes('química') || name.includes('farmacia') || name.includes('materiales')) {
+                select.value = 'curie';
+            }
+            // Biología / Microbiología (Pasteur)
+            else if (name.includes('biolog') || name.includes('microbiolog') || name.includes('celular') || name.includes('genetica') || name.includes('genética')) {
+                select.value = 'pasteur';
+            }
+            // Salud / Clínica (Osler)
+            else if (name.includes('salud') || name.includes('medic') || name.includes('médic') || name.includes('anatomia') || name.includes('anatomía') || name.includes('clinica') || name.includes('clínica')) {
                 select.value = 'osler';
-            } else if (name.includes('derecho') || name.includes('legal')) {
+            }
+            // Derecho / Debate (Cicerón)
+            else if (name.includes('derecho') || name.includes('legal') || name.includes('juridic') || name.includes('jurídic') || name.includes('penal') || name.includes('civil')) {
                 select.value = 'ciceron';
+            }
+            // Psicología / Conducta (Wundt)
+            else if (name.includes('psicolog') || name.includes('conducta') || name.includes('cognitiv')) {
+                select.value = 'wundt';
+            }
+            // Negocios / Economía (Smith)
+            else if (name.includes('negocio') || name.includes('finanz') || name.includes('econom') || name.includes('contabil') || name.includes('costo')) {
+                select.value = 'smith';
+            }
+            // Default: Redacción académica / Reportes (Sor Juana)
+            else {
+                select.value = 'sorjuana';
             }
         }
 
@@ -2121,6 +2426,121 @@
             const drawerEl = document.getElementById('main-menu-drawer');
             if (!drawerEl) return;
             drawerEl.style.display = drawerEl.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function openFranklinModal() {
+            renderFranklinRecommendations();
+            const modal = document.getElementById('modal-franklin');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeFranklinModal() {
+            const modal = document.getElementById('modal-franklin');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function applyFranklinPreset(presetKey) {
+            setTimerPreset(presetKey);
+            closeFranklinModal();
+            const timerDisplay = document.getElementById('timer-display');
+            if (timerDisplay) {
+                timerDisplay.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function renderFranklinRecommendations() {
+            const container = document.getElementById('franklin-recommendations');
+            const streakStatusEl = document.getElementById('franklin-streak-status');
+            const streakPctEl = document.getElementById('franklin-streak-pct');
+            if (!container) return;
+
+            const now = new Date();
+            const pendingTasks = [...allUpcomingTasks, ...allOverdueTasks];
+            
+            const completedCount = allCompletedTasks.length;
+            const totalCount = completedCount + pendingTasks.length;
+            
+            let streakPct = 100;
+            if (allOverdueTasks.length > 0) {
+                streakPct = Math.max(50, Math.round((completedCount / (totalCount || 1)) * 100));
+            }
+            if (streakPctEl) streakPctEl.textContent = `${streakPct}%`;
+            
+            if (streakStatusEl) {
+                if (allOverdueTasks.length > 0) {
+                    streakStatusEl.innerHTML = `<span class="text-amber-500 font-bold">Atención:</span> Tienes ${allOverdueTasks.length} entrega(s) en zona de rescate. Activa un bloque hoy para restablecer tu racha.`;
+                } else if (pendingTasks.length === 0) {
+                    streakStatusEl.innerHTML = `<span class="text-emerald-500 font-bold">¡Impecable!</span> Todas las misiones al día. Racha diaria al 100%.`;
+                } else {
+                    streakStatusEl.innerHTML = `<span class="text-indigo-400 font-bold">Racha Activa:</span> ${pendingTasks.length} entrega(s) programadas. Mantén el ritmo con los bloques sugeridos abajo.`;
+                }
+            }
+
+            container.innerHTML = '';
+
+            if (pendingTasks.length === 0) {
+                container.innerHTML = `
+                    <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-center">
+                        <i class="fa-solid fa-circle-check text-base mb-1"></i>
+                        <p class="font-medium">No hay entregas pendientes urgentes. ¡La Antorcha brilla con fuerza!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const sorted = [...pendingTasks].sort((a, b) => {
+                if (!a.due_date) return 1;
+                if (!b.due_date) return -1;
+                return new Date(a.due_date) - new Date(b.due_date);
+            }).slice(0, 5);
+
+            sorted.forEach(t => {
+                const hasDue = !!t.due_date;
+                const dueDate = hasDue ? new Date(t.due_date) : null;
+                const diffHours = hasDue ? Math.round((dueDate - now) / (1000 * 60 * 60)) : 999;
+                
+                let recPreset = 'pomodoro';
+                let recPresetLabel = 'Pomodoro (25 min)';
+                let urgencyBadge = '';
+
+                if (diffHours < 0) {
+                    recPreset = '52-17';
+                    recPresetLabel = 'Regla 52/17 (Rescate)';
+                    urgencyBadge = '<span class="text-[10px] bg-rose-500/20 text-rose-500 px-1.5 py-0.5 rounded font-bold">Rescate</span>';
+                } else if (diffHours <= 24) {
+                    recPreset = '52-17';
+                    recPresetLabel = 'Regla 52/17 (Inminente)';
+                    urgencyBadge = '<span class="text-[10px] bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded font-bold">Vence &lt; 24h</span>';
+                } else if (t.mission_type === 'main') {
+                    recPreset = 'ultradiano';
+                    recPresetLabel = 'Ultradiano (90 min)';
+                    urgencyBadge = '<span class="text-[10px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.5 rounded font-bold">Misión Mayor</span>';
+                } else {
+                    recPreset = 'pomodoro';
+                    recPresetLabel = 'Pomodoro (25 min)';
+                    urgencyBadge = '<span class="text-[10px] bg-emerald-500/20 text-emerald-500 px-1.5 py-0.5 rounded font-bold">Programada</span>';
+                }
+
+                const card = document.createElement('div');
+                card.className = "p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/70 border border-cantera-200 dark:border-slate-700 flex items-center justify-between gap-3";
+                card.innerHTML = `
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="font-bold text-cantera-900 dark:text-white truncate text-xs">${t.title}</span>
+                            ${urgencyBadge}
+                        </div>
+                        <div class="text-[11px] text-cantera-600 dark:text-slate-400 flex items-center gap-2">
+                            <span><i class="fa-solid fa-book-open text-[10px] text-indigo-400"></i> ${(t.course_name || '').replace(/_/g, ' ')}</span>
+                            <span>•</span>
+                            <span class="text-indigo-600 dark:text-indigo-300 font-medium">Recomendado: <strong>${recPresetLabel}</strong></span>
+                        </div>
+                    </div>
+                    <button onclick="applyFranklinPreset('${recPreset}')" class="shrink-0 px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] transition-colors shadow-sm cursor-pointer" title="Cargar este bloque en el temporizador">
+                        <i class="fa-solid fa-play text-[10px] mr-1"></i> Foco
+                    </button>
+                `;
+                container.appendChild(card);
+            });
         }
 
         function openMentorsModal() {

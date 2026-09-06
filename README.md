@@ -16,6 +16,7 @@ Desplegado en producción: [https://agora-app-leox.onrender.com](https://agora-a
   - ✨ **Misiones Especiales:** Tareas devueltas por el profesor o con calificación baja para rescate de puntos.
   - 🛟 **Misiones de Rescate:** Entregas tardías o atrasadas priorizadas para evitar penalizaciones.
   - 🧭 **Misiones Abiertas:** Actividades sin fecha límite para avanzar a ritmo propio.
+- **Carga en Paralelo Ultra-Rápida:** El cliente consume concurrentemente `/api/tasks` y `/api/courses` mediante `Promise.all`, cargando materias y misiones sin cuellos de botella ni bloqueos secuenciales.
 - **Sincronización Total de Materias:** Detecta e incluye en los filtros todas las asignaturas activas en las que el alumno está inscrito, incluso durante las primeras semanas del ciclo lectivo cuando aún no tienen tareas asignadas.
 - **Limpieza Tipográfica Automática:** Los identificadores técnicos con guiones bajos (ej. TUTORIAS_2026B) se formatean automáticamente a nombres limpios y legibles (TUTORIAS 2026B).
 - **Diseño Centrado y Balanceado:** Espaciado simétrico con barra lateral ergonómica y vista de entregas centrada y adaptable.
@@ -40,21 +41,47 @@ Desplegado en producción: [https://agora-app-leox.onrender.com](https://agora-a
 
 ---
 
-### 4. Panel de Profesores y Mentores Académicos
-Ignis clasifica automáticamente tu materia o te permite elegir a tu mentor preferido:
-1. **Isaac Newton:** Exactas, cálculo diferencial/integral y física.
-2. **Ada Lovelace:** Software, algoritmos, arquitectura de datos y depuración lógica.
-3. **Alan Turing:** Sistemas, máquinas de estado, autómatas y lógica proposicional.
-4. **Sor Juana Inés de la Cruz:** Ensayos, marco teórico, redacción académica y reportes.
-5. **William Osler:** Medicina, razonamiento clínico y árboles diagnósticos.
-6. **Marco Tulio Cicerón:** Argumentación jurídica, debate y silogismos legales.
-7. **Adam Smith:** Finanzas, viabilidad económica y estrategia de negocios.
-8. **Sócrates:** Simulador de exámenes y mayéutica rigurosa.
-9. **Benjamin Franklin:** Estrategia de productividad, agenda y fraccionamiento de bloques de estudio.
+### 4. Catálogo de los 24 Mentores Universitarios (Ignis) 🎓
+Ignis clasifica automáticamente la disciplina de tu materia o te permite alternar libremente entre los 24 mentores históricos de dominio público:
+
+#### I. Exactas, Computación y Hardware (7)
+1. **Isaac Newton:** Ciencias exactas, cálculo diferencial/integral, transformada de Laplace y dinámica.
+2. **Nikola Tesla:** Hardware, circuitos analógicos/digitales, microcontroladores (Arduino/ESP32) y potencia.
+3. **Ada Lovelace:** Lógica de programación, algoritmos, estructuras de datos y análisis Big-O.
+4. **Alan Turing:** Autómatas finitos, máquinas de estado, lógica booleana y sistemas operativos.
+5. **Gustave Eiffel:** Resistencia de materiales, estructuras, vigas, cortante/flector y obras civiles.
+6. **Sadi Carnot:** Termodinámica, fluidos, ciclos de potencia (Rankine/Otto) y transferencia de calor.
+7. **Henry Gantt:** Optimización de procesos, líneas de ensamble, ruta crítica (PERT/CPM) y logística.
+
+#### II. Diseño, Arquitectura y Expresión Visual (5)
+8. **Walter Gropius (Bauhaus):** Diseño web, interfaces UI/UX, retículas modulares y jerarquía visual.
+9. **Charles Frederick Worth:** Diseño de modas, patronaje estructural, caída de telas y confección.
+10. **Elsie de Wolfe:** Diseño de interiores, habitabilidad, circulación espacial, luz natural y ergonomía.
+11. **Artemisia Gentileschi:** Artes plásticas, ilustración, teoría del color, claroscuro y perspectiva.
+12. **Marco Vitruvio:** Arquitectura y urbanismo: tríada clásica (Firmitas, Utilitas y Venustas).
+
+#### III. Ciencias Naturales, Químicas y Salud (4)
+13. **Marie Curie:** Química, farmacia, estequiometría, cinética y seguridad en laboratorio.
+14. **Louis Pasteur:** Biología, microbiología aplicada, cultivos y diseño experimental.
+15. **William Osler:** Medicina, semiología clínica, diagnóstico diferencial y fisiopatología.
+16. **Florence Nightingale:** Estadística aplicada, bioestadística, pruebas de hipótesis y visualización cuantitativa.
+
+#### IV. Humanidades, Sociales y Negocios (6)
+17. **Sor Juana Inés de la Cruz:** Redacción académica, reportes técnicos, ensayos y metodología.
+18. **Marco Tulio Cicerón:** Derecho, silogismos jurídicos (Hechos, Derecho y Petitorio) y debate forense.
+19. **Wilhelm Wundt:** Psicología, ciencias de la conducta y diseño experimental empírico.
+20. **Adam Smith:** Negocios, análisis costo-beneficio, viabilidad financiera y microeconomía.
+21. **Johann Sebastian Bach:** Teoría musical, armonía, acústica, modulación tonal y contrapunto.
+22. **Nellie Bly:** Periodismo de investigación, crónica, triangulación de fuentes y ética informativa.
+
+#### V. Módulos Autónomos Especiales (2)
+23. **Sócrates (Simulador de Exámenes):** Defensa oral y sinodal universitario bajo presión.
+24. **Benjamin Franklin (El Reloj de Franklin):** Estratega de rutina, hábitos y guardián de La Antorcha.
 
 ---
 
 ### 5. Productividad, Ritmo y Estado
+- **El Reloj de Franklin y La Antorcha:** Botón cincelado de reloj de arena sobre el reloj digital. Relaciona dinámicamente las fechas de entrega con los bloques del temporizador para asegurar el 100% de la racha diaria.
 - **Reloj Digital en Vivo:** Visualización en tiempo real de hora y fecha académica.
 - **Temporizador Multitécnica Integrado:**
   - *Pomodoro Clásico:* 25 min de foco / 5 min de descanso.
