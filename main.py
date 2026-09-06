@@ -233,6 +233,17 @@ async def get_tasks(request: Request):
 
     try:
         tasks = fetch_tasks(creds=creds)
+        try:
+            from db.database import get_all_task_states
+            states = get_all_task_states()
+            for t in tasks:
+                t_id = str(t.get('id'))
+                if t_id in states:
+                    t['status'] = states[t_id].get('status', 'pending')
+                    t['notes'] = states[t_id].get('notes', '')
+        except Exception:
+            pass
+
         tasks_with_dates = [t for t in tasks if t.get('due_date')]
         tasks_without_dates = [t for t in tasks if not t.get('due_date')]
         return {
@@ -241,6 +252,28 @@ async def get_tasks(request: Request):
         }
     except Exception as e:
         traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/tasks/{task_id}/toggle")
+async def toggle_task_status(task_id: str, request: Request):
+    data = await request.json()
+    status = data.get("status", "pending")
+    try:
+        from db.database import update_task_status
+        update_task_status(task_id, status)
+        return {"ok": True, "status": status}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/tasks/{task_id}/notes")
+async def save_task_notes(task_id: str, request: Request):
+    data = await request.json()
+    notes = data.get("notes", "")
+    try:
+        from db.database import update_task_notes
+        update_task_notes(task_id, notes)
+        return {"ok": True}
+    except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.get("/api/announcements")
