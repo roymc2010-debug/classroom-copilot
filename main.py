@@ -77,8 +77,16 @@ def restore_and_refresh_credentials(creds_json: str, session_id: str = None):
     if not creds_json:
         return None
     try:
-        data = json.loads(creds_json)
-        creds = Credentials.from_authorized_user_info(data, SCOPES)
+        data = json.loads(creds_json) if isinstance(creds_json, str) else creds_json
+        creds = Credentials(
+            token=data.get("token") or data.get("access_token"),
+            refresh_token=data.get("refresh_token"),
+            token_uri=data.get("token_uri") or "https://oauth2.googleapis.com/token",
+            client_id=data.get("client_id"),
+            client_secret=data.get("client_secret"),
+            scopes=data.get("scopes") or SCOPES
+        )
+
         if creds and creds.expired and creds.refresh_token:
             try:
                 creds.refresh(GoogleRequest())
@@ -87,7 +95,10 @@ def restore_and_refresh_credentials(creds_json: str, session_id: str = None):
                     save_sessions()
             except Exception as e:
                 print(f"No se pudo refrescar el token de Google: {e}")
-        return creds
+
+        if creds.token or creds.refresh_token:
+            return creds
+        return None
     except Exception as e:
         print(f"Error restaurando credenciales: {e}")
         return None
@@ -113,7 +124,18 @@ def get_session_user_email(creds) -> str:
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse(request=request, name="index.html")
+    session_id = request.cookies.get("agora_session")
+    has_session = False
+    if session_id and session_id in user_sessions:
+        creds = restore_and_refresh_credentials(user_sessions[session_id], session_id=session_id)
+        if creds and (creds.token or creds.refresh_token):
+            has_session = True
+
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={"has_session": has_session}
+    )
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
@@ -138,6 +160,7 @@ async def auth_login(request: Request):
         f"response_type=code&"
         f"scope={scopes_str}&"
         f"access_type=offline&"
+        f"include_granted_scopes=true&"
         f"prompt=consent"
     )
     return RedirectResponse(auth_url)
@@ -172,9 +195,28 @@ async def auth_callback(request: Request, code: str = None, error: str = None):
         with urllib.request.urlopen(req) as resp:
             token_data = json.loads(resp.read().decode("utf-8"))
 
+        existing_refresh = None
+        for s_id, s_data in user_sessions.items():
+            try:
+                parsed = json.loads(s_data) if isinstance(s_data, str) else s_data
+                if parsed.get("refresh_token"):
+                    existing_refresh = parsed.get("refresh_token")
+                    break
+            except Exception:
+                pass
+
+        if not existing_refresh and os.path.exists("token.json"):
+            try:
+                t_old = json.loads(open("token.json", "r", encoding="utf-8").read())
+                existing_refresh = t_old.get("refresh_token")
+            except Exception:
+                pass
+
+        refresh_token = token_data.get("refresh_token") or existing_refresh
+
         creds = Credentials(
             token=token_data.get("access_token"),
-            refresh_token=token_data.get("refresh_token"),
+            refresh_token=refresh_token,
             token_uri="https://oauth2.googleapis.com/token",
             client_id=client_id,
             client_secret=client_secret,
@@ -184,6 +226,12 @@ async def auth_callback(request: Request, code: str = None, error: str = None):
         session_id = str(uuid.uuid4())
         user_sessions[session_id] = creds.to_json()
         save_sessions()
+
+        try:
+            with open("token.json", "w", encoding="utf-8") as f:
+                f.write(creds.to_json())
+        except Exception:
+            pass
 
         print(f"Autenticacion completada con exito para sesion: {session_id}")
 
@@ -201,6 +249,7 @@ async def auth_callback(request: Request, code: str = None, error: str = None):
             key="agora_session",
             value=session_id,
             max_age=30 * 24 * 3600,
+            path="/",
             httponly=True,
             samesite="lax",
             secure=is_https
