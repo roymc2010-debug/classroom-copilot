@@ -81,7 +81,7 @@
             <!-- Logo Heroico (Grande, imponente, sin marco de icono de app móvil) -->
             <div class="relative mb-6 group">
                 <div class="absolute -inset-6 bg-gradient-to-tr from-amber-500/20 via-sky-500/20 to-indigo-500/15 rounded-full blur-3xl pointer-events-none opacity-90 animate-pulse"></div>
-                <img src="/static/agora_logo_1024.png" alt="Ágora" class="w-56 h-56 sm:w-64 sm:h-64 md:w-80 md:h-80 object-contain relative z-10 filter drop-shadow-[0_25px_45px_rgba(0,0,0,0.75)] transition-transform duration-700 hover:scale-[1.03]">
+                <img src="/static/agora_logo_1024.png?v=4" alt="Ágora" class="w-56 h-56 sm:w-64 sm:h-64 md:w-80 md:h-80 object-contain relative z-10 filter drop-shadow-[0_25px_45px_rgba(0,0,0,0.75)] transition-transform duration-700 hover:scale-[1.03]">
             </div>
 
             <!-- Título Majestuoso con espaciado amplio -->
@@ -119,8 +119,8 @@
                 </button>
                 <!-- Logo Adaptativo: Fondo según el tema activo -->
                 <div class="w-10 h-10 rounded-xl overflow-hidden shadow-md shrink-0 border border-cantera-300 dark:border-sky-500/30">
-                    <img src="/static/agora_logo_dark_64.png" alt="Ágora Logo" class="w-full h-full object-cover hidden dark:block">
-                    <img src="/static/agora_logo_light_64.png" alt="Ágora Logo" class="w-full h-full object-cover block dark:hidden">
+                    <img src="/static/agora_logo_dark_64.png?v=4" alt="Ágora Logo" class="w-full h-full object-cover hidden dark:block">
+                    <img src="/static/agora_logo_light_64.png?v=4" alt="Ágora Logo" class="w-full h-full object-cover block dark:hidden">
                 </div>
                 <div>
                     <h1 class="text-xl md:text-2xl font-black tracking-tight leading-none text-cantera-900 dark:text-white">Ágora</h1>
@@ -2364,16 +2364,60 @@
             const courseName = task.course_name || '';
             const taskTitle = task.title || '';
             const taskId = String(task.id);
+            const attachmentFiles = Array.isArray(task.attachment_files) ? task.attachment_files : [];
 
-            // Extraer nombre de documento adjunto si existe
-            const docMatch = raw.match(/--- Documento adjunto:\s*(.*?)\s*---/);
-            const docTitle = docMatch ? docMatch[1].trim() : '';
+            // 1. Extraer nombres de documentos adjuntos limpios
+            const docTitles = [];
+            attachmentFiles.forEach(f => {
+                if (f && f.title && !docTitles.includes(f.title.trim())) {
+                    docTitles.push(f.title.trim());
+                }
+            });
 
-            // Limpiar separadores técnicos
-            let text = raw
-                .replace(/--- Documento adjunto:.*?---\s*/g, '')
-                .replace(/Archivos\/Enlaces adjuntos:[\s\S]*$/g, '')
+            // Detectar si venía en formato de bloque de documento
+            const docMatch = raw.match(/---\s*Documento adjunto:\s*(.*?)\s*---/i);
+            if (docMatch && docMatch[1] && !docTitles.includes(docMatch[1].trim())) {
+                docTitles.push(docMatch[1].trim());
+            }
+
+            // Detectar bloque 'Archivos adjuntos:\nNombre.pdf (url)'
+            const attachRegex = /(?:Archivos|Enlaces)\s*adjuntos:?\s*([\s\S]*?)$/i;
+            const attachMatch = raw.match(attachRegex);
+            if (attachMatch && attachMatch[1]) {
+                const lines = attachMatch[1].split('\n');
+                for (const line of lines) {
+                    const mFile = line.trim().match(/^(.*?)(?:\s*\(https?:\/\/|\s*$)/);
+                    if (mFile && mFile[1]) {
+                        const fname = mFile[1].trim();
+                        if (fname.length > 3 && fname.includes('.') && !docTitles.includes(fname)) {
+                            docTitles.push(fname);
+                        }
+                    }
+                }
+            }
+
+            // 2. Limpiar el texto: quitar separadores técnicos, notas de adjuntos y URLs crudas
+            let cleanedText = raw
+                .replace(/---\s*Documento adjunto:.*?\s*---/gi, '')
+                .replace(/(?:Archivos|Enlaces)\s*adjuntos:?[\s\S]*$/gi, '')
+                .replace(/https?:\/\/\S+/gi, '')
                 .trim();
+
+            // 3. Extractor Heurístico de Consignas Accionables del Profesor
+            const ACTION_KEYWORDS = [
+                'realizar', 'elaborar', 'hacer', 'redactar', 'escribir', 'desarrollar', 'crear', 'diseñar',
+                'resolver', 'calcular', 'solucionar', 'contestar', 'responder', 'demostrar', 'obtener',
+                'entregar', 'subir', 'enviar', 'adjuntar', 'presentar', 'incluir', 'llevar', 'asistir', 'buscar',
+                'leer', 'revisar', 'consultar', 'analizar', 'investigar', 'comentar', 'explicar', 'justificar',
+                'ensayo', 'cuestionario', 'problema', 'ejercicio', 'taller', 'práctica', 'practica', 'reporte', 'selfie',
+                'asistencia', 'consigna', 'objetivo', 'formato', 'requisito', 'criterio', 'rúbrica', 'rubrica', 'puntos', 'valor'
+            ];
+
+            const INSTITUTIONAL_KEYWORDS = [
+                'catedra', 'cátedra', 'difusión', 'difusion', 'enseñanza', 'ensenanza', 'centro universitario', 'cucei',
+                'udg', 'universidad', 'director de investigacion', 'director de investigación', 'impartida por',
+                'los invita al ciclo', 'información del evento', 'informacion del evento', 'auditorio', 'conferencias 202'
+            ];
 
             function normalizeStr(str) {
                 return (str || '')
@@ -2385,44 +2429,107 @@
 
             const normCourse = normalizeStr(courseName);
             const normTitle = normalizeStr(taskTitle);
-            const normDoc = normalizeStr(docTitle.replace(/\.pdf$/i, ''));
 
-            const rawLines = text.split('\n').map(l => l.trim()).filter(Boolean);
-            const cleanedLines = [];
+            const rawLines = cleanedText.split('\n').map(l => l.trim()).filter(Boolean);
+            const actionSentences = [];
+            const generalSentences = [];
 
             for (const line of rawLines) {
                 const normL = normalizeStr(line);
                 if (!normL) continue;
 
-                // Omitir líneas redundantes que solo repiten la materia, el título de la tarea o el archivo
-                if (normCourse && (normL.includes(normCourse) || normCourse.includes(normL))) continue;
-                if (normTitle && (normL.includes(normTitle) || normTitle.includes(normL))) continue;
-                if (normDoc && (normL.includes(normDoc) || normDoc.includes(normL))) continue;
+                // Omitir si la línea solo repite el nombre de la materia o título de la tarea
+                if (normCourse && (normL === normCourse || (normL.length < 40 && normCourse.includes(normL)))) continue;
+                if (normTitle && (normL === normTitle || (normL.length < 40 && normTitle.includes(normL)))) continue;
 
-                // Omitir encabezados genéricos institucionales
-                if (['programa', 'universidaddeguadalajara', 'cucei', 'actividades', 'actividads', 'materia'].includes(normL)) continue;
+                const lLow = line.toLowerCase();
+                const isInst = INSTITUTIONAL_KEYWORDS.some(k => lLow.includes(k));
 
-                cleanedLines.push(line);
+                // Partir en oraciones si hay puntuación (. ! ?)
+                const sentences = line.split(/(?<=[.!?])\s+/);
+                for (let s of sentences) {
+                    s = s.trim().replace(/^[-*•\d.)\s]+/, '').trim();
+                    if (s.length < 5) continue;
+                    const sLow = s.toLowerCase();
+
+                    const isAction = ACTION_KEYWORDS.some(k => sLow.includes(k));
+                    if (isAction) {
+                        if (!/[.!?]$/.test(s)) s += '.';
+                        actionSentences.push(s);
+                    } else if (!isInst && s.length > 15) {
+                        generalSentences.push(s);
+                    }
+                }
             }
 
-            // Unir líneas continuas para aprovechar todo el ancho de la tarjeta
-            let cleanParagraph = cleanedLines.join(' ').replace(/\s+/g, ' ').trim();
+            // 4. Botón de Documento Adjunto para Visor de Ignis
+            let docButtonHtml = '';
+            if (docTitles.length > 0) {
+                const primaryDoc = docTitles[0];
+                let fileIcon = 'fa-file-pdf text-red-500';
+                if (primaryDoc.endsWith('.doc') || primaryDoc.endsWith('.docx')) {
+                    fileIcon = 'fa-file-word text-blue-500';
+                } else if (primaryDoc.endsWith('.xls') || primaryDoc.endsWith('.xlsx')) {
+                    fileIcon = 'fa-file-excel text-emerald-500';
+                }
 
-            let docButton = '';
-            if (docTitle) {
-                docButton = `
-                    <button onclick="openIgnisWorkspace('${taskId}')" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-900/60 transition-colors font-semibold text-xs cursor-pointer" title="Abrir y consultar en Ignis">
-                        <i class="fa-regular fa-file-pdf text-red-500"></i>
-                        <span class="truncate max-w-[200px] sm:max-w-xs">${docTitle}</span>
-                        <span class="text-[10px] bg-red-200/60 dark:bg-red-900/60 px-1.5 py-0.5 rounded font-bold">Ver en Ignis</span>
+                docButtonHtml = `
+                    <button onclick="openIgnisWorkspace('${taskId}')" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-900/60 transition-all font-semibold text-xs cursor-pointer shadow-2xs group" title="Abrir y consultar en Ignis">
+                        <i class="fa-regular ${fileIcon} group-hover:scale-110 transition-transform"></i>
+                        <span class="truncate max-w-[170px] sm:max-w-xs font-mono text-[11px]">${primaryDoc}</span>
+                        <span class="text-[10px] bg-red-200/70 dark:bg-red-900/70 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Ver en Ignis</span>
                     </button>
                 `;
             }
 
-            if (!cleanParagraph && docTitle) {
-                cleanParagraph = 'Consigna y ejercicios adjuntos en el archivo. Abre el visor de Ignis para consultar el contenido y resolver tus dudas con tu tutor.';
-            } else if (!cleanParagraph) {
-                cleanParagraph = 'Sin instrucciones adicionales especificadas por el profesor.';
+            // 5. Construcción del Cuerpo del Resumen
+            let bodyHtml = '';
+
+            if (actionSentences.length > 0) {
+                const items = actionSentences.map(act => {
+                    const actL = act.toLowerCase();
+                    let icon = 'fa-circle-check text-indigo-500';
+                    if (actL.includes('ensayo') || actL.includes('redactar') || actL.includes('escribir')) {
+                        icon = 'fa-pen-nib text-indigo-500';
+                    } else if (actL.includes('selfie') || actL.includes('foto') || actL.includes('imagen')) {
+                        icon = 'fa-camera text-sky-500';
+                    } else if (actL.includes('asistencia') || actL.includes('asistir') || actL.includes('buscar')) {
+                        icon = 'fa-user-check text-emerald-500';
+                    } else if (actL.includes('resolver') || actL.includes('calcular') || actL.includes('ejercicio') || actL.includes('problema')) {
+                        icon = 'fa-calculator text-amber-500';
+                    } else if (actL.includes('leer') || actL.includes('revisar') || actL.includes('consultar')) {
+                        icon = 'fa-book-open text-blue-500';
+                    } else if (actL.includes('subir') || actL.includes('entregar') || actL.includes('enviar')) {
+                        icon = 'fa-cloud-arrow-up text-purple-500';
+                    }
+
+                    return `
+                        <li class="flex items-start gap-2 text-xs sm:text-sm text-cantera-900 dark:text-slate-200 leading-relaxed">
+                            <i class="fa-solid ${icon} mt-1 shrink-0 text-xs"></i>
+                            <span>${act}</span>
+                        </li>
+                    `;
+                }).join('');
+
+                bodyHtml = `<ul class="space-y-1.5 mt-0.5">${items}</ul>`;
+            } else if (generalSentences.length > 0) {
+                const textPara = generalSentences.slice(0, 3).join(' ');
+                bodyHtml = `<p class="text-xs sm:text-sm text-cantera-800 dark:text-slate-300 leading-relaxed break-words">${textPara}</p>`;
+            } else if (docTitles.length > 0) {
+                const fname = docTitles[0];
+                bodyHtml = `
+                    <div class="flex flex-col gap-1 py-0.5">
+                        <p class="text-xs sm:text-sm text-cantera-900 dark:text-slate-200 font-semibold flex items-center gap-2">
+                            <i class="fa-solid fa-file-lines text-amber-500 text-sm shrink-0"></i>
+                            <span>Consigna y ejercicios en el archivo adjunto <strong class="font-mono text-indigo-600 dark:text-indigo-400">${fname}</strong>.</span>
+                        </p>
+                        <p class="text-xs text-cantera-600 dark:text-slate-400">
+                            Abre el visor interactivo de Ignis con el botón superior para consultar los problemas y resolver dudas con tu tutor.
+                        </p>
+                    </div>
+                `;
+            } else {
+                bodyHtml = `<p class="text-xs text-cantera-500 dark:text-slate-400 italic">Sin consignas adicionales especificadas en Classroom.</p>`;
             }
 
             return `
@@ -2432,9 +2539,9 @@
                             <i class="fa-solid fa-list-check"></i>
                             <span>¿Qué debes hacer?</span>
                         </span>
-                        ${docButton}
+                        ${docButtonHtml}
                     </div>
-                    <p class="text-cantera-800 dark:text-slate-300 leading-relaxed break-words">${cleanParagraph}</p>
+                    ${bodyHtml}
                 </div>
             `;
         }
@@ -2888,12 +2995,21 @@
             currentTaskDocs = [];
             currentDocIndex = 0;
             const desc = task.description || '';
+            const attachmentFiles = Array.isArray(task.attachment_files) ? task.attachment_files : [];
             
             try {
                 const driveLinks = [...desc.matchAll(/https:\/\/drive\.google\.com\/file\/d\/[^\s\)]+/g)].map(m => m[0]);
                 const docMatches = [...desc.matchAll(/--- Documento adjunto: (.*?) ---\n([\s\S]*?)(?=(--- Documento adjunto:|$))/g)];
                 
-                if (docMatches.length > 0) {
+                if (attachmentFiles.length > 0) {
+                    attachmentFiles.forEach(f => {
+                        currentTaskDocs.push({
+                            title: f.title || 'Documento adjunto',
+                            content: (desc || '').replace(/https?:\/\/\S+/g, '').replace(/(?:Archivos|Enlaces)\s*adjuntos:?[\s\S]*$/gi, '').trim() || 'Documento disponible para consulta y apoyo con tu tutor.',
+                            link: f.link || task.link
+                        });
+                    });
+                } else if (docMatches.length > 0) {
                     docMatches.forEach((m, idx) => {
                         const docTitle = m.at(1) || 'Documento adjunto';
                         const docContent = m.at(2) || '';
