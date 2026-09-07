@@ -355,11 +355,11 @@
                 </div>
             </div>
 
-            <!-- Botón de Acceso al Simulador Socrático -->
+            <!-- Botón de Acceso al Simulador de Parciales -->
             <button onclick="openSocratesModal()" class="shrink-0 w-full py-2.5 px-3.5 rounded-xl bg-white dark:bg-night-800/80 border border-cantera-300 dark:border-slate-700 hover:border-indigo-500 flex items-center justify-between text-xs font-bold text-cantera-800 dark:text-slate-200 transition-all shadow-sm group cursor-pointer">
                 <span class="flex items-center gap-2">
                     <i class="fa-solid fa-graduation-cap text-indigo-500 text-sm group-hover:scale-110 transition-transform"></i>
-                    <span>Simulador Socrático</span>
+                    <span>Simulador de Parciales</span>
                 </span>
                 <i class="fa-solid fa-chevron-right text-[10px] text-cantera-500 dark:text-slate-500"></i>
             </button>
@@ -494,7 +494,7 @@
                                 <option value="bly">Nellie Bly (Periodismo / Investigación / Medios)</option>
                             </optgroup>
                             <optgroup label="Módulos Autónomos">
-                                <option value="socrates">Sócrates (Simulador de Exámenes)</option>
+                                <option value="socrates">Sócrates (Simulador de Parciales)</option>
                                 <option value="franklin">Benjamin Franklin (Estratega de Rutina y La Antorcha)</option>
                             </optgroup>
                         </select>
@@ -626,7 +626,7 @@
                     </button>
                     <button onclick="openSocratesModal(); toggleMainMenu();" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
                         <i class="fa-solid fa-graduation-cap text-indigo-500 w-5"></i>
-                        <span>Simulador Socrático</span>
+                        <span>Simulador de Parciales</span>
                     </button>
                     <button onclick="openMentorsModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors">
                         <i class="fa-solid fa-user-graduate text-indigo-500 w-5"></i>
@@ -815,7 +815,7 @@
                     <h4 class="font-bold text-[11px] uppercase tracking-wider text-sky-600 dark:text-sky-400 border-b border-sky-500/20 pb-1">5. Módulos Autónomos Especiales (2 Mentores)</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                         <div class="p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
-                            <span class="font-bold text-cantera-900 dark:text-sky-300 block mb-0.5">Sócrates (Simulador de Exámenes Departamentales)</span>
+                            <span class="font-bold text-cantera-900 dark:text-sky-300 block mb-0.5">Sócrates (Simulador de Parciales)</span>
                             <span class="text-[10px] text-sky-500 block mb-1">Evaluación Oral y Mayéutica Universitaria</span>
                             Sinodal universitario que te evalúa bajo presión en modo teórico, práctico o híbrido a partir de tus documentos y consignas.
                         </div>
@@ -991,7 +991,7 @@
         </div>
     </div>
 
-    <!-- Modal Simulador Socrático -->
+    <!-- Modal Simulador de Parciales -->
     <div id="modal-socrates" style="display: none;" onclick="if(event.target === this) closeSocratesModal()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 md:p-6">
         <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl max-w-2xl w-full h-[88vh] flex flex-col shadow-2xl overflow-hidden">
             <!-- Header -->
@@ -1001,7 +1001,7 @@
                         <i class="fa-solid fa-graduation-cap text-base"></i>
                     </div>
                     <div>
-                        <h3 class="text-sm font-black text-cantera-900 dark:text-white tracking-tight">Simulador Socrático de Exámenes</h3>
+                        <h3 class="text-sm font-black text-cantera-900 dark:text-white tracking-tight">Simulador de Parciales</h3>
                         <p class="text-[10px] text-cantera-600 dark:text-slate-400">Evaluación oral dialéctica para medir tu dominio real</p>
                     </div>
                 </div>
@@ -1035,7 +1035,7 @@
             <div id="socrates-messages" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scroll text-xs">
                 <div class="p-6 text-center text-cantera-600 dark:text-slate-400 space-y-2">
                     <i class="fa-solid fa-landmark text-3xl text-indigo-500/50"></i>
-                    <p class="font-medium text-sm text-cantera-800 dark:text-slate-200">Bienvenido al Simulador Socrático</p>
+                    <p class="font-medium text-sm text-cantera-800 dark:text-slate-200">Bienvenido al Simulador de Parciales</p>
                     <p class="text-xs max-w-md mx-auto">Selecciona tu materia y la modalidad del examen (teórico, práctico o híbrido), luego presiona <strong>Iniciar</strong> para comenzar tu evaluación.</p>
                 </div>
             </div>
@@ -2974,7 +2974,7 @@
         const MENTORS_CATALOG = [
             // Universales y Autónomos (Siempre presentes para todas las materias)
             { id: 'sorjuana', name: 'Sor Juana Inés (Reportes / Redacción / Ensayos)', isUniversal: true },
-            { id: 'socrates', name: 'Sócrates (Simulador Socrático de Exámenes)', isUniversal: true },
+            { id: 'socrates', name: 'Sócrates (Simulador de Parciales)', isUniversal: true },
             { id: 'franklin', name: 'Benjamin Franklin (Estratega de Rutina)', isUniversal: true },
 
             // Exactas, Computación y Hardware
@@ -3628,7 +3628,7 @@
             });
         }
 
-        // Simulador Socrático de Exámenes
+        // Simulador de Parciales
         function openSocratesModal() {
             const modal = document.getElementById('modal-socrates');
             if (!modal) return;

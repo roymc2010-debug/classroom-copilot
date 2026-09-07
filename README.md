@@ -94,7 +94,7 @@ Un módulo ejecutivo de organización diaria enfocado en la acción:
 | **Economía y Finanzas** | **Adam Smith** | Análisis costo-beneficio, microeconomía, estados financieros y proyectos. |
 | **Música y Acústica** | **Johann Sebastian Bach** | Armonía formal, acústica, síntesis sonora, contrapunto y análisis modal. |
 | **Periodismo y Medios** | **Nellie Bly** | Periodismo de investigación, crónica, triangulación de fuentes y ética. |
-| **Simulador de Exámenes** | **Sócrates** | Evaluación dialéctica oral y socrática para exámenes de grado o departamentales. |
+| **Simulador de Parciales** | **Sócrates** | Evaluación dialéctica oral y socrática para exámenes de grado o departamentales. |
 | **Estrategia y Rutina** | **Benjamin Franklin** | Gestión de bloques de tiempo y productividad académica. |
 
 ---

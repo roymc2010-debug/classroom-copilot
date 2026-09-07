@@ -436,7 +436,7 @@ async def ask_ai(request: Request):
 @app.post("/api/socrates/exam")
 async def socrates_exam(request: Request):
     """
-    Simulador Socrático de Exámenes Departamentales Universales.
+    Simulador de Parciales Universitarios (Sócrates).
     Soporta modalidades: 'teorico', 'practico' e 'hibrido'.
     """
     data = await request.json()
