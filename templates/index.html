@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=3">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png?v=3">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png?v=3">
+    <link rel="shortcut icon" href="/favicon.ico?v=3">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/agora_logo_192.png?v=3">
     <title>Ágora — Organizador de Misiones para Classroom</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -1522,6 +1526,43 @@
             closeSettingsModal();
         }
 
+        // Control y Desvanecimiento del Splash Screen Inicial
+        function dismissSplashScreen(isAuth = true) {
+            const splash = document.getElementById('splash-screen');
+            const splashLoading = document.getElementById('splash-loading-state');
+            const splashAuth = document.getElementById('splash-auth-state');
+            if (!splash) return;
+
+            if (!isAuth) {
+                // Si el alumno no tiene sesión activa, mostrar el botón de iniciar sesión en Google dentro del splash
+                if (splashLoading) splashLoading.style.display = 'none';
+                if (splashAuth) splashAuth.style.display = 'flex';
+                return;
+            }
+
+            // Si el alumno tiene sesión activa y tareas cargadas, desvanecer splash suavemente
+            splash.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+            splash.style.opacity = '0';
+            splash.style.transform = 'scale(1.02)';
+            splash.style.pointerEvents = 'none';
+            setTimeout(() => {
+                splash.style.display = 'none';
+            }, 650);
+        }
+
+        // Failsafe de seguridad (4 segundos): nunca dejar al alumno bloqueado en pantalla de carga
+        setTimeout(() => {
+            const splash = document.getElementById('splash-screen');
+            const splashLoading = document.getElementById('splash-loading-state');
+            const splashAuth = document.getElementById('splash-auth-state');
+            if (splash && splash.style.display !== 'none') {
+                if (splashLoading && splashLoading.style.display !== 'none') {
+                    splashLoading.style.display = 'none';
+                    if (splashAuth) splashAuth.style.display = 'flex';
+                }
+            }
+        }, 4000);
+
         // Carga de tareas
         async function loadTasks() {
             const loading = document.getElementById('loading');
@@ -1538,6 +1579,7 @@
                 ]);
 
                 if (response.status === 401) {
+                    dismissSplashScreen(false);
                     if (authWarning) authWarning.style.display = 'flex';
                     if (loading) loading.style.display = 'none';
                     return;
@@ -1638,9 +1680,11 @@
                 renderMentorSelectOptions();
 
                 if (timelineView) timelineView.style.display = 'block';
+                dismissSplashScreen(true);
 
             } catch (error) {
                 console.error("Error loading tasks:", error);
+                dismissSplashScreen(false);
             } finally {
                 if (loading) loading.style.display = 'none';
             }
