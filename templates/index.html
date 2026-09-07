@@ -361,7 +361,7 @@
         </aside>
 
         <!-- Contenedor Central Dinámico (Timeline) -->
-        <main id="main-content-area" class="flex-1 h-full overflow-y-auto custom-scroll p-6 md:p-8 2xl:pr-[340px]">
+        <main id="main-content-area" class="flex-1 h-full overflow-y-auto custom-scroll p-4 sm:p-6 md:p-8 pb-24 md:pb-8 2xl:pr-[340px]">
             <div id="loading" class="text-center py-16">
                 <i class="fa-solid fa-spinner fa-spin text-3xl text-indigo-500 mb-4"></i>
                 <p class="text-cantera-600 dark:text-slate-400 text-sm">Sincronizando con Classroom...</p>
@@ -536,21 +536,48 @@
                     </div>
                 </div>
 
-                <!-- Paneles Divididos -->
-                <div class="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
-                    <!-- Panel Izquierdo: Documento / PDF -->
-                    <div id="ignis-doc-pane" class="w-full md:w-1/2 border-b md:border-b-0 md:border-r border-cantera-300 dark:border-slate-700 flex flex-col bg-cantera-50/70 dark:bg-slate-900/50">
-                        <div id="doc-viewer-container" class="flex-1 p-2 overflow-y-auto custom-scroll text-xs leading-relaxed"></div>
+                <!-- Pestañas Superiores para Celulares (Modo Deslizamiento Horizontal) -->
+                <div class="md:hidden flex items-center justify-between p-2 px-4 bg-cantera-100 dark:bg-night-950 border-b border-cantera-300 dark:border-slate-800 text-xs shrink-0">
+                    <div class="flex items-center gap-1.5 bg-cantera-200/80 dark:bg-slate-900 p-1 rounded-xl border border-cantera-300 dark:border-slate-700 shadow-xs w-full max-w-sm mx-auto">
+                        <button id="mobile-tab-doc" onclick="setMobileIgnisTab('doc')" class="flex-1 py-2 rounded-lg font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-indigo-600 text-white shadow-xs text-xs">
+                            <i class="fa-regular fa-file-pdf"></i>
+                            <span>1. Documentos</span>
+                        </button>
+                        <button id="mobile-tab-chat" onclick="setMobileIgnisTab('chat')" class="flex-1 py-2 rounded-lg font-medium transition-all text-center flex items-center justify-center gap-1.5 text-cantera-700 dark:text-slate-400 text-xs">
+                            <i class="fa-solid fa-fire text-amber-500"></i>
+                            <span>2. Ignis Chat</span>
+                        </button>
                     </div>
+                </div>
 
-                    <!-- Panel Derecho: Chat Ignis -->
-                    <div id="ignis-chat-pane" class="w-full md:w-1/2 flex flex-col bg-white dark:bg-slate-900/20">
-                        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
-                        <div class="p-3 border-t border-cantera-300 dark:border-slate-700 bg-cantera-50 dark:bg-slate-800">
-                            <form id="chat-form" onsubmit="handleChatSubmit(event)" class="flex gap-2">
-                                <input type="text" id="chat-input" placeholder="Pregunta a Ignis sobre el documento..." autocomplete="off" class="flex-1 bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-600 rounded-lg px-3.5 py-2 text-sm text-cantera-900 dark:text-white focus:outline-none focus:border-indigo-500">
-                                <button type="submit" id="chat-submit-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold cursor-pointer"><i class="fa-solid fa-paper-plane text-sm"></i></button>
-                            </form>
+                <!-- Contenedor con Deslizamiento Horizontal Tipo Fotos (Swipe) -->
+                <div class="flex-1 w-full min-h-0 overflow-hidden relative">
+                    <div id="ignis-panes-slider" class="h-full flex flex-row w-[200%] md:w-full transition-transform duration-300 ease-out">
+                        <!-- Panel 1: Documento / PDF (100% en móvil, 50% en desktop) -->
+                        <div id="ignis-doc-pane" class="w-1/2 md:w-1/2 h-full border-r border-cantera-300 dark:border-slate-700 flex flex-col bg-cantera-50/70 dark:bg-slate-900/50 shrink-0 md:shrink">
+                            <div id="doc-viewer-container" class="flex-1 p-3 md:p-4 overflow-y-auto custom-scroll text-xs leading-relaxed"></div>
+                            <!-- Ayuda de gesto en móvil -->
+                            <div class="md:hidden py-1.5 px-3 bg-cantera-200/50 dark:bg-slate-900/70 text-[10px] text-cantera-600 dark:text-slate-400 text-center flex items-center justify-center gap-1 border-t border-cantera-300 dark:border-slate-800">
+                                <span>Desliza hacia la izquierda</span>
+                                <i class="fa-solid fa-arrow-right text-[9px]"></i>
+                                <span>para chatear con Ignis</span>
+                            </div>
+                        </div>
+
+                        <!-- Panel 2: Chat Ignis (100% en móvil, 50% en desktop) -->
+                        <div id="ignis-chat-pane" class="w-1/2 md:w-1/2 h-full flex flex-col bg-white dark:bg-slate-900/20 shrink-0 md:shrink">
+                            <!-- Ayuda de gesto en móvil -->
+                            <div class="md:hidden py-1.5 px-3 bg-cantera-200/50 dark:bg-slate-900/70 text-[10px] text-cantera-600 dark:text-slate-400 text-center flex items-center justify-center gap-1 border-b border-cantera-300 dark:border-slate-800">
+                                <i class="fa-solid fa-arrow-left text-[9px]"></i>
+                                <span>Desliza hacia la derecha para volver al documento</span>
+                            </div>
+                            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+                            <div class="p-3 border-t border-cantera-300 dark:border-slate-700 bg-cantera-50 dark:bg-slate-800">
+                                <form id="chat-form" onsubmit="handleChatSubmit(event)" class="flex gap-2">
+                                    <input type="text" id="chat-input" placeholder="Pregunta a Ignis sobre el documento..." autocomplete="off" class="flex-1 bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-600 rounded-lg px-3.5 py-2 text-sm text-cantera-900 dark:text-white focus:outline-none focus:border-indigo-500">
+                                    <button type="submit" id="chat-submit-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold cursor-pointer"><i class="fa-solid fa-paper-plane text-sm"></i></button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2124,14 +2151,22 @@
             }
         }
 
-        // Render de Tarjetas
+        // Render de Tarjetas Rediseñadas (Aprovechamiento 100% Full-Width, sin checkbox confuso y con resumen accionable)
         function renderTasks(tasks, containerId) {
             const container = document.getElementById(containerId);
             if (!container) return;
             container.innerHTML = '';
 
             if (!tasks || tasks.length === 0) {
-                container.innerHTML = `<p class="text-cantera-600 dark:text-slate-500 italic text-sm py-4 text-center">No hay misiones en esta vista</p>`;
+                container.innerHTML = `
+                    <div class="py-12 px-6 text-center border-2 border-dashed border-cantera-300 dark:border-slate-800 rounded-2xl bg-cantera-50/50 dark:bg-slate-900/30">
+                        <div class="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl mb-3">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                        <h4 class="font-bold text-cantera-900 dark:text-white text-sm">¡Estás al día!</h4>
+                        <p class="text-cantera-600 dark:text-slate-400 text-xs mt-1">No hay tareas pendientes en esta categoría.</p>
+                    </div>
+                `;
                 return;
             }
 
@@ -2142,55 +2177,61 @@
                 const isDone = task.status === 'done' || task.classroom_status === 'ENTREGADA' || task.classroom_status === 'CALIFICADA';
                 const card = document.createElement('div');
                 
+                // Badges de Estado Oficial de Classroom (Sin Checkbox que confunda al estudiante)
                 let classroomBadge = '';
                 if (task.classroom_status === 'CALIFICADA') {
                     const gradeStr = task.assigned_grade !== null ? `${task.assigned_grade}/${task.max_points || 100}` : 'Calificada';
-                    classroomBadge = `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"><i class="fa-solid fa-check-double mr-1"></i>${gradeStr}</span>`;
+                    classroomBadge = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/90 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1.5"><i class="fa-solid fa-check-double"></i> Calificada: ${gradeStr}</span>`;
                 } else if (task.classroom_status === 'ENTREGADA') {
-                    classroomBadge = `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800"><i class="fa-solid fa-clock mr-1"></i>En revisión</span>`;
+                    classroomBadge = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-100 dark:bg-indigo-950/90 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800 flex items-center gap-1.5"><i class="fa-solid fa-clock"></i> Entregada en revisión</span>`;
                 } else if (task.classroom_status === 'SUBIDA_SIN_ENTREGAR') {
-                    classroomBadge = `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 animate-pulse"><i class="fa-solid fa-triangle-exclamation mr-1"></i>¡Subida! Falta entregar</span>`;
+                    classroomBadge = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-950/90 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 animate-pulse flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation"></i> Archivo adjunto (Falta dar Entregar)</span>`;
                 } else if (task.classroom_status === 'DEVUELTA') {
-                    classroomBadge = `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-800"><i class="fa-solid fa-rotate-left mr-1"></i>Devuelta para corregir</span>`;
+                    classroomBadge = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-purple-100 dark:bg-purple-950/90 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-800 flex items-center gap-1.5"><i class="fa-solid fa-rotate-left"></i> Devuelta por profesor</span>`;
                 } else {
-                    classroomBadge = `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-cantera-100 dark:bg-slate-800 text-cantera-600 dark:text-slate-400 border border-cantera-300 dark:border-slate-700">Sin entregar</span>`;
+                    classroomBadge = `<span class="text-[11px] font-medium px-2.5 py-1 rounded-lg bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-300 border border-cantera-300 dark:border-slate-700 flex items-center gap-1.5"><i class="fa-regular fa-clock text-amber-500"></i> Pendiente en Classroom</span>`;
                 }
 
                 let borderHex = '#6366F1';
-                let missionBadge = `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800"><i class="fa-solid fa-shield-halved mr-1"></i>Secundaria</span>`;
+                let missionBadge = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800"><i class="fa-solid fa-shield-halved mr-1"></i>Secundaria</span>`;
 
                 if (task.mission_type === 'main') {
                     borderHex = '#F59E0B';
-                    missionBadge = `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800"><i class="fa-solid fa-khanda mr-1"></i>Principal</span>`;
+                    missionBadge = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800"><i class="fa-solid fa-khanda mr-1"></i>Principal</span>`;
                 } else if (task.mission_type === 'daily') {
                     borderHex = '#0EA5E9';
-                    missionBadge = `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-800"><i class="fa-solid fa-bolt mr-1"></i>Diaria</span>`;
+                    missionBadge = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800"><i class="fa-solid fa-bolt mr-1"></i>Diaria</span>`;
                 } else if (task.mission_type === 'special') {
                     borderHex = '#A855F7';
-                    missionBadge = `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-800"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Especial</span>`;
+                    missionBadge = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/80 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Especial</span>`;
                 } else if (task.mission_type === 'rescue') {
                     borderHex = '#F97316';
-                    missionBadge = `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-300 border border-orange-300 dark:border-orange-800"><i class="fa-solid fa-life-ring mr-1"></i>Rescate</span>`;
+                    missionBadge = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-orange-50 dark:bg-orange-950/80 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800"><i class="fa-solid fa-life-ring mr-1"></i>Rescate</span>`;
                 } else if (task.mission_type === 'open') {
                     borderHex = '#14B8A6';
-                    missionBadge = `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-800"><i class="fa-solid fa-compass mr-1"></i>Abierta</span>`;
+                    missionBadge = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800"><i class="fa-solid fa-compass mr-1"></i>Abierta</span>`;
                 }
 
                 const dateStr = formatRelativeDate(task.due_date);
 
+                // Tarjeta de Tarea Completada / Calificada
                 if (isDone) {
-                    card.className = "bg-cantera-50/80 dark:bg-night-950/60 border border-cantera-300 dark:border-slate-800 rounded-lg px-4 py-3 flex items-center justify-between text-cantera-600 dark:text-slate-400 shadow-sm opacity-85 hover:opacity-100 transition-opacity";
-                    card.style.borderLeft = `5px solid #10B981`;
+                    card.className = "w-full bg-cantera-50/90 dark:bg-night-950/70 border border-cantera-300 dark:border-slate-800 rounded-2xl p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-cantera-700 dark:text-slate-300 shadow-sm opacity-90 hover:opacity-100 transition-all";
+                    card.style.borderLeft = `6px solid #10B981`;
                     card.innerHTML = `
-                        <div class="flex items-center gap-3 min-w-0 pr-4">
-                            <i class="fa-solid fa-circle-check text-emerald-500 text-base shrink-0" title="Entregada en Classroom"></i>
-                            <span class="text-xs px-2 py-0.5 rounded bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-400 truncate">${task.course_name}</span>
-                            <span class="text-sm line-through text-cantera-500 dark:text-slate-500 truncate">${task.title}</span>
+                        <div class="flex items-start md:items-center gap-3 min-w-0 flex-1">
+                            <i class="fa-solid fa-circle-check text-emerald-500 text-lg shrink-0 mt-0.5 md:mt-0" title="Entregada en Classroom"></i>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-2 flex-wrap mb-1">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-cantera-200 dark:bg-slate-800 text-cantera-800 dark:text-slate-300">${task.course_name}</span>
+                                    ${classroomBadge}
+                                </div>
+                                <h4 class="text-sm md:text-base font-semibold text-cantera-600 dark:text-slate-400 line-through truncate">${task.title}</h4>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-2 shrink-0">
-                            ${classroomBadge}
-                            <button onclick="openIgnisWorkspace('${taskId}')" class="text-xs text-cantera-700 dark:text-slate-400 hover:text-indigo-600 px-2.5 py-1 rounded bg-cantera-100 dark:bg-slate-800 border border-cantera-300 dark:border-slate-700 flex items-center gap-1.5 cursor-pointer">
-                                <i class="fa-solid fa-fire text-amber-500"></i> Ignis
+                        <div class="flex items-center gap-2 shrink-0 self-end md:self-center">
+                            <button onclick="openIgnisWorkspace('${taskId}')" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-cantera-300 dark:border-slate-700 hover:border-indigo-500 flex items-center gap-1.5 cursor-pointer transition-colors">
+                                <i class="fa-solid fa-fire text-amber-500"></i> Repasar en Ignis
                             </button>
                         </div>
                     `;
@@ -2198,50 +2239,61 @@
                     return;
                 }
 
-                card.className = "bg-white dark:bg-night-800/90 border border-cantera-300 dark:border-slate-700/80 rounded-xl p-5 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all";
-                card.style.borderLeft = `5px solid ${borderHex}`;
+                // Tarjeta Activa (Aprovechamiento 100% Full-Width)
+                card.className = "w-full bg-white dark:bg-night-900/90 border border-cantera-300 dark:border-slate-700/80 rounded-2xl p-5 md:p-6 flex flex-col gap-4 shadow-sm hover:shadow-md transition-all";
+                card.style.borderLeft = `6px solid ${borderHex}`;
 
                 card.innerHTML = `
-                    <div class="flex-1 w-full flex flex-col">
-                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">${task.course_name}</span>
+                    <div class="w-full flex flex-col gap-3">
+                        <!-- Cabecera Superior: Materia, Tipo de Misión, Estado de Classroom y Fecha -->
+                        <div class="flex flex-wrap items-center justify-between gap-2 pb-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="text-xs font-bold px-3 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shadow-2xs">${task.course_name}</span>
                                 ${missionBadge}
                                 ${classroomBadge}
                             </div>
-                            <span class="text-xs font-semibold text-cantera-700 dark:text-slate-300"><i class="fa-regular fa-clock mr-1 text-slate-400"></i>${dateStr}</span>
+                            <div class="flex items-center gap-1.5 text-xs font-semibold text-cantera-700 dark:text-slate-300 bg-cantera-100/70 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg">
+                                <i class="fa-regular fa-clock text-slate-400"></i>
+                                <span>${dateStr}</span>
+                            </div>
                         </div>
 
-                        <h3 class="text-xl font-bold text-cantera-900 dark:text-slate-100 mb-2">
-                            <a href="${task.link}" target="_blank" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-1.5">
-                                ${task.title}
+                        <!-- Título de la Tarea (A todo el ancho disponible) -->
+                        <h3 class="text-lg md:text-xl font-extrabold text-cantera-900 dark:text-white leading-snug">
+                            <a href="${task.link}" target="_blank" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors flex items-center gap-2">
+                                <span>${task.title}</span>
                                 <i class="fa-solid fa-arrow-up-right-from-square text-xs opacity-50"></i>
                             </a>
                         </h3>
 
+                        <!-- Bloque de Resumen de la Tarea (Full-Width, sin textos cortados) -->
                         ${formatTaskDescriptionBlock(task)}
 
-                        <details class="mb-4 group">
-                            <summary class="cursor-pointer text-xs font-medium text-cantera-600 dark:text-slate-400 hover:text-cantera-900 dark:hover:text-slate-200 list-none flex items-center gap-1">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                                <span>Notas personales</span>
+                        <!-- Notas Personales Desplegables -->
+                        <details class="group mt-1">
+                            <summary class="cursor-pointer text-xs font-semibold text-cantera-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 list-none flex items-center gap-1.5 transition-colors select-none">
+                                <i class="fa-solid fa-pen-to-square text-indigo-500"></i>
+                                <span>Notas personales y borradores</span>
+                                <i class="fa-solid fa-chevron-down text-[10px] opacity-60 group-open:rotate-180 transition-transform"></i>
                             </summary>
-                            <div class="mt-2 flex flex-col gap-2">
-                                <textarea id="notes-${taskId}" rows="2" class="w-full bg-cantera-50 dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 rounded-lg p-2 text-sm text-cantera-900 dark:text-slate-200 focus:outline-none focus:border-indigo-500 resize-none">${task.notes || ''}</textarea>
-                                <button onclick="saveNotes('${taskId}')" class="self-end text-xs bg-cantera-100 dark:bg-slate-700 hover:bg-cantera-200 text-cantera-800 dark:text-slate-200 px-3 py-1.5 rounded border border-cantera-300 dark:border-slate-600 font-medium">
+                            <div class="mt-2.5 flex flex-col gap-2">
+                                <textarea id="notes-${taskId}" rows="2" class="w-full bg-cantera-50 dark:bg-slate-950 border border-cantera-300 dark:border-slate-700 rounded-xl p-3 text-xs text-cantera-900 dark:text-slate-200 focus:outline-none focus:border-indigo-500 resize-none leading-relaxed" placeholder="Escribe aquí ideas, enlaces de investigación o dudas para preguntar a Ignis...">${task.notes || ''}</textarea>
+                                <button onclick="saveNotes('${taskId}')" class="self-end text-xs bg-cantera-100 dark:bg-slate-800 hover:bg-cantera-200 text-cantera-800 dark:text-slate-200 px-3.5 py-1.5 rounded-lg border border-cantera-300 dark:border-slate-600 font-bold transition-all shadow-xs cursor-pointer">
                                     Guardar notas
                                 </button>
                             </div>
                         </details>
 
-                        <div class="flex items-center justify-between gap-3 pt-3 border-t border-cantera-200 dark:border-slate-700/60 mt-auto flex-wrap">
-                            <button onclick="openIgnisWorkspace('${taskId}')" class="text-sm font-semibold bg-indigo-50 dark:bg-indigo-600/20 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-xs cursor-pointer">
-                                <i class="fa-solid fa-fire text-amber-500"></i> Abrir en Ignis
+                        <!-- Botones de Acción: Abrir en Ignis y Entregar en Google Classroom -->
+                        <div class="flex items-center justify-between gap-3 pt-3.5 border-t border-cantera-200 dark:border-slate-800 mt-2 flex-wrap">
+                            <button onclick="openIgnisWorkspace('${taskId}')" class="text-xs md:text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-sm shadow-indigo-600/30 cursor-pointer">
+                                <i class="fa-solid fa-fire text-amber-300"></i>
+                                <span>Abrir en Ignis (Tutor)</span>
                             </button>
 
-                            <a href="${task.link}" target="_blank" class="text-xs font-semibold text-cantera-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-3.5 py-2 rounded-lg bg-cantera-100 dark:bg-slate-800 border border-cantera-300 dark:border-slate-700 flex items-center gap-1.5 transition-all shadow-xs hover:border-indigo-400 cursor-pointer" title="Abrir entrega en Google Classroom">
-                                <span>Subir en Classroom</span>
-                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px] opacity-70"></i>
+                            <a href="${task.link}" target="_blank" class="text-xs font-bold text-cantera-800 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 px-4 py-2.5 rounded-xl bg-cantera-100 dark:bg-slate-800 hover:bg-cantera-200 dark:hover:bg-slate-700 border border-cantera-300 dark:border-slate-700 flex items-center gap-2 transition-all shadow-2xs cursor-pointer" title="Abrir entrega en Google Classroom">
+                                <span>Subir entrega en Classroom</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[11px] opacity-70"></i>
                             </a>
                         </div>
                     </div>
@@ -2254,10 +2306,7 @@
             const raw = task.description || '';
             const courseName = task.course_name || '';
             const taskTitle = task.title || '';
-
-            if (!raw) {
-                return '<p class="text-xs text-cantera-600 dark:text-slate-400 italic mb-4">Sin descripción asignada para esta tarea.</p>';
-            }
+            const taskId = String(task.id);
 
             // Extraer nombre de documento adjunto si existe
             const docMatch = raw.match(/--- Documento adjunto:\s*(.*?)\s*---/);
@@ -2302,29 +2351,33 @@
             // Unir líneas continuas para aprovechar todo el ancho de la tarjeta
             let cleanParagraph = cleanedLines.join(' ').replace(/\s+/g, ' ').trim();
 
-            let docBadge = '';
+            let docButton = '';
             if (docTitle) {
-                docBadge = `
-                    <div class="flex items-center gap-2 text-xs text-cantera-800 dark:text-slate-200 mb-2.5 font-medium bg-cantera-50 dark:bg-slate-900/60 px-3 py-1.5 rounded-lg border border-cantera-200 dark:border-slate-800 w-fit max-w-full">
-                        <i class="fa-regular fa-file-pdf text-red-500 text-sm"></i>
-                        <span class="truncate font-semibold">${docTitle}</span>
-                    </div>
+                docButton = `
+                    <button onclick="openIgnisWorkspace('${taskId}')" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-900/60 transition-colors font-semibold text-xs cursor-pointer" title="Abrir y consultar en Ignis">
+                        <i class="fa-regular fa-file-pdf text-red-500"></i>
+                        <span class="truncate max-w-[200px] sm:max-w-xs">${docTitle}</span>
+                        <span class="text-[10px] bg-red-200/60 dark:bg-red-900/60 px-1.5 py-0.5 rounded font-bold">Ver en Ignis</span>
+                    </button>
                 `;
             }
 
             if (!cleanParagraph && docTitle) {
                 cleanParagraph = 'Consigna y ejercicios adjuntos en el archivo. Abre el visor de Ignis para consultar el contenido y resolver tus dudas con tu tutor.';
             } else if (!cleanParagraph) {
-                cleanParagraph = 'Sin instrucciones adicionales para esta entrega.';
+                cleanParagraph = 'Sin instrucciones adicionales especificadas por el profesor.';
             }
 
             return `
-                ${docBadge}
-                <div class="text-xs sm:text-sm text-cantera-800 dark:text-slate-200 mb-4 leading-relaxed bg-cantera-50/50 dark:bg-slate-900/40 p-3 rounded-xl border border-cantera-200 dark:border-slate-800">
-                    <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 block mb-1">
-                        <i class="fa-solid fa-list-check mr-1"></i> Resumen de la Tarea:
-                    </span>
-                    <p class="text-cantera-700 dark:text-slate-300 line-clamp-4 leading-relaxed">${cleanParagraph}</p>
+                <div class="w-full bg-cantera-50/70 dark:bg-slate-950/60 p-4 rounded-xl border border-cantera-200 dark:border-slate-800 text-xs sm:text-sm leading-relaxed">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2 pb-1.5 border-b border-cantera-200/60 dark:border-slate-800/60">
+                        <span class="font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 text-[11px] flex items-center gap-1.5">
+                            <i class="fa-solid fa-list-check"></i>
+                            <span>¿Qué debes hacer?</span>
+                        </span>
+                        ${docButton}
+                    </div>
+                    <p class="text-cantera-800 dark:text-slate-300 leading-relaxed break-words">${cleanParagraph}</p>
                 </div>
             `;
         }
@@ -2387,6 +2440,117 @@
         }
 
         // Visor de Ignis
+        
+        // --- Control de Pestañas Deslizables en Celulares para Ignis ---
+        let ignisMobileActiveTab = 'doc';
+        function setMobileIgnisTab(tab) {
+            ignisMobileActiveTab = tab;
+            const slider = document.getElementById('ignis-panes-slider');
+            const btnDoc = document.getElementById('mobile-tab-doc');
+            const btnChat = document.getElementById('mobile-tab-chat');
+
+            if (window.innerWidth >= 768) {
+                if (slider) slider.style.transform = 'none';
+                return;
+            }
+
+            if (tab === 'doc') {
+                if (slider) slider.style.transform = 'translateX(0%)';
+                if (btnDoc) btnDoc.className = "flex-1 py-2 rounded-lg font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-indigo-600 text-white shadow-xs text-xs";
+                if (btnChat) btnChat.className = "flex-1 py-2 rounded-lg font-medium transition-all text-center flex items-center justify-center gap-1.5 text-cantera-700 dark:text-slate-400 text-xs";
+            } else {
+                if (slider) slider.style.transform = 'translateX(-50%)';
+                if (btnDoc) btnDoc.className = "flex-1 py-2 rounded-lg font-medium transition-all text-center flex items-center justify-center gap-1.5 text-cantera-700 dark:text-slate-400 text-xs";
+                if (btnChat) btnChat.className = "flex-1 py-2 rounded-lg font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-indigo-600 text-white shadow-xs text-xs";
+                setTimeout(() => {
+                    const inp = document.getElementById('chat-input');
+                    if (inp) inp.focus();
+                }, 150);
+            }
+        }
+
+        // Detección de Gesto de Deslizamiento Táctil (Swipe estilo Fotos)
+        (function setupIgnisTouchSwipe() {
+            let touchStartX = 0;
+            let touchStartY = 0;
+            document.addEventListener('DOMContentLoaded', () => {
+                const slider = document.getElementById('ignis-panes-slider');
+                if (!slider) return;
+
+                slider.addEventListener('touchstart', (e) => {
+                    touchStartX = e.changedTouches[0].screenX;
+                    touchStartY = e.changedTouches[0].screenY;
+                }, { passive: true });
+
+                slider.addEventListener('touchend', (e) => {
+                    if (window.innerWidth >= 768) return;
+                    const diffX = e.changedTouches[0].screenX - touchStartX;
+                    const diffY = e.changedTouches[0].screenY - touchStartY;
+                    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+                        if (diffX < 0) {
+                            setMobileIgnisTab('chat');
+                        } else {
+                            setMobileIgnisTab('doc');
+                        }
+                    }
+                }, { passive: true });
+            });
+        })();
+
+        // --- Control de la Barra Inferior de 4 Pestañas Móviles ---
+        function navMobileSwitch(tab) {
+            const btnMissions = document.getElementById('m-nav-missions');
+            const btnCalendar = document.getElementById('m-nav-calendar');
+            const btnIgnis = document.getElementById('m-nav-ignis');
+            const btnSettings = document.getElementById('m-nav-settings');
+            const sidebar = document.getElementById('sidebar');
+
+            // Reset tabs
+            [btnMissions, btnCalendar, btnIgnis, btnSettings].forEach(b => {
+                if (b) {
+                    b.classList.remove('text-indigo-600', 'dark:text-indigo-400', 'font-bold');
+                    b.classList.add('text-cantera-600', 'dark:text-slate-400', 'font-medium');
+                }
+            });
+
+            if (tab === 'missions') {
+                if (btnMissions) {
+                    btnMissions.classList.add('text-indigo-600', 'dark:text-indigo-400', 'font-bold');
+                    btnMissions.classList.remove('text-cantera-600', 'dark:text-slate-400');
+                }
+                if (sidebar) sidebar.classList.remove('mobile-open');
+                const mainArea = document.getElementById('main-content-area');
+                if (mainArea) mainArea.scrollTo({ top: 0, behavior: 'smooth' });
+            } else if (tab === 'calendar') {
+                if (btnCalendar) {
+                    btnCalendar.classList.add('text-indigo-600', 'dark:text-indigo-400', 'font-bold');
+                    btnCalendar.classList.remove('text-cantera-600', 'dark:text-slate-400');
+                }
+                if (sidebar) {
+                    sidebar.classList.add('mobile-open');
+                    const calEl = document.getElementById('mini-calendar');
+                    if (calEl) calEl.scrollIntoView({ behavior: 'smooth' });
+                }
+            } else if (tab === 'ignis') {
+                if (btnIgnis) {
+                    btnIgnis.classList.add('text-indigo-600', 'dark:text-indigo-400', 'font-bold');
+                    btnIgnis.classList.remove('text-cantera-600', 'dark:text-slate-400');
+                }
+                // Abrir Ignis con la primera tarea disponible o tutor general
+                if (allTasks && allTasks.length > 0) {
+                    openIgnisWorkspace(allTasks[0].id);
+                } else {
+                    openSocratesModal();
+                }
+            } else if (tab === 'settings') {
+                if (btnSettings) {
+                    btnSettings.classList.add('text-indigo-600', 'dark:text-indigo-400', 'font-bold');
+                    btnSettings.classList.remove('text-cantera-600', 'dark:text-slate-400');
+                }
+                if (typeof toggleMainMenu === 'function') toggleMainMenu();
+            }
+        }
+
         function openIgnisWorkspace(taskId) {
             const task = typeof taskId === 'object' ? taskId : tasksMap.get(String(taskId));
             if (!task) return;
@@ -2428,12 +2592,15 @@
 
             ignisViewMode = 'split';
             updateIgnisPanes();
+            if (window.innerWidth < 768) {
+                setMobileIgnisTab('doc');
+            }
 
             const backdrop = document.getElementById('ignis-workspace-backdrop');
             if (backdrop) backdrop.style.display = 'flex';
             setTimeout(() => {
                 const inp = document.getElementById('chat-input');
-                if (inp) inp.focus();
+                if (inp && window.innerWidth >= 768) inp.focus();
             }, 80);
         }
 
@@ -2457,8 +2624,22 @@
             const chatPane = document.getElementById('ignis-chat-pane');
             const btnPdf = document.getElementById('btn-view-pdf');
             const btnChat = document.getElementById('btn-view-chat');
+            const slider = document.getElementById('ignis-panes-slider');
 
             if (!docPane || !chatPane) return;
+
+            // En móviles (< 768px), paneles 100% de ancho en slider horizontal fluido
+            if (window.innerWidth < 768) {
+                docPane.style.display = 'flex';
+                chatPane.style.display = 'flex';
+                docPane.className = "w-1/2 md:w-1/2 h-full border-r border-cantera-300 dark:border-slate-700 flex flex-col bg-cantera-50/70 dark:bg-slate-900/50 shrink-0 md:shrink";
+                chatPane.className = "w-1/2 md:w-1/2 h-full flex flex-col bg-white dark:bg-slate-900/20 shrink-0 md:shrink";
+                setMobileIgnisTab(ignisMobileActiveTab || 'doc');
+                return;
+            }
+
+            // En desktop (>= 768px), resetear transform del slider
+            if (slider) slider.style.transform = 'none';
 
             if (ignisViewMode === 'pdf') {
                 docPane.style.display = 'flex';
@@ -2474,13 +2655,17 @@
                 if (btnChat) btnChat.className = "px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-600 text-white shadow-sm flex items-center gap-1.5 cursor-pointer";
             } else { // split
                 docPane.style.display = 'flex';
-                docPane.className = "w-full md:w-1/2 border-b md:border-b-0 md:border-r border-cantera-300 dark:border-slate-700 flex flex-col bg-cantera-50/70 dark:bg-slate-900/50";
+                docPane.className = "w-1/2 h-full border-r border-cantera-300 dark:border-slate-700 flex flex-col bg-cantera-50/70 dark:bg-slate-900/50";
                 chatPane.style.display = 'flex';
-                chatPane.className = "w-full md:w-1/2 flex flex-col bg-white dark:bg-slate-900/20";
+                chatPane.className = "w-1/2 h-full flex flex-col bg-white dark:bg-slate-900/20";
                 if (btnPdf) btnPdf.className = "px-2.5 py-1 rounded-lg text-xs font-medium bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-300 hover:bg-cantera-300 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer";
                 if (btnChat) btnChat.className = "px-2.5 py-1 rounded-lg text-xs font-medium bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-300 hover:bg-cantera-300 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer";
             }
         }
+
+        window.addEventListener('resize', () => {
+            if (typeof updateIgnisPanes === 'function') updateIgnisPanes();
+        });
 
         // Catálogo Maestro de los 24 Profesores y Mentores Universitarios
         const MENTORS_CATALOG = [
@@ -3318,5 +3503,32 @@
             container.scrollTop = container.scrollHeight;
         }
     </script>
+    <!-- Barra Inferior de Navegación Móvil (4 Pestañas Limpias) -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-night-900/95 backdrop-blur-md border-t border-cantera-300 dark:border-slate-800 px-2 py-2 flex items-center justify-around shadow-2xl">
+        <!-- 1. Misiones -->
+        <button onclick="navMobileSwitch('missions')" id="m-nav-missions" class="flex flex-col items-center gap-1 text-indigo-600 dark:text-indigo-400 font-bold transition-all px-3 py-1">
+            <i class="fa-solid fa-list-check text-base"></i>
+            <span class="text-[10px]">Misiones</span>
+        </button>
+
+        <!-- 2. Calendario -->
+        <button onclick="navMobileSwitch('calendar')" id="m-nav-calendar" class="flex flex-col items-center gap-1 text-cantera-600 dark:text-slate-400 hover:text-indigo-500 font-medium transition-all px-3 py-1">
+            <i class="fa-regular fa-calendar-days text-base"></i>
+            <span class="text-[10px]">Calendario</span>
+        </button>
+
+        <!-- 3. Ignis -->
+        <button onclick="navMobileSwitch('ignis')" id="m-nav-ignis" class="flex flex-col items-center gap-1 text-cantera-600 dark:text-slate-400 hover:text-amber-500 font-medium transition-all px-3 py-1">
+            <i class="fa-solid fa-fire text-base text-amber-500"></i>
+            <span class="text-[10px]">Ignis</span>
+        </button>
+
+        <!-- 4. Ajustes / Menú -->
+        <button onclick="navMobileSwitch('settings')" id="m-nav-settings" class="flex flex-col items-center gap-1 text-cantera-600 dark:text-slate-400 hover:text-indigo-500 font-medium transition-all px-3 py-1">
+            <i class="fa-solid fa-sliders text-base"></i>
+            <span class="text-[10px]">Ajustes</span>
+        </button>
+    </nav>
+
 </body>
 </html>
