@@ -2839,7 +2839,7 @@
             const yesterday = new Date(now);
             yesterday.setDate(yesterday.getDate() - 1);
 
-            const timeFormatted = due.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            const timeFormatted = due.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
             // 1. Tarea Vencida (diffMs < 0)
             if (diffMs < 0) {
@@ -2867,7 +2867,7 @@
             }
 
             // 4. Vence en días posteriores
-            return due.toLocaleString('es-ES', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            return due.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
         }
 
         async function toggleStatus(taskId, isChecked) {
