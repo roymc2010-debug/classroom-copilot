@@ -40,7 +40,8 @@ SCOPES = [
     'https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly',
     'https://www.googleapis.com/auth/classroom.announcements.readonly',
     'https://www.googleapis.com/auth/drive.readonly',
-    'https://www.googleapis.com/auth/gmail.readonly'
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/userinfo.email'
 ]
 
 def load_client_secrets():
@@ -73,11 +74,15 @@ def get_redirect_uri(request: Request):
         return "https://agora-app-leox.onrender.com/auth/callback"
     return f"{base}/auth/callback"
 
-def restore_and_refresh_credentials(creds_json: str, session_id: str = None):
-    if not creds_json:
+def restore_and_refresh_credentials(creds_data, session_id: str = None):
+    if not creds_data:
         return None
     try:
-        data = json.loads(creds_json) if isinstance(creds_json, str) else creds_json
+        if isinstance(creds_data, dict):
+            raw_creds = creds_data.get("creds", creds_data)
+        else:
+            raw_creds = creds_data
+        data = json.loads(raw_creds) if isinstance(raw_creds, str) else raw_creds
         creds = Credentials(
             token=data.get("token") or data.get("access_token"),
             refresh_token=data.get("refresh_token"),
@@ -91,7 +96,10 @@ def restore_and_refresh_credentials(creds_json: str, session_id: str = None):
             try:
                 creds.refresh(GoogleRequest())
                 if session_id and session_id in user_sessions:
-                    user_sessions[session_id] = creds.to_json()
+                    if isinstance(user_sessions[session_id], dict) and "creds" in user_sessions[session_id]:
+                        user_sessions[session_id]["creds"] = creds.to_json()
+                    else:
+                        user_sessions[session_id] = creds.to_json()
                     save_sessions()
             except Exception as e:
                 print(f"No se pudo refrescar el token de Google: {e}")
@@ -121,6 +129,16 @@ def get_session_user_email(creds) -> str:
         return profile.get('emailAddress', '').lower().strip()
     except Exception:
         return ""
+
+def get_session_email(session_id: str, creds=None) -> str:
+    if not session_id:
+        return get_session_user_email(creds) if creds else ""
+    sess = user_sessions.get(session_id)
+    if isinstance(sess, dict) and sess.get("email"):
+        return sess["email"].lower().strip()
+    if creds:
+        return get_session_user_email(creds)
+    return ""
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -161,7 +179,7 @@ async def auth_login(request: Request):
         f"scope={scopes_str}&"
         f"access_type=offline&"
         f"include_granted_scopes=true&"
-        f"prompt=consent"
+        f"prompt=select_account%20consent"
     )
     return RedirectResponse(auth_url)
 
@@ -198,7 +216,8 @@ async def auth_callback(request: Request, code: str = None, error: str = None):
         existing_refresh = None
         for s_id, s_data in user_sessions.items():
             try:
-                parsed = json.loads(s_data) if isinstance(s_data, str) else s_data
+                raw_c = s_data.get("creds", s_data) if isinstance(s_data, dict) else s_data
+                parsed = json.loads(raw_c) if isinstance(raw_c, str) else raw_c
                 if parsed.get("refresh_token"):
                     existing_refresh = parsed.get("refresh_token")
                     break
@@ -223,8 +242,28 @@ async def auth_callback(request: Request, code: str = None, error: str = None):
             scopes=SCOPES
         )
 
+        # Consultar endpoint oficial userinfo de Google para extraer el email institucional exacto
+        user_email = ""
+        try:
+            uinfo_req = urllib.request.Request(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {token_data.get('access_token')}"}
+            )
+            with urllib.request.urlopen(uinfo_req) as uresp:
+                uinfo = json.loads(uresp.read().decode("utf-8"))
+                user_email = uinfo.get("email", "").lower().strip()
+        except Exception as e:
+            print(f"Aviso: userinfo no devolvió email ({e}), intentando perfil de Classroom...")
+            try:
+                user_email = get_session_user_email(creds)
+            except Exception:
+                pass
+
         session_id = str(uuid.uuid4())
-        user_sessions[session_id] = creds.to_json()
+        user_sessions[session_id] = {
+            "creds": creds.to_json(),
+            "email": user_email
+        }
         save_sessions()
 
         try:
@@ -233,12 +272,11 @@ async def auth_callback(request: Request, code: str = None, error: str = None):
         except Exception:
             pass
 
-        print(f"Autenticacion completada con exito para sesion: {session_id}")
+        print(f"Autenticacion completada con exito para {user_email or 'usuario'} (sesion: {session_id})")
 
         try:
             from services.mock_data_service import cycle_alex_stage
-            user_em = get_session_user_email(creds)
-            if user_em == ALEX_EMAIL:
+            if user_email == ALEX_EMAIL:
                 cycle_alex_stage()
         except Exception:
             pass
@@ -287,14 +325,14 @@ async def get_courses(request: Request):
     if not creds:
         return JSONResponse(status_code=401, content={"error": "Not authenticated"})
 
-    user_email = get_session_user_email(creds)
+    user_email = get_session_email(session_id, creds=creds)
     if user_email == ALEX_EMAIL:
         from services.mock_data_service import get_alex_stage_data
         alex_data = get_alex_stage_data()
         return {"courses": alex_data["courses"]}
 
     try:
-        courses = fetch_courses(creds=creds)
+        courses = fetch_courses(creds=creds, user_email=user_email)
         return {"courses": courses}
     except Exception as e:
         traceback.print_exc()
@@ -312,7 +350,7 @@ async def get_tasks(request: Request):
     if not creds:
         return JSONResponse(status_code=401, content={"error": "Not authenticated"})
 
-    user_email = get_session_user_email(creds)
+    user_email = get_session_email(session_id, creds=creds)
 
     # Si es Alex, servir paquete de datos falsos de la etapa activa
     if user_email == ALEX_EMAIL:
@@ -333,8 +371,8 @@ async def get_tasks(request: Request):
         }
 
     try:
-        courses = fetch_courses(creds=creds)
-        tasks = fetch_tasks(creds=creds)
+        courses = fetch_courses(creds=creds, user_email=user_email)
+        tasks = fetch_tasks(creds=creds, user_email=user_email)
         try:
             from db.database import get_all_task_states
             states = get_all_task_states()
@@ -392,14 +430,14 @@ async def api_announcements(request: Request):
     if not creds:
         return {"announcements": []}
 
-    user_email = get_session_user_email(creds)
+    user_email = get_session_email(session_id, creds=creds)
     if user_email == ALEX_EMAIL:
         from services.mock_data_service import get_alex_stage_data
         alex_data = get_alex_stage_data()
         return {"announcements": alex_data["announcements"]}
 
     try:
-        alerts = get_announcements_and_alerts(creds=creds)
+        alerts = get_announcements_and_alerts(creds=creds, user_email=user_email)
         return {"announcements": alerts}
     except Exception as e:
         print(f"Error obteniendo avisos: {e}")

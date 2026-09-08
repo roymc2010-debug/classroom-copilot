@@ -1826,7 +1826,14 @@
 
             // Extraer enlaces https?://
             const linkMatches = rawText.match(/https?:\/\/[^\s\)]+/g) || [];
-            const links = linkMatches.map(l => l.trim());
+            const links = linkMatches.map(l => {
+                let trimmed = l.trim();
+                if (currentUserEmail && (trimmed.includes('google.com') || trimmed.includes('classroom.')) && !trimmed.includes('authuser=')) {
+                    const sep = trimmed.includes('?') ? '&' : '?';
+                    trimmed = `${trimmed}${sep}authuser=${encodeURIComponent(currentUserEmail)}`;
+                }
+                return trimmed;
+            });
             const cleanText = rawText.replace(/https?:\/\/[^\s\)]+/g, '').trim();
 
             // Limpiar saludos iniciales
@@ -3182,7 +3189,12 @@
             const doc = currentTaskDocs[currentDocIndex];
             document.getElementById('doc-carousel-title').textContent = doc.title;
             document.getElementById('doc-carousel-counter').textContent = `${currentDocIndex + 1}/${currentTaskDocs.length}`;
-            document.getElementById('doc-external-link').href = doc.link || currentTaskContext.link;
+            let extLink = doc.link || currentTaskContext.link;
+            if (extLink && currentUserEmail && (extLink.includes('google.com') || extLink.includes('classroom.')) && !extLink.includes('authuser=')) {
+                const sep = extLink.includes('?') ? '&' : '?';
+                extLink = `${extLink}${sep}authuser=${encodeURIComponent(currentUserEmail)}`;
+            }
+            document.getElementById('doc-external-link').href = extLink;
 
             const container = document.getElementById('doc-viewer-container');
 
@@ -3197,7 +3209,10 @@
             }
 
             if (docViewMode === 'pdf' && fileId) {
-                const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+                let previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+                if (currentUserEmail) {
+                    previewUrl += `?authuser=${encodeURIComponent(currentUserEmail)}`;
+                }
                 container.innerHTML = `
                     <div class="w-full h-full flex flex-col">
                         <iframe src="${previewUrl}" class="w-full flex-1 min-h-[460px] border-0 rounded-xl bg-white shadow-inner" allow="autoplay"></iframe>

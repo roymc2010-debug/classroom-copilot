@@ -17,8 +17,24 @@ SCOPES = [
     'https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly',
     'https://www.googleapis.com/auth/classroom.announcements.readonly',
     'https://www.googleapis.com/auth/drive.readonly',
-    'https://www.googleapis.com/auth/gmail.readonly'
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/userinfo.email'
 ]
+
+def inject_authuser(url: str, user_email: str = None) -> str:
+    """
+    Inyecta deterministamente ?authuser={user_email} en enlaces externos de Google
+    (Classroom, Drive, Docs, etc.) para que el navegador del alumno abra directamente
+    su perfil escolar y evite errores de 'cuenta incorrecta / clase no encontrada'.
+    """
+    if not url or not user_email:
+        return url or ""
+    if "authuser=" in url:
+        return url
+    if "google.com" in url or "classroom." in url or "drive." in url:
+        sep = "&" if "?" in url else "?"
+        return f"{url}{sep}authuser={user_email}"
+    return url
 
 def get_credentials():
     creds = None
@@ -122,8 +138,16 @@ def get_active_courses(service):
     print(f"[Classroom API] Cursos recuperados ({len(final_list)}): {[c.get('name') for c in final_list]}")
     return final_list
 
-def get_all_tasks(creds=None):
+def get_all_tasks(creds=None, user_email=None):
     service = get_classroom_service(creds=creds)
+
+    # Si no se pasó user_email, intentar extraerlo del perfil
+    if not user_email and creds:
+        try:
+            profile = service.userProfiles().get(userId='me').execute()
+            user_email = profile.get('emailAddress', '').lower().strip()
+        except Exception:
+            pass
 
     courses = get_active_courses(service)
     tasks = []
@@ -143,7 +167,7 @@ def get_all_tasks(creds=None):
             cw_id = cw['id']
             title = cw.get('title', 'Sin título')
             desc = cw.get('description', '')
-            alt_link = cw.get('alternateLink', '')
+            alt_link = inject_authuser(cw.get('alternateLink', ''), user_email)
             max_points = cw.get('maxPoints')
 
             due_date = cw.get('dueDate')
@@ -200,7 +224,7 @@ def get_all_tasks(creds=None):
                 if drive_file:
                     f_id = drive_file.get('id')
                     f_title = drive_file.get('title', 'Documento adjunto')
-                    f_link = drive_file.get('alternateLink', '')
+                    f_link = inject_authuser(drive_file.get('alternateLink', ''), user_email)
 
                     if f_link:
                         attachment_links.append(f"{f_title} ({f_link})")
@@ -231,24 +255,38 @@ def get_all_tasks(creds=None):
 # Exportar con ambos nombres para compatibilidad total
 fetch_tasks = get_all_tasks
 
-def fetch_courses(creds=None):
+def fetch_courses(creds=None, user_email=None):
     try:
         service = get_classroom_service(creds=creds)
+        if not user_email and creds:
+            try:
+                profile = service.userProfiles().get(userId='me').execute()
+                user_email = profile.get('emailAddress', '').lower().strip()
+            except Exception:
+                pass
+
         courses = get_active_courses(service)
         return [{
             'id': c.get('id'),
             'name': c.get('name', 'Materia sin nombre').replace('_', ' '),
             'section': c.get('section', ''),
-            'alternateLink': c.get('alternateLink', '')
+            'alternateLink': inject_authuser(c.get('alternateLink', ''), user_email)
         } for c in courses]
     except Exception as e:
         print(f"Error en fetch_courses: {e}")
         return []
 
-def get_announcements_and_alerts(creds=None):
+def get_announcements_and_alerts(creds=None, user_email=None):
     alerts = []
     try:
         service = get_classroom_service(creds=creds)
+        if not user_email and creds:
+            try:
+                profile = service.userProfiles().get(userId='me').execute()
+                user_email = profile.get('emailAddress', '').lower().strip()
+            except Exception:
+                pass
+
         courses = get_active_courses(service)
 
         cutoff_date = (datetime.datetime.utcnow() - datetime.timedelta(days=7)).isoformat() + "Z"
@@ -269,7 +307,7 @@ def get_announcements_and_alerts(creds=None):
                             'course_name': c_name,
                             'title': f"Aviso en {c_name}",
                             'content': text,
-                            'link': a.get('alternateLink', ''),
+                            'link': inject_authuser(a.get('alternateLink', ''), user_email),
                             'date': created
                         })
             except Exception:

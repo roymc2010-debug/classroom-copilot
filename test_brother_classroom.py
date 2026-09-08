@@ -12,7 +12,7 @@ for mod in ['google', 'google.oauth2', 'google.oauth2.credentials', 'google.auth
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from services.classroom_service import get_active_courses, get_all_tasks, fetch_courses
+from services.classroom_service import get_active_courses, get_all_tasks, fetch_courses, inject_authuser
 
 class TestBrotherClassroomData(unittest.TestCase):
     
@@ -122,6 +122,35 @@ class TestBrotherClassroomData(unittest.TestCase):
             self.assertEqual(tasks[0]['attachment_files'][0]['id'], 'drive_pdf_123')
             
         print("[OK] Test 4 superado: Las tareas recolectan metadatos de PDF sin descargas bloqueantes (sin timeouts).")
+
+    def test_5_inject_authuser_dynamic_links(self):
+        """
+        Prueba que los enlaces de Google Classroom y Drive reciban deterministamente
+        el parámetro ?authuser={email} para enrutar la cuenta institucional sin errores 403.
+        """
+        email = "estudiante.cucei@alumnos.udg.mx"
+        
+        # URL sin parámetros previos
+        url1 = "https://classroom.google.com/c/MzQ4OTI5/a/NTg4MjQ/details"
+        res1 = inject_authuser(url1, email)
+        self.assertEqual(res1, f"{url1}?authuser={email}")
+        
+        # URL con parámetros previos
+        url2 = "https://drive.google.com/file/d/123xyz/preview?usp=drivesdk"
+        res2 = inject_authuser(url2, email)
+        self.assertEqual(res2, f"{url2}&authuser={email}")
+        
+        # URL que ya contiene authuser
+        url3 = f"{url1}?authuser={email}"
+        res3 = inject_authuser(url3, email)
+        self.assertEqual(res3, url3)
+        
+        # URL no perteneciente a Google
+        url4 = "https://wikipedia.org/wiki/Calculus"
+        res4 = inject_authuser(url4, email)
+        self.assertEqual(res4, url4)
+        
+        print("[OK] Test 5 superado: Enlaces externos de Google integran ?authuser deterministamente.")
 
 if __name__ == '__main__':
     unittest.main()
