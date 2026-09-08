@@ -323,7 +323,7 @@ def get_all_tasks(creds=None, user_email=None):
                 day = due_date.get('day')
                 hour = due_time.get('hours', 23) if due_time else 23
                 minute = due_time.get('minutes', 59) if due_time else 59
-                dt = datetime.datetime(year, month, day, hour, minute)
+                dt = datetime.datetime(year, month, day, hour, minute, tzinfo=datetime.timezone.utc)
                 due_date_iso = dt.isoformat()
 
             classroom_status = 'PENDIENTE'

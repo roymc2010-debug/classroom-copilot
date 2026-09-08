@@ -1348,10 +1348,33 @@
             tick();
         }
 
+        function parseDueDate(dueStr) {
+            if (!dueStr) return null;
+            let str = String(dueStr).trim();
+            // Si viene una fecha ISO sin indicador de zona horaria (sin Z ni offset +00:00),
+            // Google Classroom API entrega dueDate/dueTime en UTC; agregamos 'Z' para que el navegador
+            // la convierta de forma determinista a la hora local del estudiante.
+            if (!str.endsWith('Z') && !str.includes('+') && !/T\d{2}:\d{2}:\d{2}[+-]\d{2}/.test(str)) {
+                str += 'Z';
+            }
+            const d = new Date(str);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        function getLocalDateString(d) {
+            if (!d) return '';
+            const dateObj = typeof d === 'string' ? parseDueDate(d) : d;
+            if (!dateObj || isNaN(dateObj.getTime())) return '';
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
         function getAcademicDateString(d = new Date()) {
             const copy = new Date(d);
             if (copy.getHours() < 7) copy.setDate(copy.getDate() - 1);
-            return copy.toISOString().split('T')[0];
+            return getLocalDateString(copy);
         }
 
         // Temporizador
@@ -1646,7 +1669,7 @@
 
                 (data.tasks_with_dates || []).forEach(task => {
                     task.course_name = (task.course_name || '').replace(/_/g, ' ');
-                    const dueDate = new Date(task.due_date);
+                    const dueDate = parseDueDate(task.due_date);
                     if (task.classroom_status === 'ENTREGADA' || task.classroom_status === 'CALIFICADA') {
                         task.status = 'done';
                     }
@@ -2092,7 +2115,8 @@
             if (selectedCalendarDay !== null) {
                 filtered = filtered.filter(t => {
                     if (!t.due_date) return false;
-                    return new Date(t.due_date).getDate() === selectedCalendarDay;
+                    const d = parseDueDate(t.due_date);
+                    return d && d.getDate() === selectedCalendarDay;
                 });
                 if (titleEl) titleEl.textContent = `Misiones del día ${selectedCalendarDay}`;
                 if (clearBtn) clearBtn.style.display = 'inline-flex';
@@ -2121,7 +2145,9 @@
                 filtered.sort((a, b) => {
                     if (!a.due_date) return 1;
                     if (!b.due_date) return -1;
-                    return new Date(a.due_date) - new Date(b.due_date);
+                    const da = parseDueDate(a.due_date);
+                    const db = parseDueDate(b.due_date);
+                    return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
                 });
             } else if (currentSortMode === 'importance') {
                 const priority = { 'main': 1, 'daily': 2, 'secondary': 3, 'special': 4, 'rescue': 5, 'open': 6 };
@@ -2243,7 +2269,7 @@
                 const isSubmitted = t.classroom_status === 'ENTREGADA' || t.status === 'done';
                 const isDone = isGraded || isSubmitted;
 
-                const taskDay = t.due_date ? t.due_date.split('T')[0] : '';
+                const taskDay = t.due_date ? getLocalDateString(t.due_date) : '';
                 const isToday = taskDay === academicToday && t.mission_type !== 'rescue';
                 
                 if (isToday) {
@@ -2327,7 +2353,9 @@
 
             [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks].forEach(t => {
                 if (t.due_date) {
-                    const d = new Date(t.due_date).getDate();
+                    const parsedD = parseDueDate(t.due_date);
+                    const d = parsedD ? parsedD.getDate() : null;
+                    if (!d) return;
                     if (!dayStatus[d]) dayStatus[d] = { pending: false, done: false, exam: false, announcement: false };
                     
                     const titleLower = (t.title || '').toLowerCase();
@@ -2793,17 +2821,52 @@
 
         function formatRelativeDate(dueStr) {
             if (!dueStr) return 'Sin fecha';
-            const due = new Date(dueStr);
+            const due = parseDueDate(dueStr);
+            if (!due) return 'Sin fecha';
+
             const now = new Date();
             const diffMs = due - now;
             const diffHours = Math.round(diffMs / (1000 * 60 * 60));
 
-            if (diffHours > 0 && diffHours <= 12) {
-                return `Vence en ${diffHours}h`;
+            const isSameDay = (d1, d2) => 
+                d1.getFullYear() === d2.getFullYear() &&
+                d1.getMonth() === d2.getMonth() &&
+                d1.getDate() === d2.getDate();
+
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            const timeFormatted = due.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+            // 1. Tarea Vencida (diffMs < 0)
+            if (diffMs < 0) {
+                if (isSameDay(due, now)) {
+                    return `Venció hoy a las ${timeFormatted}`;
+                }
+                if (isSameDay(due, yesterday)) {
+                    return `Venció ayer a las ${timeFormatted}`;
+                }
+                const overdueDays = Math.max(1, Math.round(Math.abs(diffMs) / (1000 * 60 * 60 * 24)));
+                return `Venció hace ${overdueDays}d`;
             }
-            if (diffHours > 12 && diffHours <= 24) {
-                return `Vence hoy a las ${due.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+
+            // 2. Vence Hoy
+            if (isSameDay(due, now)) {
+                if (diffHours >= 1 && diffHours <= 3) {
+                    return `Vence en ${diffHours}h (hoy a las ${timeFormatted})`;
+                }
+                return `Vence hoy a las ${timeFormatted}`;
             }
+
+            // 3. Vence Mañana
+            if (isSameDay(due, tomorrow)) {
+                return `Vence mañana a las ${timeFormatted}`;
+            }
+
+            // 4. Vence en días posteriores
             return due.toLocaleString('es-ES', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
         }
 
@@ -3586,12 +3649,14 @@
             const sorted = [...pendingTasks].sort((a, b) => {
                 if (!a.due_date) return 1;
                 if (!b.due_date) return -1;
-                return new Date(a.due_date) - new Date(b.due_date);
+                const da = parseDueDate(a.due_date);
+                const db = parseDueDate(b.due_date);
+                return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
             }).slice(0, 6);
 
             sorted.forEach(t => {
                 const hasDue = !!t.due_date;
-                const dueDate = hasDue ? new Date(t.due_date) : null;
+                const dueDate = hasDue ? parseDueDate(t.due_date) : null;
                 const diffHours = hasDue ? Math.round((dueDate - now) / (1000 * 60 * 60)) : 999;
                 
                 // Urgencia temporal independiente

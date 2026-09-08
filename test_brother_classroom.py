@@ -200,5 +200,39 @@ class TestBrotherClassroomData(unittest.TestCase):
 
         print("[OK] Test 7 superado: Almacenamiento y recuperación en caché de disco de adjuntos es instantáneo y persistente.")
 
+    def test_8_due_date_utc_timezone_awareness(self):
+        """
+        Prueba que las fechas y horas de entrega provenientes de Google Classroom (UTC)
+        se emitan con zona horaria UTC explícita (+00:00 o Z) para que el navegador las
+        convierta a la hora local exacta (ej. 15:59 UTC -> 09:59 AM local México).
+        """
+        mock_service = MagicMock()
+        mock_service.courses().list().execute.return_value = {
+            'courses': [{'id': '401', 'name': 'Teoría de Sistemas II', 'courseState': 'ACTIVE'}]
+        }
+        mock_service.courses().courseWork().list().execute.return_value = {
+            'courseWork': [{
+                'id': 'cw_sistemas_4a',
+                'title': 'Teoría de sistemas II UT 2 Act apre s 4 a',
+                'dueDate': {'year': 2026, 'month': 9, 'day': 8},
+                'dueTime': {'hours': 15, 'minutes': 59},
+                'materials': []
+            }]
+        }
+        mock_service.courses().courseWork().studentSubmissions().list().execute.return_value = {
+            'studentSubmissions': [{'state': 'NEW'}]
+        }
+        
+        with patch('services.classroom_service.get_classroom_service', return_value=mock_service):
+            tasks = get_all_tasks(creds=MagicMock())
+            self.assertEqual(len(tasks), 1)
+            due_iso = tasks[0].get('due_date')
+            self.assertIsNotNone(due_iso)
+            # Debe contener zona horaria explícita (+00:00 o Z) para evitar ser tratada como hora local cruda
+            self.assertTrue('+00:00' in due_iso or due_iso.endswith('Z'))
+            self.assertIn('2026-09-08T15:59:00', due_iso)
+
+        print("[OK] Test 8 superado: Fechas de entrega integran zona horaria UTC explícita para conversión local exacta.")
+
 if __name__ == '__main__':
     unittest.main()
