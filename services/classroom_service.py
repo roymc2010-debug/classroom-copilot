@@ -1,5 +1,7 @@
 import os
 import io
+import re
+import json
 import datetime
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -20,6 +22,105 @@ SCOPES = [
     'https://www.googleapis.com/auth/gmail.readonly',
     'https://www.googleapis.com/auth/userinfo.email'
 ]
+
+PDF_CACHE_DIR = os.path.join("data", "pdf_cache")
+
+def get_cached_attachment_data(file_id: str) -> dict:
+    """Lee del almacenamiento en disco las consignas extraídas y el texto del documento para carga instantánea."""
+    if not file_id:
+        return {}
+    cache_path = os.path.join(PDF_CACHE_DIR, f"{file_id}.json")
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def save_cached_attachment_data(file_id: str, data: dict):
+    """Guarda en caché persistente en disco el análisis de consignas del archivo."""
+    if not file_id or not data:
+        return
+    try:
+        os.makedirs(PDF_CACHE_DIR, exist_ok=True)
+        cache_path = os.path.join(PDF_CACHE_DIR, f"{file_id}.json")
+        with open(cache_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+    except Exception as e:
+        print(f"Error guardando caché de PDF {file_id}: {e}")
+
+def extract_actionable_consignas(text: str, course_name: str = "", task_title: str = "", max_items: int = 4) -> list[str]:
+    """
+    Extrae de forma robusta y rigurosa las consignas reales y ejercicios de un texto de PDF universitario.
+    Filtra encabezados institucionales, nombres de materia y metadatos docentes para extraer
+    exactamente las acciones requeridas por el estudiante (ej. 'Resuelve 5 ejercicios sobre transformada de Laplace...').
+    """
+    if not text:
+        return []
+
+    lines = [l.strip() for l in text.split('\n') if l.strip()]
+    
+    IGNORE_PATTERNS = [
+        r'universidad', r'departamento', r'divisi[oó]n', r'centro universitario', r'cucei',
+        r'profesor', r'docente', r'alumno', r'estudiante', r'c[oó]digo:', r'fecha:',
+        r'semestre', r'ciclo escolar', r'licenciatura', r'ingenier[ií]a', r'cr[eé]ditos',
+        r'criterios? de evaluaci[oó]n', r'ponderaci[oó]n', r'r[uú]brica', r'bibliograf[ií]a',
+        r'p[aá]gina \d+', r'^\d+\s*$'
+    ]
+    ignore_re = re.compile('|'.join(IGNORE_PATTERNS), re.IGNORECASE)
+
+    ACTION_VERBS = [
+        r'resuelve', r'resolver', r'calcula', r'calcular', r'determina', r'determinar',
+        r'obten(?:er|ga)?', r'halla(?:r)?', r'grafica(?:r)?', r'demuestra', r'demostrar',
+        r'elabora(?:r)?', r'realiza(?:r)?', r'redacta(?:r)?', r'desarrolla(?:r)?',
+        r'simula(?:r)?', r'investiga(?:r)?', r'analiza(?:r)?', r'compara(?:r)?',
+        r'entrega(?:r)?', r'sube', r'subir', r'contesta(?:r)?', r'responde(?:r)?',
+        r'encuentra', r'encontrar', r'aplica(?:r)?', r'ejercicios?', r'problemas?',
+        r'transformada de laplace', r'funci[oó]n de transferencia', r'diagrama',
+        r'ecuaci[oó]n', r'circuito', r'cuestionario', r'reporte', r'ensayo'
+    ]
+    action_re = re.compile(r'\b(' + '|'.join(ACTION_VERBS) + r')\b', re.IGNORECASE)
+
+    prefix_clean_re = re.compile(r'^(?:instrucciones?|consigna|objetivo|actividad|tarea|ejercicio\s*\d*|problema\s*\d*)\s*[:.-]\s*', re.IGNORECASE)
+    bullet_clean_re = re.compile(r'^(?:[-*•–—]|\d+[\.\)]|[a-zA-Z][\.\)])\s*')
+
+    candidate_sentences = []
+
+    for line in lines:
+        if ignore_re.search(line) and not action_re.search(line):
+            continue
+        
+        sentences = re.split(r'(?<=[.!?])\s+', line)
+        for s in sentences:
+            s_clean = s.strip()
+            s_clean = bullet_clean_re.sub('', s_clean).strip()
+            s_clean = prefix_clean_re.sub('', s_clean).strip()
+
+            if len(s_clean) < 10:
+                continue
+
+            if course_name and s_clean.lower() == course_name.lower():
+                continue
+            if task_title and s_clean.lower() == task_title.lower():
+                continue
+
+            if action_re.search(s_clean):
+                s_formatted = s_clean[0].upper() + s_clean[1:]
+                if not s_formatted.endswith(('.', '!', '?')):
+                    s_formatted += '.'
+                if s_formatted not in candidate_sentences:
+                    candidate_sentences.append(s_formatted)
+
+    filtered = []
+    for c in candidate_sentences:
+        if len(c) > 250:
+            sub = re.split(r'(?<=[.!?])\s+', c)
+            c = sub[0]
+        if len(c) >= 15 and c not in filtered:
+            filtered.append(c)
+
+    return filtered[:max_items]
 
 def inject_authuser(url: str, user_email: str = None) -> str:
     """
@@ -61,7 +162,13 @@ def get_gmail_service(creds=None):
         return None
 
 def extract_pdf_text_from_drive(drive_service, file_id: str) -> str:
-    """Extrae texto de un PDF en Drive bajo demanda (para usar en Ignis, no en el listado general)."""
+    """Extrae texto de un PDF o Documento en Drive bajo demanda (con caché y soporte para Google Docs)."""
+    if not file_id or not drive_service:
+        return ""
+    cached = get_cached_attachment_data(file_id)
+    if cached and cached.get("text"):
+        return cached["text"]
+
     try:
         request = drive_service.files().get_media(fileId=file_id)
         fh = io.BytesIO()
@@ -73,14 +180,50 @@ def extract_pdf_text_from_drive(drive_service, file_id: str) -> str:
         fh.seek(0)
         reader = PdfReader(fh)
         text_content = []
-        for page in reader.pages:
+        # Limitar a las primeras 5 páginas para optimizar tiempo y memoria
+        for page in reader.pages[:5]:
             t = page.extract_text()
             if t:
                 text_content.append(t)
-        return "\n".join(text_content).strip()
+        res = "\n".join(text_content).strip()
+        if res:
+            return res
     except Exception as e:
-        print(f"Aviso: no se pudo extraer texto del PDF {file_id}: {e}")
+        print(f"Aviso: descarga get_media de {file_id} ({e}), probando exportación alternativa...")
+
+    # Intento de respaldo: si es un Google Doc nativo
+    try:
+        req_export = drive_service.files().export_media(fileId=file_id, mimeType='text/plain')
+        fh_exp = io.BytesIO()
+        downloader_exp = MediaIoBaseDownload(fh_exp, req_export)
+        done = False
+        while not done:
+            _, done = downloader_exp.next_chunk()
+        fh_exp.seek(0)
+        return fh_exp.read().decode('utf-8', errors='ignore').strip()
+    except Exception as e_exp:
+        print(f"Aviso: no se pudo extraer texto del archivo {file_id}: {e_exp}")
         return ""
+
+def get_task_attachment_summary(drive_service, file_id: str, course_name: str = "", task_title: str = "") -> dict:
+    """Obtiene el resumen y acciones del adjunto, aprovechando la caché en disco."""
+    if not file_id:
+        return {"actions": [], "text": ""}
+    cached = get_cached_attachment_data(file_id)
+    if cached and cached.get("actions"):
+        return cached
+
+    text = extract_pdf_text_from_drive(drive_service, file_id)
+    actions = extract_actionable_consignas(text, course_name=course_name, task_title=task_title)
+
+    data = {
+        "file_id": file_id,
+        "actions": actions,
+        "text": text[:3000]
+    }
+    if text or actions:
+        save_cached_attachment_data(file_id, data)
+    return data
 
 def get_active_courses(service):
     """
@@ -235,6 +378,15 @@ def get_all_tasks(creds=None, user_email=None):
             if attachment_links:
                 full_desc += "\n\nArchivos adjuntos:\n" + "\n".join(attachment_links)
 
+            cached_actions = []
+            for af in attachment_files:
+                af_id = af.get('id')
+                if af_id:
+                    c_data = get_cached_attachment_data(af_id)
+                    if c_data and c_data.get('actions'):
+                        cached_actions = c_data['actions']
+                        break
+
             tasks.append({
                 'id': str(cw_id),
                 'course_id': course_id,
@@ -246,7 +398,8 @@ def get_all_tasks(creds=None, user_email=None):
                 'classroom_status': classroom_status,
                 'assigned_grade': assigned_grade,
                 'max_points': max_points,
-                'attachment_files': attachment_files
+                'attachment_files': attachment_files,
+                'cached_actions': cached_actions
             })
 
     print(f"[Classroom API] Total de tareas procesadas: {len(tasks)}")

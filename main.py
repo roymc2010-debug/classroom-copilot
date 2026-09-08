@@ -452,6 +452,66 @@ async def cycle_alex_semester_stage(request: Request):
     new_stage = cycle_alex_stage()
     return {"ok": True, "stage": new_stage}
 
+@app.get("/api/tasks/{task_id}/attachment_summary")
+async def get_attachment_summary(
+    task_id: str,
+    request: Request,
+    file_id: str = None,
+    course_name: str = "",
+    title: str = ""
+):
+    """
+    Extrae y devuelve de forma asíncrona las consignas y ejercicios reales del documento adjunto de la tarea.
+    Utiliza caché en disco para respuesta inmediata (<1ms) en cargas posteriores.
+    """
+    session_id = request.cookies.get("agora_session")
+    creds_json = user_sessions.get(session_id)
+    creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
+
+    if not creds:
+        return JSONResponse(status_code=401, content={"error": "Not authenticated"})
+
+    user_email = get_session_email(session_id, creds=creds)
+
+    # Para Alex (mock), devolver acciones realistas según título
+    if user_email == ALEX_EMAIL:
+        t_low = (title or "").lower()
+        if "laplace" in t_low or "sistemas" in t_low:
+            return {"actions": [
+                "Resuelve 5 ejercicios sobre transformada de Laplace aplicando linealidad y traslación.",
+                "Determina la función de transferencia del sistema dinámico dado.",
+                "Grafica la respuesta al escalón unitario para comprobar la estabilidad.",
+                "Entrega el reporte de ejercicios manuscritos en PDF."
+            ]}
+        elif "funci" in t_low or "calculo" in t_low:
+            return {"actions": [
+                "Determina analíticamente el dominio y rango de las funciones racionales.",
+                "Grafica las asíntotas verticales y horizontales de los ejercicios 1 al 8.",
+                "Justifica la continuidad en cada intervalo."
+            ]}
+        elif "algoritmo" in t_low or "python" in t_low:
+            return {"actions": [
+                "Desarrolla en Python un script que calcule el índice de masa corporal.",
+                "Implementa estructuras condicionales y validación de entradas numéricas.",
+                "Adjunta diagrama de flujo en formato Mermaid."
+            ]}
+        return {"actions": [
+            f"Revisar los ejercicios y requerimientos del documento adjunto para {title or 'la tarea'}.",
+            "Completar el procedimiento de cálculo y estructurar la entrega en PDF."
+        ]}
+
+    if not file_id:
+        return {"actions": []}
+
+    try:
+        from services.classroom_service import get_drive_service, get_task_attachment_summary
+        drive_service = get_drive_service(creds=creds)
+        res = get_task_attachment_summary(drive_service, file_id, course_name=course_name, task_title=title)
+        return {"actions": res.get("actions", [])}
+    except Exception as e:
+        print(f"Error obteniendo resumen de adjunto {file_id}: {e}")
+        return {"actions": []}
+
 @app.post("/api/copilot/ask")
 async def ask_ai(request: Request):
     """
@@ -462,6 +522,20 @@ async def ask_ai(request: Request):
     mentor = data.get("mentor", "auto")
     task_context = data.get("task_context", {})
     messages = data.get("messages", [])
+
+    # Enriquecer el contexto de Ignis con el contenido real del documento si está en caché
+    file_id = data.get("file_id") or task_context.get("file_id")
+    if file_id:
+        try:
+            from services.classroom_service import get_cached_attachment_data
+            cached_doc = get_cached_attachment_data(file_id)
+            if cached_doc and cached_doc.get("text"):
+                doc_text = cached_doc["text"][:2500]
+                curr_desc = task_context.get("description", "")
+                if "Contenido del documento adjunto:" not in curr_desc:
+                    task_context["description"] = f"{curr_desc}\n\n[Contenido del documento adjunto:\n{doc_text}]".strip()
+        except Exception:
+            pass
 
     response_text = await ask_copilot(
         provider=provider,

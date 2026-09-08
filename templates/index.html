@@ -136,7 +136,7 @@
                         <span id="progress-today-text" class="font-bold text-amber-600 dark:text-amber-400">0%</span>
                     </div>
                     <div class="w-full bg-cantera-200 dark:bg-night-800 rounded-full h-2 overflow-hidden flex border border-cantera-300 dark:border-slate-700">
-                        <div id="progress-today-bar" class="bg-linear-to-r from-amber-500 to-orange-500 h-full transition-all duration-500" style="width: 0%" title="Tareas de hoy completadas"></div>
+                        <div id="progress-today-bar" class="bg-amber-500 dark:bg-amber-400 h-full transition-all duration-500" style="width: 0%" title="Tareas de hoy completadas"></div>
                     </div>
                     <div class="flex justify-between text-[10px] text-cantera-600 dark:text-slate-400">
                         <span id="today-tasks-count">0 hoy</span>
@@ -2524,6 +2524,103 @@
                 `;
                 container.appendChild(card);
             });
+
+            // Tras renderizar las tarjetas, disparar enriquecimiento asíncrono para adjuntos
+            if (typeof enrichTasksWithAttachmentSummaries === 'function') {
+                enrichTasksWithAttachmentSummaries();
+            }
+        }
+
+        function renderActionItemsHtml(actions) {
+            if (!actions || actions.length === 0) return '';
+            const items = actions.map(act => {
+                const actL = act.toLowerCase();
+                let icon = 'fa-circle-check text-indigo-500';
+                if (actL.includes('ensayo') || actL.includes('redactar') || actL.includes('escribir')) {
+                    icon = 'fa-pen-nib text-indigo-500';
+                } else if (actL.includes('selfie') || actL.includes('foto') || actL.includes('imagen')) {
+                    icon = 'fa-camera text-sky-500';
+                } else if (actL.includes('asistencia') || actL.includes('asistir') || actL.includes('buscar')) {
+                    icon = 'fa-user-check text-emerald-500';
+                } else if (actL.includes('resolver') || actL.includes('resuelve') || actL.includes('calcular') || actL.includes('calcula') || actL.includes('ejercicio') || actL.includes('problema') || actL.includes('laplace')) {
+                    icon = 'fa-calculator text-amber-500';
+                } else if (actL.includes('graficar') || actL.includes('grafica') || actL.includes('diagrama')) {
+                    icon = 'fa-chart-line text-teal-500';
+                } else if (actL.includes('leer') || actL.includes('revisar') || actL.includes('consultar')) {
+                    icon = 'fa-book-open text-blue-500';
+                } else if (actL.includes('subir') || actL.includes('entregar') || actL.includes('enviar')) {
+                    icon = 'fa-cloud-arrow-up text-purple-500';
+                }
+
+                return `
+                    <li class="flex items-start gap-2 text-xs sm:text-sm text-cantera-900 dark:text-slate-200 leading-relaxed">
+                        <i class="fa-solid ${icon} mt-1 shrink-0 text-xs"></i>
+                        <span>${act}</span>
+                    </li>
+                `;
+            }).join('');
+
+            return `<ul class="space-y-1.5 mt-0.5">${items}</ul>`;
+        }
+
+        const pendingSummaryRequests = new Set();
+
+        function enrichTasksWithAttachmentSummaries() {
+            const allTasks = [...allUpcomingTasks, ...allOverdueTasks, ...allNoDateTasks];
+            allTasks.forEach(t => {
+                const taskId = String(t.id);
+                const container = document.getElementById(`task-summary-body-${taskId}`);
+                if (!container) return;
+
+                // Si ya tiene cached_actions o ya tiene lista <ul> renderizada, no pedir de nuevo
+                if (t.cached_actions && t.cached_actions.length > 0) return;
+                if (container.querySelector('ul')) return;
+                if (pendingSummaryRequests.has(taskId)) return;
+
+                const files = Array.isArray(t.attachment_files) ? t.attachment_files : [];
+                if (files.length === 0 || !files[0].id) return;
+
+                const fileId = files[0].id;
+                const fname = files[0].title || 'Documento adjunto';
+
+                // Solo si el contenedor está esperando o tiene el placeholder de extracción
+                if (container.querySelector('.fa-circle-notch') || container.querySelector('.fa-file-lines')) {
+                    pendingSummaryRequests.add(taskId);
+                    fetch(`/api/tasks/${taskId}/attachment_summary?file_id=${encodeURIComponent(fileId)}&course_name=${encodeURIComponent(t.course_name || '')}&title=${encodeURIComponent(t.title || '')}`)
+                        .then(r => r.ok ? r.json() : null)
+                        .then(data => {
+                            pendingSummaryRequests.delete(taskId);
+                            if (data && data.actions && data.actions.length > 0) {
+                                t.cached_actions = data.actions;
+                                t.action_sentences = data.actions;
+                                const newHtml = renderActionItemsHtml(data.actions);
+                                const currentEl = document.getElementById(`task-summary-body-${taskId}`);
+                                if (currentEl && newHtml) {
+                                    currentEl.innerHTML = newHtml;
+                                }
+                            } else {
+                                const currentEl = document.getElementById(`task-summary-body-${taskId}`);
+                                if (currentEl) {
+                                    currentEl.innerHTML = `
+                                        <div class="flex flex-col gap-1 py-0.5">
+                                            <p class="text-xs sm:text-sm text-cantera-900 dark:text-slate-200 font-semibold flex items-center gap-2">
+                                                <i class="fa-solid fa-file-lines text-amber-500 text-sm shrink-0"></i>
+                                                <span>Consignas y ejercicios en el archivo adjunto <strong class="font-mono text-indigo-600 dark:text-indigo-400">${fname}</strong>.</span>
+                                            </p>
+                                            <p class="text-xs text-cantera-600 dark:text-slate-400">
+                                                Abre el visor o consulta los problemas detallados en el documento para preparar la entrega.
+                                            </p>
+                                        </div>
+                                    `;
+                                }
+                            }
+                        })
+                        .catch(err => {
+                            pendingSummaryRequests.delete(taskId);
+                            console.log('Aviso en resumen de adjunto:', err);
+                        });
+                }
+            });
         }
 
         function formatTaskDescriptionBlock(task) {
@@ -2652,50 +2749,31 @@
             // 5. Construcción del Cuerpo del Resumen
             let bodyHtml = '';
 
-            if (actionSentences.length > 0) {
-                const items = actionSentences.map(act => {
-                    const actL = act.toLowerCase();
-                    let icon = 'fa-circle-check text-indigo-500';
-                    if (actL.includes('ensayo') || actL.includes('redactar') || actL.includes('escribir')) {
-                        icon = 'fa-pen-nib text-indigo-500';
-                    } else if (actL.includes('selfie') || actL.includes('foto') || actL.includes('imagen')) {
-                        icon = 'fa-camera text-sky-500';
-                    } else if (actL.includes('asistencia') || actL.includes('asistir') || actL.includes('buscar')) {
-                        icon = 'fa-user-check text-emerald-500';
-                    } else if (actL.includes('resolver') || actL.includes('calcular') || actL.includes('ejercicio') || actL.includes('problema')) {
-                        icon = 'fa-calculator text-amber-500';
-                    } else if (actL.includes('leer') || actL.includes('revisar') || actL.includes('consultar')) {
-                        icon = 'fa-book-open text-blue-500';
-                    } else if (actL.includes('subir') || actL.includes('entregar') || actL.includes('enviar')) {
-                        icon = 'fa-cloud-arrow-up text-purple-500';
-                    }
-
-                    return `
-                        <li class="flex items-start gap-2 text-xs sm:text-sm text-cantera-900 dark:text-slate-200 leading-relaxed">
-                            <i class="fa-solid ${icon} mt-1 shrink-0 text-xs"></i>
-                            <span>${act}</span>
-                        </li>
-                    `;
-                }).join('');
-
-                bodyHtml = `<ul class="space-y-1.5 mt-0.5">${items}</ul>`;
-            } else if (generalSentences.length > 0) {
+            // Prioridad 1: Si ya tenemos consignas reales en caché (del PDF analizado)
+            if (task.cached_actions && task.cached_actions.length > 0) {
+                bodyHtml = renderActionItemsHtml(task.cached_actions);
+            }
+            // Prioridad 2: Si el profesor escribió consignas de acción en el texto de Classroom
+            else if (actionSentences.length > 0) {
+                bodyHtml = renderActionItemsHtml(actionSentences);
+            }
+            // Prioridad 3: Si hay oraciones generales en el texto de Classroom
+            else if (generalSentences.length > 0) {
                 const textPara = generalSentences.slice(0, 3).join(' ');
                 bodyHtml = `<p class="text-xs sm:text-sm text-cantera-800 dark:text-slate-300 leading-relaxed break-words">${textPara}</p>`;
-            } else if (docTitles.length > 0) {
-                const fname = docTitles[0];
+            }
+            // Prioridad 4: Si tiene documento adjunto, mostrar estado de análisis activo
+            else if (attachmentFiles.length > 0 || docTitles.length > 0) {
+                const fname = docTitles[0] || (attachmentFiles[0] && attachmentFiles[0].title) || 'Documento adjunto';
                 bodyHtml = `
-                    <div class="flex flex-col gap-1 py-0.5">
-                        <p class="text-xs sm:text-sm text-cantera-900 dark:text-slate-200 font-semibold flex items-center gap-2">
-                            <i class="fa-solid fa-file-lines text-amber-500 text-sm shrink-0"></i>
-                            <span>Consigna y ejercicios en el archivo adjunto <strong class="font-mono text-indigo-600 dark:text-indigo-400">${fname}</strong>.</span>
-                        </p>
-                        <p class="text-xs text-cantera-600 dark:text-slate-400">
-                            Revisar las especificaciones y problemas detallados en el documento para preparar la entrega.
-                        </p>
+                    <div class="flex items-center gap-2 py-1 text-xs sm:text-sm text-cantera-700 dark:text-slate-300">
+                        <i class="fa-solid fa-circle-notch fa-spin text-amber-500 text-xs shrink-0"></i>
+                        <span>Extrayendo consignas y ejercicios de <strong class="font-mono text-indigo-600 dark:text-indigo-400 font-semibold">${fname}</strong>...</span>
                     </div>
                 `;
-            } else {
+            }
+            // Prioridad 5: Sin consignas
+            else {
                 bodyHtml = `<p class="text-xs text-cantera-500 dark:text-slate-400 italic">Sin consignas adicionales especificadas en Classroom.</p>`;
             }
 
@@ -2708,7 +2786,7 @@
                         </span>
                         ${docButtonHtml}
                     </div>
-                    ${bodyHtml}
+                    <div id="task-summary-body-${taskId}">${bodyHtml}</div>
                 </div>
             `;
         }
