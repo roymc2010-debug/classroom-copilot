@@ -750,85 +750,97 @@
                     <button onclick="toggleMainMenu()" class="text-cantera-600 dark:text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark text-lg"></i></button>
                 </div>
 
-                <!-- Materias Activas en Móvil -->
-                <div class="space-y-1.5">
-                    <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center justify-between">
-                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-book-bookmark text-indigo-500"></i> Materias</span>
-                        <button onclick="clearCourseSelection(); toggleMainMenu();" class="text-[10px] text-indigo-500 hover:underline">Ver todas</button>
-                    </span>
-                    <div id="drawer-courses-list" class="space-y-1 text-xs max-h-36 overflow-y-auto custom-scroll">
-                        <p class="text-[11px] text-slate-400 italic">Cargando materias...</p>
+                <!-- Sección Exclusiva Móvil (< md): Materias, Filtros y Temporizador -->
+                <div class="md:hidden space-y-5">
+                    <!-- Materias Activas en Móvil -->
+                    <div class="space-y-1.5">
+                        <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center justify-between">
+                            <span class="flex items-center gap-1.5"><i class="fa-solid fa-book-bookmark text-indigo-500"></i> Materias</span>
+                            <button onclick="clearCourseSelection(); toggleMainMenu();" class="text-[10px] text-indigo-500 hover:underline">Ver todas</button>
+                        </span>
+                        <div id="drawer-courses-list" class="space-y-1 text-xs max-h-36 overflow-y-auto custom-scroll">
+                            <p class="text-[11px] text-slate-400 italic">Cargando materias...</p>
+                        </div>
+                    </div>
+
+                    <!-- Filtros del Centro de Misiones -->
+                    <div class="space-y-1.5">
+                        <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-list-check text-amber-500"></i>
+                            <span>Filtro de Misiones</span>
+                        </span>
+                        <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+                            <button onclick="setMissionFilter('all'); toggleMainMenu();" class="p-2 rounded-lg bg-cantera-100 dark:bg-slate-800 text-left font-semibold flex items-center justify-between">
+                                <span>Todas</span>
+                                <span id="drawer-count-all" class="text-[9px] bg-white dark:bg-slate-900 px-1 py-0.5 rounded">0</span>
+                            </button>
+                            <button onclick="setMissionFilter('main'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1">
+                                <i class="fa-solid fa-khanda text-amber-500 text-[10px]"></i>
+                                <span>Principal</span>
+                            </button>
+                            <button onclick="setMissionFilter('secondary'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1">
+                                <i class="fa-solid fa-shield-halved text-indigo-500 text-[10px]"></i>
+                                <span>Secundarias</span>
+                            </button>
+                            <button onclick="setMissionFilter('daily'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1">
+                                <i class="fa-solid fa-bolt text-sky-500 text-[10px]"></i>
+                                <span>Diarias</span>
+                            </button>
+                            <button onclick="setMissionFilter('special'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1">
+                                <i class="fa-solid fa-wand-magic-sparkles text-purple-500 text-[10px]"></i>
+                                <span>Especiales</span>
+                            </button>
+                            <button onclick="setMissionFilter('rescue'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1 text-orange-500">
+                                <i class="fa-solid fa-life-ring text-[10px]"></i>
+                                <span>Rescate</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Temporizador de Estudio en Menú Móvil -->
+                    <div class="space-y-2 p-3 rounded-2xl bg-cantera-100/70 dark:bg-slate-800/50 border border-cantera-200 dark:border-slate-700/70 text-center">
+                        <div class="flex items-center justify-between text-xs font-bold text-cantera-800 dark:text-slate-200">
+                            <span class="flex items-center gap-1.5"><i class="fa-solid fa-stopwatch text-sky-500"></i> Temporizador</span>
+                            <span id="drawer-timer-display" class="font-mono text-base font-black text-indigo-600 dark:text-indigo-400">25:00</span>
+                        </div>
+                        <div class="flex justify-center gap-1.5 text-xs">
+                            <button onclick="startTimer()" class="px-3 py-1 rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-xs">Iniciar</button>
+                            <button onclick="pauseTimer()" class="px-2.5 py-1 rounded-lg bg-cantera-200 dark:bg-slate-700 text-cantera-800 dark:text-slate-200 text-xs">Pausa</button>
+                            <button onclick="resetTimer()" class="px-2 py-1 rounded-lg bg-cantera-200 dark:bg-slate-700 text-cantera-600 dark:text-slate-400 text-xs"><i class="fa-solid fa-rotate-right"></i></button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1 text-[10px] pt-1">
+                            <button onclick="setTimerPreset('pomodoro')" class="p-1 rounded bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 font-medium">Pomodoro 25/5</button>
+                            <button onclick="setTimerPreset('52-17')" class="p-1 rounded bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 font-medium">52/17</button>
+                            <button onclick="setTimerPreset('ultradiano')" class="p-1 rounded bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 font-medium">90/20</button>
+                            <button onclick="setTimerPreset('5min')" class="p-1 rounded bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 font-medium">5 min</button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Filtros del Centro de Misiones -->
-                <div class="space-y-1.5">
-                    <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center gap-1.5">
-                        <i class="fa-solid fa-list-check text-amber-500"></i>
-                        <span>Filtro de Misiones</span>
-                    </span>
-                    <div class="grid grid-cols-2 gap-1.5 text-[11px]">
-                        <button onclick="setMissionFilter('all'); toggleMainMenu();" class="p-2 rounded-lg bg-cantera-100 dark:bg-slate-800 text-left font-semibold flex items-center justify-between">
-                            <span>Todas</span>
-                            <span id="drawer-count-all" class="text-[9px] bg-white dark:bg-slate-900 px-1 py-0.5 rounded">0</span>
-                        </button>
-                        <button onclick="setMissionFilter('main'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1">
-                            <i class="fa-solid fa-khanda text-amber-500 text-[10px]"></i>
-                            <span>Principal</span>
-                        </button>
-                        <button onclick="setMissionFilter('secondary'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1">
-                            <i class="fa-solid fa-shield-halved text-indigo-500 text-[10px]"></i>
-                            <span>Secundarias</span>
-                        </button>
-                        <button onclick="setMissionFilter('daily'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1">
-                            <i class="fa-solid fa-bolt text-sky-500 text-[10px]"></i>
-                            <span>Diarias</span>
-                        </button>
-                        <button onclick="setMissionFilter('special'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1">
-                            <i class="fa-solid fa-wand-magic-sparkles text-purple-500 text-[10px]"></i>
-                            <span>Especiales</span>
-                        </button>
-                        <button onclick="setMissionFilter('rescue'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1 text-orange-500">
-                            <i class="fa-solid fa-life-ring text-[10px]"></i>
-                            <span>Rescate</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Temporizador de Estudio en Menú Móvil -->
-                <div class="space-y-2 p-3 rounded-2xl bg-cantera-100/70 dark:bg-slate-800/50 border border-cantera-200 dark:border-slate-700/70 text-center">
-                    <div class="flex items-center justify-between text-xs font-bold text-cantera-800 dark:text-slate-200">
-                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-stopwatch text-sky-500"></i> Temporizador</span>
-                        <span id="drawer-timer-display" class="font-mono text-base font-black text-indigo-600 dark:text-indigo-400">25:00</span>
-                    </div>
-                    <div class="flex justify-center gap-1.5 text-xs">
-                        <button onclick="startTimer()" class="px-3 py-1 rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-xs">Iniciar</button>
-                        <button onclick="pauseTimer()" class="px-2.5 py-1 rounded-lg bg-cantera-200 dark:bg-slate-700 text-cantera-800 dark:text-slate-200 text-xs">Pausa</button>
-                        <button onclick="resetTimer()" class="px-2 py-1 rounded-lg bg-cantera-200 dark:bg-slate-700 text-cantera-600 dark:text-slate-400 text-xs"><i class="fa-solid fa-rotate-right"></i></button>
-                    </div>
-                    <div class="grid grid-cols-2 gap-1 text-[10px] pt-1">
-                        <button onclick="setTimerPreset('pomodoro')" class="p-1 rounded bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 font-medium">Pomodoro 25/5</button>
-                        <button onclick="setTimerPreset('52-17')" class="p-1 rounded bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 font-medium">52/17</button>
-                        <button onclick="setTimerPreset('ultradiano')" class="p-1 rounded bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 font-medium">90/20</button>
-                        <button onclick="setTimerPreset('5min')" class="p-1 rounded bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 font-medium">5 min</button>
-                    </div>
-                </div>
-
-                <nav class="space-y-1.5 text-xs font-medium border-t border-cantera-200 dark:border-slate-800 pt-3">
-                    <button onclick="openFranklinModal(); toggleMainMenu();" class="w-full text-left p-2.5 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-2.5 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
-                        <i class="fa-solid fa-hourglass-half text-amber-500 w-4"></i>
+                <!-- Navegación Ágora (Idéntica e Intacta en Escritorio / Web Original) -->
+                <nav class="space-y-2 text-sm font-medium border-t md:border-t-0 border-cantera-200 dark:border-slate-800 pt-3 md:pt-0">
+                    <button onclick="openFranklinModal(); toggleMainMenu();" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-hourglass-half text-amber-500 w-5"></i>
                         <span>Evaluador de Carga (Franklin)</span>
                     </button>
-                    <button onclick="openSocratesModal(); toggleMainMenu();" class="w-full text-left p-2.5 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-2.5 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
-                        <i class="fa-solid fa-graduation-cap text-indigo-500 w-4"></i>
+                    <button onclick="openSocratesModal(); toggleMainMenu();" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-graduation-cap text-indigo-500 w-5"></i>
                         <span>Simulador de Parciales</span>
                     </button>
-                    <button onclick="openMentorsModal()" class="w-full text-left p-2.5 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-2.5 text-cantera-800 dark:text-slate-200 transition-colors">
-                        <i class="fa-solid fa-user-graduate text-indigo-500 w-4"></i>
-                        <span>Mentores de Ignis</span>
+                    <button onclick="openMentorsModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-user-graduate text-indigo-500 w-5"></i>
+                        <span>Profesores de Ignis</span>
                     </button>
-                    <button onclick="openSettingsModal(); toggleMainMenu();" class="w-full text-left p-2.5 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-2.5 text-cantera-800 dark:text-slate-200 transition-colors">
-                        <i class="fa-solid fa-sliders text-amber-500 w-4"></i>
+                    <button onclick="openTechniquesModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-stopwatch text-sky-500 w-5"></i>
+                        <span>Técnicas y Consejos</span>
+                    </button>
+                    <button onclick="openGradesModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-chart-line text-emerald-500 w-5"></i>
+                        <span>Calificaciones y Avance</span>
+                    </button>
+                    <button onclick="openSettingsModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-sliders text-amber-500 w-5"></i>
                         <span>Configuración de la App</span>
                     </button>
                 </nav>
