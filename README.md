@@ -60,11 +60,11 @@ Un módulo ejecutivo de organización diaria enfocado en la acción:
 - **Visor Dual Sincronizado:** Documento oficial (PDF / consigna) a la izquierda y chat analítico con el tutor a la derecha.
 - **Alternancia Dinámica de Pantalla:** Botones `[ 📄 PDF ]` e `[ 🔥 Ignis ]` para expandir el documento al 100%, expandir el chat al 100% o regresar a la división simétrica 50/50.
 - **Pedagogía Anti-Copia (Scaffolding):** El tutor nunca entrega la respuesta directa; formula preguntas de andamiaje, desglosa conceptos y propone ejercicios gemelos con datos cambiados.
-- **Filtro Inteligente de Profesores por Carrera:**
+- **Filtro Inteligente de Mentores por Carrera:**
   - El selector en Ignis detecta automáticamente las materias inscritas del alumno y **filtra el catálogo**, mostrando únicamente los mentores pertinentes a su especialidad.
   - **Sor Juana Inés de la Cruz** permanece siempre fija como tutora universal de redacción académica, metodología y ensayos.
   - Incluye acceso directo a los módulos autónomos de **Sócrates** (exámenes) y **Franklin** (rutina).
-  - Selector expandible: `[ 📋 Ver todos los 24 profesores... ]` disponible si el alumno desea consultar especialistas de otras disciplinas.
+  - Selector expandible: `[ 📋 Ver todos los 24 mentores... ]` disponible si el alumno desea consultar especialistas de otras disciplinas.
 
 ---
 
