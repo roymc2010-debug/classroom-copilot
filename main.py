@@ -117,6 +117,15 @@ app = FastAPI(title="Agora")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+@app.get("/manifest.json")
+def get_manifest():
+    return FileResponse("manifest.json", media_type="application/manifest+json")
+
+@app.get("/favicon.ico")
+def get_favicon():
+    return FileResponse("static/favicon.ico", media_type="image/x-icon")
+
+
 
 ALEX_EMAIL = "alexmunoz918@gmail.com"
 

@@ -3,11 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=3">
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png?v=3">
-    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png?v=3">
-    <link rel="shortcut icon" href="/favicon.ico?v=3">
-    <link rel="apple-touch-icon" sizes="180x180" href="/static/agora_logo_192.png?v=3">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0A0F1D">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ágora">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=4">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png?v=4">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png?v=4">
+    <link rel="shortcut icon" href="/favicon.ico?v=4">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/agora_logo_192.png?v=4">
+    <link rel="apple-touch-icon" sizes="192x192" href="/static/agora_logo_192.png?v=4">
+    <link rel="apple-touch-icon" sizes="512x512" href="/static/agora_logo_512.png?v=4">
     <title>Ágora — Organizador de Misiones para Classroom</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -67,6 +75,12 @@
 
         details > summary { list-style: none; }
         details > summary::-webkit-details-marker { display: none; }
+
+        @media (min-width: 768px) {
+            #main-content-area { display: block !important; }
+            #mobile-calendar-page { display: none !important; }
+            #mobile-settings-page { display: none !important; }
+        }
     </style>
 </head>
 <body class="h-screen overflow-hidden font-sans flex flex-col transition-colors duration-300">
@@ -202,8 +216,8 @@
                     <i class="fa-solid fa-arrows-rotate text-[10px] opacity-70 ml-1"></i>
                 </div>
 
-                <!-- Antorcha de Prometeo (Racha por Semanas Académicas - 8 Niveles de Fuego) -->
-                <div id="torch-badge-container" onclick="handleTorchClick()" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-night-800 border border-cantera-300 dark:border-slate-700 select-none shadow-sm transition-all group" title="La Antorcha de Prometeo">
+                <!-- Antorcha de Prometeo (Racha por Semanas Académicas - 8 Niveles de Fuego) (Solo Escritorio en Header) -->
+                <div id="torch-badge-container" onclick="handleTorchClick()" class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-night-800 border border-cantera-300 dark:border-slate-700 select-none shadow-sm transition-all group" title="La Antorcha de Prometeo">
                     <svg class="w-7 h-7 shrink-0 transition-transform group-hover:scale-110 duration-300" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <defs>
                             <!-- Nivel 0: Ceniza (0 sem) -->
@@ -466,13 +480,207 @@
             </div>
         </main>
 
+        <!-- PÁGINA MÓVIL 2: CALENDARIO (Racha + Calendario + Franklin) -->
+        <div id="mobile-calendar-page" class="md:hidden flex-1 h-full overflow-y-auto custom-scroll p-4 pb-28 space-y-4" style="display: none;">
+            <!-- 1. Tarjeta de la Racha (Antorcha de Prometeo) -->
+            <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-fire text-amber-500"></i>
+                        <span>La Antorcha de Prometeo</span>
+                    </span>
+                    <span class="text-[10px] text-cantera-600 dark:text-slate-400 font-medium">Constancia Académica</span>
+                </div>
+                
+                <div onclick="handleTorchClick()" class="flex items-center gap-3.5 p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700/60 cursor-pointer active:scale-[0.99] transition-transform">
+                    <div class="w-12 h-12 rounded-xl bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-inner">
+                        <svg class="w-8 h-8 shrink-0" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16 26L15 32H21L20 26H16Z" fill="#78716C"/>
+                            <path d="M14 24H22V26H14V24Z" fill="#A8A29E"/>
+                            <path id="mobile-torch-flame" d="M16.87 2.5 L16.69 6.51 L10.07 16.09 L10.07 19.75 L11.81 22.89 L15.65 25.33 L14.25 23.06 L14.08 20.27 L15.65 16.79 L18.26 14.87 L18.78 19.58 L20.0 20.45 L21.05 19.23 L21.75 20.62 L20.53 25.33 L24.53 21.84 L25.75 19.05 L25.75 15.74 L23.49 11.21 L22.97 13.3 L21.4 14.0 L20.88 7.55 Z" fill="url(#flame-off)"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p id="mobile-streak-text" class="text-sm font-extrabold text-cantera-900 dark:text-white truncate">0 días de racha</p>
+                        <p class="text-[11px] text-cantera-600 dark:text-slate-400 mt-0.5">Toca aquí para alternar nivel de fuego y racha</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Tarjeta del Calendario Académico -->
+            <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-cantera-200 dark:border-slate-800">
+                    <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-regular fa-calendar-days text-indigo-500"></i>
+                        <span>Calendario Académico</span>
+                    </span>
+                    <div class="flex items-center gap-2">
+                        <button type="button" onclick="prevMonth()" class="w-7 h-7 rounded-lg bg-cantera-100 dark:bg-slate-800 flex items-center justify-center text-xs text-cantera-700 dark:text-slate-300 active:scale-95"><i class="fa-solid fa-chevron-left"></i></button>
+                        <span id="mobile-cal-month-label" class="font-bold text-xs text-indigo-600 dark:text-indigo-400 px-1"></span>
+                        <button type="button" onclick="nextMonth()" class="w-7 h-7 rounded-lg bg-cantera-100 dark:bg-slate-800 flex items-center justify-center text-xs text-cantera-700 dark:text-slate-300 active:scale-95"><i class="fa-solid fa-chevron-right"></i></button>
+                    </div>
+                </div>
+
+                <!-- Grid de Días -->
+                <div id="mobile-calendar-grid" class="grid grid-cols-7 gap-1 text-center text-xs font-medium"></div>
+
+                <!-- Leyenda de colores -->
+                <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-slate-400 pt-2 border-t border-cantera-200 dark:border-slate-800">
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Pendiente</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Entregada</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-indigo-500"></span> Examen</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span> Aviso</span>
+                </div>
+            </div>
+
+            <!-- 3. Tarjeta de Benjamin Franklin (Evaluador Pragmático de Carga) -->
+            <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
+                <div class="flex items-center justify-between pb-2 border-b border-cantera-200 dark:border-slate-800">
+                    <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-hourglass-half text-amber-500"></i>
+                        <span>Evaluador Pragmático Franklin</span>
+                    </span>
+                    <span id="mobile-franklin-count" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">0 pendientes</span>
+                </div>
+
+                <p id="mobile-franklin-status" class="text-xs text-cantera-700 dark:text-slate-300 leading-relaxed bg-cantera-50 dark:bg-slate-800/50 p-3 rounded-xl border border-cantera-200 dark:border-slate-700/60">
+                    Calculando carga de entregas...
+                </p>
+
+                <div class="space-y-1.5">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-cantera-600 dark:text-slate-400 block">Entregas Priorizadas:</span>
+                    <div id="mobile-franklin-recommendations" class="space-y-2">
+                        <p class="text-xs text-slate-400 italic">No hay entregas pendientes.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PÁGINA MÓVIL 4: AJUSTES / MENÚ ÁGORA (Opciones del menú web) -->
+        <div id="mobile-settings-page" class="md:hidden flex-1 h-full overflow-y-auto custom-scroll p-4 pb-28 space-y-4" style="display: none;">
+            <div class="flex items-center justify-between pb-3 border-b border-cantera-200 dark:border-slate-800">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                        <i class="fa-solid fa-landmark text-sm"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-extrabold text-cantera-900 dark:text-white leading-none">Menú Ágora</h2>
+                        <p class="text-[11px] text-cantera-600 dark:text-slate-400 mt-0.5">Herramientas y configuración</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navegación de Herramientas -->
+            <div class="space-y-2">
+                <!-- Franklin -->
+                <button type="button" onclick="openFranklinModal()" class="w-full p-3.5 rounded-2xl bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-800 hover:border-amber-500/50 flex items-center justify-between text-left transition-all active:scale-[0.99] shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                            <i class="fa-solid fa-hourglass-half text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-cantera-900 dark:text-white">Evaluador de Carga (Franklin)</p>
+                            <p class="text-[10px] text-cantera-600 dark:text-slate-400">Diagnóstico pragmático y rutina de estudio</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-cantera-500 dark:text-slate-500"></i>
+                </button>
+
+                <!-- Sócrates -->
+                <button type="button" onclick="openSocratesModal()" class="w-full p-3.5 rounded-2xl bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-800 hover:border-indigo-500/50 flex items-center justify-between text-left transition-all active:scale-[0.99] shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 shrink-0">
+                            <i class="fa-solid fa-graduation-cap text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-cantera-900 dark:text-white">Simulador de Parciales</p>
+                            <p class="text-[10px] text-cantera-600 dark:text-slate-400">Práctica de exámenes y preguntas socráticas</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-cantera-500 dark:text-slate-500"></i>
+                </button>
+
+                <!-- Profesores de Ignis -->
+                <button type="button" onclick="openMentorsModal()" class="w-full p-3.5 rounded-2xl bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-800 hover:border-indigo-500/50 flex items-center justify-between text-left transition-all active:scale-[0.99] shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500 shrink-0">
+                            <i class="fa-solid fa-user-graduate text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-cantera-900 dark:text-white">Profesores de Ignis</p>
+                            <p class="text-[10px] text-cantera-600 dark:text-slate-400">Selección de mentores especializados</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-cantera-500 dark:text-slate-500"></i>
+                </button>
+
+                <!-- Técnicas y Consejos -->
+                <button type="button" onclick="openTechniquesModal()" class="w-full p-3.5 rounded-2xl bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-800 hover:border-sky-500/50 flex items-center justify-between text-left transition-all active:scale-[0.99] shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500 shrink-0">
+                            <i class="fa-solid fa-stopwatch text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-cantera-900 dark:text-white">Técnicas y Consejos</p>
+                            <p class="text-[10px] text-cantera-600 dark:text-slate-400">Métodos de estudio, Pomodoro y ultradiano</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-cantera-500 dark:text-slate-500"></i>
+                </button>
+
+                <!-- Calificaciones y Avance -->
+                <button type="button" onclick="openGradesModal()" class="w-full p-3.5 rounded-2xl bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-800 hover:border-emerald-500/50 flex items-center justify-between text-left transition-all active:scale-[0.99] shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+                            <i class="fa-solid fa-chart-line text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-cantera-900 dark:text-white">Calificaciones y Avance</p>
+                            <p class="text-[10px] text-cantera-600 dark:text-slate-400">Ponderaciones y progreso académico</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-cantera-500 dark:text-slate-500"></i>
+                </button>
+
+                <!-- Configuración de la App -->
+                <button type="button" onclick="openSettingsModal()" class="w-full p-3.5 rounded-2xl bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-800 hover:border-amber-500/50 flex items-center justify-between text-left transition-all active:scale-[0.99] shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 shrink-0">
+                            <i class="fa-solid fa-sliders text-sm"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-cantera-900 dark:text-white">Configuración de la App</p>
+                            <p class="text-[10px] text-cantera-600 dark:text-slate-400">Preferencias de interfaz y temas</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-cantera-500 dark:text-slate-500"></i>
+                </button>
+            </div>
+
+            <!-- Cuenta Activa y Cerrar Sesión -->
+            <div class="p-4 rounded-2xl bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-800 space-y-3 shadow-sm">
+                <div class="text-[11px] text-cantera-600 dark:text-slate-400">
+                    <span class="font-medium">Cuenta Google conectada:</span>
+                    <p id="user-email-display-settings-page" class="font-mono text-xs font-semibold text-amber-500 dark:text-amber-400 truncate mt-0.5">{{ user_email if user_email else 'Conectando...' }}</p>
+                </div>
+                <a href="/auth/logout" class="w-full p-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-2 font-bold text-xs transition-colors">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Cerrar Sesión</span>
+                </a>
+            </div>
+        </div>
+
         <!-- VENTANA SIMÉTRICA DE IGNIS -->
-        <div id="ignis-workspace-backdrop" style="display: none;" onclick="if(event.target === this) closeIgnisWorkspace()" class="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-6">
-            <div id="ignis-workspace-modal" class="w-full max-w-6xl h-[92vh] flex flex-col bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+        <div id="ignis-workspace-backdrop" style="display: none;" onclick="if(event.target === this) closeIgnisWorkspace()" class="fixed inset-0 z-40 bg-white dark:bg-night-950 md:bg-black/60 md:backdrop-blur-xs flex flex-col md:items-center md:justify-center p-0 md:p-6">
+            <div id="ignis-workspace-modal" class="w-full h-full md:max-w-6xl md:h-[92vh] flex flex-col bg-white dark:bg-night-900 border-0 md:border md:border-cantera-300 md:dark:border-slate-700 rounded-none md:rounded-2xl shadow-2xl overflow-hidden">
                 <!-- Fila 1: Encabezado -->
                 <!-- 1.A: Header Móvil (< md) -->
-                <div class="md:hidden p-2.5 px-4 border-b border-cantera-300 dark:border-slate-800 flex items-center justify-between bg-cantera-50 dark:bg-night-800 shrink-0 relative z-30">
-                    <div class="flex items-center gap-2.5 min-w-0">
+                <div class="md:hidden p-2.5 px-3 border-b border-cantera-300 dark:border-slate-800 flex items-center justify-between bg-cantera-50 dark:bg-night-800 shrink-0 relative z-30">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <!-- Botón Volver a Misiones -->
+                        <button type="button" onclick="closeIgnisWorkspace()" class="text-cantera-700 dark:text-slate-300 hover:text-indigo-500 flex items-center justify-center w-8 h-8 rounded-xl bg-cantera-200/60 dark:bg-slate-800 shrink-0 active:scale-90 transition-transform" title="Volver a Misiones">
+                            <i class="fa-solid fa-arrow-left text-xs"></i>
+                        </button>
                         <button type="button" onclick="openMentorsModal()" class="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-500 active:scale-95 transition-transform shrink-0" title="Seleccionar Mentor">
                             <i class="fa-solid fa-fire text-sm"></i>
                         </button>
@@ -581,9 +789,19 @@
                     </div>
                 </div>
 
-                <!-- Fila 2 Móvil (< md): Renglón 2 Limpio (Solo nombre de la tarea) -->
-                <div class="md:hidden p-2.5 px-4 border-b border-cantera-200 dark:border-slate-800 bg-cantera-100/80 dark:bg-night-950 text-center shrink-0">
-                    <p id="modal-task-title-mobile" class="text-xs font-bold text-cantera-900 dark:text-slate-200 truncate"></p>
+                <!-- Fila 2 Móvil (< md): Título de la tarea + Selector de Pestaña Deslizable -->
+                <div class="md:hidden p-2 px-3 border-b border-cantera-200 dark:border-slate-800 bg-cantera-100/80 dark:bg-night-950 flex flex-col gap-1.5 shrink-0">
+                    <p id="modal-task-title-mobile" class="text-xs font-bold text-cantera-900 dark:text-slate-200 truncate text-center"></p>
+                    <div class="flex gap-1 bg-cantera-200/80 dark:bg-slate-900 p-1 rounded-xl">
+                        <button id="mobile-tab-doc" type="button" onclick="setMobileIgnisTab('doc')" class="flex-1 py-1 rounded-lg text-[11px] font-bold bg-indigo-600 text-white shadow-xs flex items-center justify-center gap-1 transition-all">
+                            <i class="fa-regular fa-file-lines text-[10px]"></i>
+                            <span>Documento</span>
+                        </button>
+                        <button id="mobile-tab-chat" type="button" onclick="setMobileIgnisTab('chat')" class="flex-1 py-1 rounded-lg text-[11px] font-medium text-cantera-700 dark:text-slate-400 flex items-center justify-center gap-1 transition-all">
+                            <i class="fa-solid fa-fire text-amber-500 text-[10px]"></i>
+                            <span>Chat Ignis</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Fila 2 Escritorio (>= md): Barra de herramientas, controles y título intactos -->
@@ -654,72 +872,8 @@
         </div>
     </div>
 
-    <!-- Botón Flotante del Almanaque Móvil (Esquina inferior izquierda) -->
-    <button id="btn-floating-almanac" onclick="openAlmanaqueModal()" aria-label="Almanaque" class="fixed bottom-20 left-4 md:hidden z-30 w-12 h-12 rounded-2xl bg-white/95 dark:bg-night-900/95 border border-cantera-300 dark:border-slate-700 shadow-xl backdrop-blur-md flex flex-col items-center justify-center text-indigo-600 dark:text-indigo-400 active:scale-90 transition-transform" title="Abrir Almanaque y Carga Académica">
-        <i class="fa-regular fa-calendar-days text-base"></i>
-        <span class="text-[8px] font-bold uppercase tracking-tight mt-0.5">Almanaque</span>
-    </button>
 
-    <!-- Modal Almanaque Móvil (Calendario Superior + Diagnóstico Pragmático Franklin Inferior) -->
-    <div id="modal-almanaque" style="display: none;" onclick="if(event.target === this) closeAlmanaqueModal()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs items-center justify-center p-3 md:p-6">
-        <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl max-w-lg w-full p-4 md:p-6 shadow-2xl max-h-[90vh] overflow-y-auto custom-scroll flex flex-col gap-4">
-            <!-- Encabezado -->
-            <div class="flex justify-between items-center border-b border-cantera-200 dark:border-slate-800 pb-3 shrink-0">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                        <i class="fa-regular fa-calendar-days text-sm"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-sm md:text-base font-bold text-cantera-900 dark:text-white">Almanaque y Carga Académica</h3>
-                        <p class="text-[11px] text-cantera-600 dark:text-slate-400">Calendario de entregas y evaluación de Benjamin Franklin</p>
-                    </div>
-                </div>
-                <button onclick="closeAlmanaqueModal()" class="text-slate-400 hover:text-red-500 cursor-pointer p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
 
-            <!-- PARTE SUPERIOR: Calendario con los 4 puntos de colores -->
-            <div class="p-3.5 rounded-2xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2">
-                        <i class="fa-regular fa-calendar text-xs text-indigo-500"></i>
-                        <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-200">Calendario de Entregas</span>
-                    </div>
-                    <div class="flex items-center gap-1.5 text-[10px] text-cantera-600 dark:text-slate-400 font-mono">
-                        <span id="almanaque-cal-month-label" class="font-bold text-indigo-600 dark:text-indigo-400"></span>
-                    </div>
-                </div>
-                <div id="almanaque-mini-calendar" class="grid grid-cols-7 gap-1 text-center text-xs">
-                    <!-- Dinámico: Días con sus 4 puntos -->
-                </div>
-                <!-- Leyenda de 4 puntos -->
-                <div class="flex items-center justify-center gap-3 text-[10px] text-cantera-600 dark:text-slate-400 mt-2.5 pt-2 border-t border-cantera-200 dark:border-slate-700/60 flex-wrap">
-                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span> Pendiente</span>
-                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span> Entregada</span>
-                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span> Examen</span>
-                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block"></span> Aviso</span>
-                </div>
-            </div>
-
-            <!-- PARTE INFERIOR: Diagnóstico Pragmático de Franklin -->
-            <div class="space-y-3">
-                <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                        <i class="fa-solid fa-hourglass-half text-amber-500 text-sm"></i>
-                        <div>
-                            <span class="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider block">Evaluación Pragmática (Franklin)</span>
-                            <p id="almanaque-franklin-status" class="text-[11px] text-cantera-800 dark:text-slate-300">Priorizado por desgaste cognoscitivo</p>
-                        </div>
-                    </div>
-                    <span id="almanaque-pending-count" class="text-lg font-black font-mono text-amber-600 dark:text-amber-400">0</span>
-                </div>
-                <div id="almanaque-franklin-recommendations" class="space-y-2 text-xs">
-                    <!-- Tareas priorizadas con botón directo a Ignis -->
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Reloj Digital en Vivo & Botón de Franklin (Solo Escritorio) -->
     <div class="hidden md:flex fixed bottom-5 right-6 z-20 pointer-events-none select-none flex-col items-end gap-2">
@@ -754,11 +908,11 @@
                 <div class="md:hidden space-y-5">
                     <!-- Materias Activas en Móvil -->
                     <div class="space-y-1.5">
-                        <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center justify-between">
-                            <span class="flex items-center gap-1.5"><i class="fa-solid fa-book-bookmark text-indigo-500"></i> Materias</span>
-                            <button onclick="clearCourseSelection(); toggleMainMenu();" class="text-[10px] text-indigo-500 hover:underline">Ver todas</button>
+                        <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-book-bookmark text-indigo-500"></i>
+                            <span>Materias</span>
                         </span>
-                        <div id="drawer-courses-list" class="space-y-1 text-xs max-h-36 overflow-y-auto custom-scroll">
+                        <div id="drawer-courses-list" class="space-y-1 text-xs max-h-52 overflow-y-auto custom-scroll">
                             <p class="text-[11px] text-slate-400 italic">Cargando materias...</p>
                         </div>
                     </div>
@@ -1432,9 +1586,11 @@
             days = Math.max(0, parseInt(days) || 0);
 
             const flameEl = document.getElementById('torch-flame');
+            const mobileFlameEl = document.getElementById('mobile-torch-flame');
             const streakText = document.getElementById('streak-text');
+            const mobileStreakText = document.getElementById('mobile-streak-text');
             const badgeContainer = document.getElementById('torch-badge-container');
-            if (!flameEl || !streakText) return;
+            if (!flameEl && !mobileFlameEl) return;
 
             let gradientId = 'flame-off';
             let textColor = 'text-cantera-600 dark:text-slate-400';
@@ -1514,29 +1670,37 @@
             }
 
             // Aplicación estricta de color: Nivel 8 usa blanco absoluto sin mezcla de amarillo ni verde
-            if (isWhiteFlame) {
-                flameEl.setAttribute('fill', '#FFFFFF');
-                flameEl.setAttribute('stroke', '#F59E0B');
-                flameEl.setAttribute('stroke-width', '1.5');
-                flameEl.setAttribute('stroke-linejoin', 'round');
-            } else {
-                flameEl.setAttribute('fill', `url(#${gradientId})`);
-                flameEl.removeAttribute('stroke');
-                flameEl.removeAttribute('stroke-width');
-                flameEl.removeAttribute('stroke-linejoin');
-            }
+            [flameEl, mobileFlameEl].forEach(f => {
+                if (!f) return;
+                if (isWhiteFlame) {
+                    f.setAttribute('fill', '#FFFFFF');
+                    f.setAttribute('stroke', '#F59E0B');
+                    f.setAttribute('stroke-width', '1.5');
+                    f.setAttribute('stroke-linejoin', 'round');
+                } else {
+                    f.setAttribute('fill', `url(#${gradientId})`);
+                    f.removeAttribute('stroke');
+                    f.removeAttribute('stroke-width');
+                    f.removeAttribute('stroke-linejoin');
+                }
+                if (filterType !== 'none') {
+                    f.setAttribute('filter', filterType);
+                } else {
+                    f.removeAttribute('filter');
+                }
+            });
 
-            if (filterType !== 'none') {
-                flameEl.setAttribute('filter', filterType);
-            } else {
-                flameEl.removeAttribute('filter');
+            if (streakText) {
+                streakText.textContent = label;
+                streakText.className = `text-xs font-bold ${textColor} tracking-tight`;
             }
-
-            streakText.textContent = label;
-            streakText.className = `text-xs font-bold ${textColor} tracking-tight`;
+            if (mobileStreakText) {
+                mobileStreakText.textContent = label;
+                mobileStreakText.className = `text-sm font-extrabold ${textColor} tracking-tight truncate`;
+            }
 
             if (badgeContainer) {
-                badgeContainer.className = `flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-night-800 border ${borderColor} select-none shadow-sm transition-all group cursor-pointer hover:scale-105 active:scale-95`;
+                badgeContainer.className = `hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-night-800 border ${borderColor} select-none shadow-sm transition-all group cursor-pointer hover:scale-105 active:scale-95`;
                 badgeContainer.setAttribute('title', 'Racha de prueba aleatoria. Haz clic para alternar de nivel de fuego.');
             }
 
@@ -1572,6 +1736,7 @@
         function initApp() {
             setStreakLevel(activeStreakWeeks, activeStreakDays);
             renderMiniCalendar();
+            renderMobileCalendar();
             loadTasks();
             loadAnnouncements();
             initTheme();
@@ -1952,6 +2117,10 @@
                 if (userEmailDisplay && currentUserEmail) {
                     userEmailDisplay.textContent = currentUserEmail;
                 }
+                const userEmailSettings = document.getElementById('user-email-display-settings-page');
+                if (userEmailSettings && currentUserEmail) {
+                    userEmailSettings.textContent = currentUserEmail;
+                }
 
                 if (currentUserEmail === ALEX_TEST_EMAIL.toLowerCase()) {
                     const alexContainer = document.getElementById('alex-stage-container');
@@ -2032,6 +2201,8 @@
                 updateProgressBars();
                 updateMissionCounts();
                 renderMiniCalendar();
+                renderMobileCalendar();
+                renderMobileFranklin();
                 renderMentorSelectOptions();
 
                 if (timelineView) timelineView.style.display = 'block';
@@ -2520,7 +2691,6 @@
                         `;
                         dBtn.onclick = () => {
                             toggleCourseSelection(course);
-                            toggleMainMenu();
                         };
                         drawerListEl.appendChild(dBtn);
                     });
@@ -3405,36 +3575,55 @@
             event.target.value = '';
         }
 
-        // --- Almanaque Móvil (Calendario + Franklin) ---
+        // --- Calendario y Franklin Móvil (Página 2) ---
+        let mobileCalendarYear = new Date().getFullYear();
+        let mobileCalendarMonth = new Date().getMonth();
+
+        function prevMonth() {
+            mobileCalendarMonth--;
+            if (mobileCalendarMonth < 0) {
+                mobileCalendarMonth = 11;
+                mobileCalendarYear--;
+            }
+            renderMobileCalendar();
+        }
+
+        function nextMonth() {
+            mobileCalendarMonth++;
+            if (mobileCalendarMonth > 11) {
+                mobileCalendarMonth = 0;
+                mobileCalendarYear++;
+            }
+            renderMobileCalendar();
+        }
+
         function openAlmanaqueModal() {
-            const modal = document.getElementById('modal-almanaque');
-            if (!modal) return;
-            renderAlmanaqueCalendar();
-            renderAlmanaqueFranklin();
-            modal.style.display = 'flex';
+            navMobileSwitch('calendar');
         }
 
         function closeAlmanaqueModal() {
-            const modal = document.getElementById('modal-almanaque');
-            if (modal) modal.style.display = 'none';
+            navMobileSwitch('missions');
         }
 
-        function renderAlmanaqueCalendar() {
-            const calEl = document.getElementById('almanaque-mini-calendar');
+        function renderMobileCalendar() {
+            const calEl = document.getElementById('mobile-calendar-grid') || document.getElementById('almanaque-mini-calendar');
             if (!calEl) return;
             calEl.innerHTML = '';
 
             const daysOfWeek = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
             daysOfWeek.forEach(d => {
-                calEl.innerHTML += `<span class="text-[11px] text-cantera-600 dark:text-slate-500 font-bold">${d}</span>`;
+                calEl.innerHTML += `<span class="text-[11px] text-cantera-600 dark:text-slate-500 font-bold py-1">${d}</span>`;
             });
 
             const now = new Date();
-            const mLabel = document.getElementById('almanaque-cal-month-label');
-            if (mLabel) mLabel.textContent = now.toLocaleString('es-ES', { month: 'short' }).toUpperCase();
+            const mLabel = document.getElementById('mobile-cal-month-label') || document.getElementById('almanaque-cal-month-label');
+            const targetDate = new Date(mobileCalendarYear, mobileCalendarMonth, 1);
+            if (mLabel) {
+                mLabel.textContent = targetDate.toLocaleString('es-ES', { month: 'short', year: 'numeric' }).toUpperCase();
+            }
 
-            const year = now.getFullYear();
-            const month = now.getMonth();
+            const year = mobileCalendarYear;
+            const month = mobileCalendarMonth;
             const firstDay = new Date(year, month, 1).getDay();
             const totalDays = new Date(year, month + 1, 0).getDate();
 
@@ -3447,31 +3636,36 @@
             [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks].forEach(t => {
                 if (t.due_date) {
                     const parsedD = parseDueDate(t.due_date);
-                    const d = parsedD ? parsedD.getDate() : null;
-                    if (!d) return;
-                    if (!dayStatus[d]) dayStatus[d] = { pending: false, done: false, exam: false, announcement: false };
-                    
-                    const titleLower = (t.title || '').toLowerCase();
-                    const isExam = titleLower.includes('examen') || titleLower.includes('parcial') || titleLower.includes('evaluac') || titleLower.includes('departamental');
-                    if (isExam) dayStatus[d].exam = true;
+                    if (!parsedD) return;
+                    if (parsedD.getFullYear() === year && parsedD.getMonth() === month) {
+                        const d = parsedD.getDate();
+                        if (!dayStatus[d]) dayStatus[d] = { pending: false, done: false, exam: false, announcement: false };
+                        
+                        const titleLower = (t.title || '').toLowerCase();
+                        const isExam = titleLower.includes('examen') || titleLower.includes('parcial') || titleLower.includes('evaluac') || titleLower.includes('departamental');
+                        if (isExam) dayStatus[d].exam = true;
 
-                    const isDone = t.status === 'done' || t.classroom_status === 'ENTREGADA' || t.classroom_status === 'CALIFICADA';
-                    if (isDone) dayStatus[d].done = true;
-                    else dayStatus[d].pending = true;
+                        const isDone = t.status === 'done' || t.classroom_status === 'ENTREGADA' || t.classroom_status === 'CALIFICADA';
+                        if (isDone) dayStatus[d].done = true;
+                        else dayStatus[d].pending = true;
+                    }
                 }
             });
 
             cachedAnnouncements.forEach(a => {
                 if (a.date) {
-                    const d = new Date(a.date).getDate();
-                    if (!dayStatus[d]) dayStatus[d] = { pending: false, done: false, exam: false, announcement: false };
-                    dayStatus[d].announcement = true;
+                    const ad = new Date(a.date);
+                    if (ad.getFullYear() === year && ad.getMonth() === month) {
+                        const d = ad.getDate();
+                        if (!dayStatus[d]) dayStatus[d] = { pending: false, done: false, exam: false, announcement: false };
+                        dayStatus[d].announcement = true;
+                    }
                 }
             });
 
             for (let day = 1; day <= totalDays; day++) {
                 const info = dayStatus[day];
-                const isToday = day === now.getDate();
+                const isToday = (day === now.getDate() && month === now.getMonth() && year === now.getFullYear());
                 const isSelected = selectedCalendarDay === day;
 
                 let dotsHtml = '';
@@ -3485,39 +3679,39 @@
                 }
 
                 let selectRing = isSelected ? 'ring-2 ring-indigo-500 font-extrabold bg-indigo-50 dark:bg-indigo-950/60' : '';
-                let todayClass = isToday ? 'bg-indigo-600 text-white font-bold' : 'text-cantera-800 dark:text-slate-400 hover:bg-cantera-200 dark:hover:bg-slate-800/60';
+                let todayClass = isToday ? 'bg-indigo-600 text-white font-bold' : 'text-cantera-800 dark:text-slate-300 hover:bg-cantera-200/60 dark:hover:bg-slate-800/60';
 
                 calEl.innerHTML += `
-                    <button onclick="filterByCalendarDay(${day}); closeAlmanaqueModal();" class="h-8 flex flex-col items-center justify-center rounded-lg ${todayClass} ${selectRing} transition-all cursor-pointer">
-                        <span class="leading-none">${day}</span>
+                    <button type="button" onclick="filterByCalendarDay(${day}); navMobileSwitch('missions');" class="h-9 flex flex-col items-center justify-center rounded-xl ${todayClass} ${selectRing} transition-all cursor-pointer">
+                        <span class="leading-none text-xs">${day}</span>
                         ${dotsHtml}
                     </button>
                 `;
             }
         }
 
-        function renderAlmanaqueFranklin() {
-            const container = document.getElementById('almanaque-franklin-recommendations');
-            const statusEl = document.getElementById('almanaque-franklin-status');
-            const countEl = document.getElementById('almanaque-pending-count');
+        function renderMobileFranklin() {
+            const container = document.getElementById('mobile-franklin-recommendations') || document.getElementById('almanaque-franklin-recommendations');
+            const statusEl = document.getElementById('mobile-franklin-status') || document.getElementById('almanaque-franklin-status');
+            const countEl = document.getElementById('mobile-franklin-count') || document.getElementById('almanaque-pending-count');
             if (!container) return;
 
             const pendingTasks = [...allUpcomingTasks, ...allOverdueTasks];
-            if (countEl) countEl.textContent = pendingTasks.length;
+            if (countEl) countEl.textContent = `${pendingTasks.length} pendiente(s)`;
 
             if (statusEl) {
                 if (allOverdueTasks.length > 0) {
-                    statusEl.textContent = `Atención: ${allOverdueTasks.length} entrega(s) en zona de rescate. Prioriza lo urgente primero.`;
+                    statusEl.textContent = `Atención: Tienes ${allOverdueTasks.length} entrega(s) en zona de rescate. Prioriza lo urgente primero.`;
                 } else if (pendingTasks.length === 0) {
-                    statusEl.textContent = `¡Al día! No hay entregas pendientes urgentes.`;
+                    statusEl.textContent = `¡Al día! No hay entregas pendientes urgentes registradas.`;
                 } else {
-                    statusEl.textContent = `${pendingTasks.length} pendiente(s) ordenadas por carga cognoscitiva para evitar desvelos.`;
+                    statusEl.textContent = `${pendingTasks.length} entrega(s) pendiente(s) organizadas por urgencia y carga cognoscitiva.`;
                 }
             }
 
             container.innerHTML = '';
             if (pendingTasks.length === 0) {
-                container.innerHTML = `<div class="p-3 text-center text-emerald-500 italic">No tienes entregas pendientes. ¡Excelente trabajo!</div>`;
+                container.innerHTML = `<div class="p-3 text-center text-emerald-500 italic text-xs">No tienes entregas pendientes. ¡Excelente trabajo!</div>`;
                 return;
             }
 
@@ -3552,19 +3746,27 @@
             sorted.forEach(t => {
                 const rec = getTaskRecommendedPreset(t);
                 const item = document.createElement('div');
-                item.className = "p-2.5 rounded-xl bg-white dark:bg-slate-800/80 border border-cantera-200 dark:border-slate-700 flex items-center justify-between gap-2";
+                item.className = "p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/80 border border-cantera-200 dark:border-slate-700/80 flex items-center justify-between gap-2.5";
                 item.innerHTML = `
                     <div class="min-w-0 flex-1">
                         <p class="font-bold text-cantera-900 dark:text-white truncate text-xs">${t.title}</p>
-                        <p class="text-[10px] text-cantera-600 dark:text-slate-400 truncate">${(t.course_name || '').replace(/_/g, ' ')} • ${rec.label}</p>
+                        <p class="text-[10px] text-cantera-600 dark:text-slate-400 truncate mt-0.5">${(t.course_name || '').replace(/_/g, ' ')} • ${rec.label}</p>
                     </div>
-                    <button onclick="closeAlmanaqueModal(); openIgnisWorkspace('${t.id}');" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] shrink-0 flex items-center gap-1">
+                    <button type="button" onclick="openIgnisWorkspace('${t.id}');" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] shrink-0 flex items-center gap-1 active:scale-95 transition-all">
                         <i class="fa-solid fa-fire text-amber-400 text-[10px]"></i>
                         <span>Abrir</span>
                     </button>
                 `;
                 container.appendChild(item);
             });
+        }
+
+        function renderAlmanaqueCalendar() {
+            renderMobileCalendar();
+        }
+
+        function renderAlmanaqueFranklin() {
+            renderMobileFranklin();
         }
 
         // --- Gestión de Apuntes en Configuración ---
@@ -3648,12 +3850,20 @@
 
             if (tab === 'doc') {
                 if (slider) slider.style.transform = 'translateX(0%)';
-                if (btnDoc) btnDoc.className = "flex-1 py-2 rounded-lg font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-indigo-600 text-white shadow-xs text-xs";
-                if (btnChat) btnChat.className = "flex-1 py-2 rounded-lg font-medium transition-all text-center flex items-center justify-center gap-1.5 text-cantera-700 dark:text-slate-400 text-xs";
+                if (btnDoc) {
+                    btnDoc.className = "flex-1 py-1 rounded-lg text-[11px] font-bold bg-indigo-600 text-white shadow-xs flex items-center justify-center gap-1 transition-all";
+                }
+                if (btnChat) {
+                    btnChat.className = "flex-1 py-1 rounded-lg text-[11px] font-medium text-cantera-700 dark:text-slate-400 flex items-center justify-center gap-1 transition-all";
+                }
             } else {
                 if (slider) slider.style.transform = 'translateX(-50%)';
-                if (btnDoc) btnDoc.className = "flex-1 py-2 rounded-lg font-medium transition-all text-center flex items-center justify-center gap-1.5 text-cantera-700 dark:text-slate-400 text-xs";
-                if (btnChat) btnChat.className = "flex-1 py-2 rounded-lg font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-indigo-600 text-white shadow-xs text-xs";
+                if (btnDoc) {
+                    btnDoc.className = "flex-1 py-1 rounded-lg text-[11px] font-medium text-cantera-700 dark:text-slate-400 flex items-center justify-center gap-1 transition-all";
+                }
+                if (btnChat) {
+                    btnChat.className = "flex-1 py-1 rounded-lg text-[11px] font-bold bg-indigo-600 text-white shadow-xs flex items-center justify-center gap-1 transition-all";
+                }
                 setTimeout(() => {
                     const inp = document.getElementById('chat-input');
                     if (inp) inp.focus();
@@ -3661,41 +3871,64 @@
             }
         }
 
-        // Detección de Gesto de Deslizamiento Táctil (Swipe estilo Fotos)
+        // Detección de Gesto de Deslizamiento Táctil en Toda la Pantalla para Ignis (Swipe estilo Fotos)
         (function setupIgnisTouchSwipe() {
             let touchStartX = 0;
             let touchStartY = 0;
-            document.addEventListener('DOMContentLoaded', () => {
-                const slider = document.getElementById('ignis-panes-slider');
-                if (!slider) return;
+            let touchLastX = 0;
+            let touchLastY = 0;
+            let isSwiping = false;
 
-                slider.addEventListener('touchstart', (e) => {
-                    touchStartX = e.changedTouches[0].screenX;
-                    touchStartY = e.changedTouches[0].screenY;
+            document.addEventListener('DOMContentLoaded', () => {
+                const ignisModal = document.getElementById('ignis-workspace-modal') || document.getElementById('ignis-workspace-backdrop');
+                if (!ignisModal) return;
+
+                ignisModal.addEventListener('touchstart', (e) => {
+                    if (window.innerWidth >= 768) return;
+                    const target = e.target;
+                    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                    touchLastX = touchStartX;
+                    touchLastY = touchStartY;
+                    isSwiping = true;
                 }, { passive: true });
 
-                slider.addEventListener('touchend', (e) => {
-                    if (window.innerWidth >= 768) return;
-                    const diffX = e.changedTouches[0].screenX - touchStartX;
-                    const diffY = e.changedTouches[0].screenY - touchStartY;
-                    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+                ignisModal.addEventListener('touchmove', (e) => {
+                    if (!isSwiping || window.innerWidth >= 768) return;
+                    touchLastX = e.touches[0].clientX;
+                    touchLastY = e.touches[0].clientY;
+                }, { passive: true });
+
+                const handleSwipeEnd = () => {
+                    if (!isSwiping || window.innerWidth >= 768) return;
+                    isSwiping = false;
+                    const diffX = touchLastX - touchStartX;
+                    const diffY = touchLastY - touchStartY;
+                    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 35) {
                         if (diffX < 0) {
                             setMobileIgnisTab('chat');
                         } else {
                             setMobileIgnisTab('doc');
                         }
                     }
-                }, { passive: true });
+                };
+
+                ignisModal.addEventListener('touchend', handleSwipeEnd, { passive: true });
+                ignisModal.addEventListener('touchcancel', handleSwipeEnd, { passive: true });
             });
         })();
 
-        // --- Control de la Barra Inferior de 4 Pestañas Móviles ---
+        // --- Control de la Barra Inferior de 4 Pestañas Móviles (Páginas Completas) ---
         function navMobileSwitch(tab) {
             const btnMissions = document.getElementById('m-nav-missions');
             const btnCalendar = document.getElementById('m-nav-calendar');
             const btnIgnis = document.getElementById('m-nav-ignis');
             const btnSettings = document.getElementById('m-nav-settings');
-            const sidebar = document.getElementById('sidebar');
+
+            const missionsPage = document.getElementById('main-content-area');
+            const calendarPage = document.getElementById('mobile-calendar-page');
+            const settingsPage = document.getElementById('mobile-settings-page');
 
             // Reset tabs
             [btnMissions, btnCalendar, btnIgnis, btnSettings].forEach(b => {
@@ -3705,31 +3938,41 @@
                 }
             });
 
+            // Cerrar menú lateral si estaba abierto
+            const drawer = document.getElementById('main-menu-drawer');
+            if (drawer && drawer.style.display !== 'none') {
+                drawer.style.display = 'none';
+            }
+
             if (tab === 'missions') {
                 if (btnMissions) {
                     btnMissions.classList.add('text-indigo-600', 'dark:text-indigo-400', 'font-bold');
-                    btnMissions.classList.remove('text-cantera-600', 'dark:text-slate-400');
+                    btnMissions.classList.remove('text-cantera-600', 'dark:text-slate-400', 'font-medium');
                 }
-                if (sidebar) sidebar.classList.remove('mobile-open');
-                const mainArea = document.getElementById('main-content-area');
-                if (mainArea) mainArea.scrollTo({ top: 0, behavior: 'smooth' });
+                if (missionsPage) missionsPage.style.display = 'block';
+                if (calendarPage) calendarPage.style.display = 'none';
+                if (settingsPage) settingsPage.style.display = 'none';
+                if (missionsPage) missionsPage.scrollTo({ top: 0, behavior: 'smooth' });
             } else if (tab === 'calendar') {
                 if (btnCalendar) {
                     btnCalendar.classList.add('text-indigo-600', 'dark:text-indigo-400', 'font-bold');
-                    btnCalendar.classList.remove('text-cantera-600', 'dark:text-slate-400');
+                    btnCalendar.classList.remove('text-cantera-600', 'dark:text-slate-400', 'font-medium');
                 }
-                if (sidebar) {
-                    sidebar.classList.add('mobile-open');
-                    const calEl = document.getElementById('mini-calendar');
-                    if (calEl) calEl.scrollIntoView({ behavior: 'smooth' });
-                }
+                if (missionsPage) missionsPage.style.display = 'none';
+                if (calendarPage) calendarPage.style.display = 'block';
+                if (settingsPage) settingsPage.style.display = 'none';
+                renderMobileCalendar();
+                renderMobileFranklin();
+                setStreakLevel(activeStreakWeeks, activeStreakDays);
+                if (calendarPage) calendarPage.scrollTo({ top: 0, behavior: 'smooth' });
             } else if (tab === 'ignis') {
                 if (btnIgnis) {
                     btnIgnis.classList.add('text-indigo-600', 'dark:text-indigo-400', 'font-bold');
-                    btnIgnis.classList.remove('text-cantera-600', 'dark:text-slate-400');
+                    btnIgnis.classList.remove('text-cantera-600', 'dark:text-slate-400', 'font-medium');
                 }
-                // Abrir Ignis con la primera tarea disponible o tutor general
-                if (allTasks && allTasks.length > 0) {
+                if (currentTaskContext) {
+                    openIgnisWorkspace(currentTaskContext.id);
+                } else if (allTasks && allTasks.length > 0) {
                     openIgnisWorkspace(allTasks[0].id);
                 } else {
                     openSocratesModal();
@@ -3737,9 +3980,14 @@
             } else if (tab === 'settings') {
                 if (btnSettings) {
                     btnSettings.classList.add('text-indigo-600', 'dark:text-indigo-400', 'font-bold');
-                    btnSettings.classList.remove('text-cantera-600', 'dark:text-slate-400');
+                    btnSettings.classList.remove('text-cantera-600', 'dark:text-slate-400', 'font-medium');
                 }
-                if (typeof toggleMainMenu === 'function') toggleMainMenu();
+                if (missionsPage) missionsPage.style.display = 'none';
+                if (calendarPage) calendarPage.style.display = 'none';
+                if (settingsPage) settingsPage.style.display = 'block';
+                const emailEl = document.getElementById('user-email-display-settings-page');
+                if (emailEl && currentUserEmail) emailEl.textContent = currentUserEmail;
+                if (settingsPage) settingsPage.scrollTo({ top: 0, behavior: 'smooth' });
             }
         }
 
@@ -3792,6 +4040,8 @@
             updateIgnisPanes();
             if (window.innerWidth < 768) {
                 setMobileIgnisTab('doc');
+                const bNav = document.getElementById('mobile-bottom-nav');
+                if (bNav) bNav.style.display = 'none';
                 history.pushState({ modal: 'ignis' }, '');
                 ignisHistoryPushed = true;
             }
@@ -3807,6 +4057,8 @@
         function closeIgnisWorkspace(fromPopState = false) {
             const backdrop = document.getElementById('ignis-workspace-backdrop');
             if (backdrop) backdrop.style.display = 'none';
+            const bNav = document.getElementById('mobile-bottom-nav');
+            if (bNav) bNav.style.display = 'flex';
             currentTaskContext = null;
             if (ignisHistoryPushed && !fromPopState) {
                 ignisHistoryPushed = false;
@@ -4763,7 +5015,7 @@
         }
     </script>
     <!-- Barra Inferior de Navegación Móvil (4 Pestañas Limpias) -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-night-900/95 backdrop-blur-md border-t border-cantera-300 dark:border-slate-800 px-2 py-2 flex items-center justify-around shadow-2xl">
+    <nav id="mobile-bottom-nav" class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-night-900/95 backdrop-blur-md border-t border-cantera-300 dark:border-slate-800 px-2 py-2 flex items-center justify-around shadow-2xl">
         <!-- 1. Misiones -->
         <button onclick="navMobileSwitch('missions')" id="m-nav-missions" class="flex flex-col items-center gap-1 text-indigo-600 dark:text-indigo-400 font-bold transition-all px-3 py-1">
             <i class="fa-solid fa-list-check text-base"></i>

@@ -1,0 +1,30 @@
+{
+  "name": "Ágora",
+  "short_name": "Ágora",
+  "description": "Espacio de estudio, misiones y tutoría con Google Classroom",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0F1D",
+  "theme_color": "#0A0F1D",
+  "icons": [
+    {
+      "src": "/static/agora_logo_192.png?v=4",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/agora_logo_512.png?v=4",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/agora_logo_dark_512.png?v=4",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
