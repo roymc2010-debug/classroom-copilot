@@ -233,7 +233,7 @@ STAGES = [
                 "course_id": "mock-c32",
                 "course_name": "Arquitectura de Computadoras y Microcontroladores",
                 "title": "Misión Especial: Corrección y Rescate de Diseño de Procesador MIPS en FPGA",
-                "description": "--- Documento adjunto: Correcciones_MIPS_Pipeline.pdf ---\nTu mentor devolvió el avance de la Unidad Aritmética Lógica (ALU) para corregir los riesgos de datos (data hazards). Resuelve las dependencias con adelantamiento de operandos para recuperar la máxima puntuación.",
+                "description": "--- Documento adjunto: Correcciones_MIPS_Pipeline.pdf ---\nTu profesor devolvió el avance de la Unidad Aritmética Lógica (ALU) para corregir los riesgos de datos (data hazards). Resuelve las dependencias con adelantamiento de operandos para recuperar la máxima puntuación.",
                 "link": "#",
                 "due_date": (datetime.now() + timedelta(hours=18)).isoformat(),
                 "classroom_status": "DEVUELTA",
