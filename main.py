@@ -137,22 +137,28 @@ def get_session_email(session_id: str, creds=None) -> str:
     if isinstance(sess, dict) and sess.get("email"):
         return sess["email"].lower().strip()
     if creds:
-        return get_session_user_email(creds)
+        email = get_session_user_email(creds)
+        if email and isinstance(sess, dict):
+            sess["email"] = email
+            save_sessions()
+        return email
     return ""
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     session_id = request.cookies.get("agora_session")
     has_session = False
+    user_email = ""
     if session_id and session_id in user_sessions:
         creds = restore_and_refresh_credentials(user_sessions[session_id], session_id=session_id)
         if creds and (creds.token or creds.refresh_token):
             has_session = True
+            user_email = get_session_email(session_id, creds=creds)
 
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"has_session": has_session}
+        context={"has_session": has_session, "user_email": user_email}
     )
 
 @app.get("/favicon.ico", include_in_schema=False)
