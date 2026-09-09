@@ -4,7 +4,7 @@ import uuid
 import urllib.request
 import urllib.parse
 import traceback
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -40,6 +40,7 @@ SCOPES = [
     'https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly',
     'https://www.googleapis.com/auth/classroom.announcements.readonly',
     'https://www.googleapis.com/auth/drive.readonly',
+    'https://www.googleapis.com/auth/drive.file',
     'https://www.googleapis.com/auth/gmail.readonly',
     'https://www.googleapis.com/auth/userinfo.email'
 ]
@@ -424,6 +425,110 @@ async def save_task_notes(task_id: str, request: Request):
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+@app.post("/api/notes/upload")
+async def upload_course_note(
+    request: Request,
+    file: UploadFile = File(...),
+    course_name: str = Form(...)
+):
+    """
+    Sube un archivo de apuntes (PDF/imagen): calcula SHA-256 para deduplicación,
+    extrae texto/fórmulas y organiza en la carpeta de Drive de la asignatura.
+    """
+    session_id = request.cookies.get("agora_session")
+    creds_json = user_sessions.get(session_id)
+    creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
+    user_email = get_session_email(session_id, creds=creds)
+
+    try:
+        import services.notes_service as notes_service
+        file_bytes = await file.read()
+        res = notes_service.process_and_upload_note(
+            file_bytes=file_bytes,
+            filename=file.filename or "apunte.pdf",
+            course_name=course_name,
+            user_email=user_email,
+            creds=creds
+        )
+        return res
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/notes/personal")
+async def add_personal_note_endpoint(request: Request):
+    """
+    Inserta una nota personal/corrección de clase al final de la unidad correspondiente.
+    """
+    session_id = request.cookies.get("agora_session")
+    creds_json = user_sessions.get(session_id)
+    creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
+    user_email = get_session_email(session_id, creds=creds)
+
+    try:
+        data = await request.json()
+        course_name = data.get("course_name", "")
+        task_id = data.get("task_id", "")
+        note_text = data.get("note_text", "")
+
+        import services.notes_service as notes_service
+        res = notes_service.add_personal_note(
+            course_name=course_name,
+            task_id=task_id,
+            note_text=note_text,
+            user_email=user_email,
+            creds=creds
+        )
+        return res
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/api/notes/{course_name}")
+async def get_course_notes_endpoint(course_name: str, request: Request):
+    """
+    Devuelve la lista modular de documentos disponibles para esa materia
+    (unidades temáticas, formulario y documento maestro compilado).
+    """
+    session_id = request.cookies.get("agora_session")
+    creds_json = user_sessions.get(session_id)
+    creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
+    user_email = get_session_email(session_id, creds=creds)
+
+    try:
+        import services.notes_service as notes_service
+        res = notes_service.get_course_notes(
+            course_name=course_name,
+            user_email=user_email,
+            creds=creds
+        )
+        return res
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.delete("/api/notes/{course_name}")
+async def delete_course_notes_endpoint(course_name: str, request: Request):
+    """
+    Elimina los archivos de apuntes de esa materia en Google Drive y limpia el almacenamiento local.
+    """
+    session_id = request.cookies.get("agora_session")
+    creds_json = user_sessions.get(session_id)
+    creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
+    user_email = get_session_email(session_id, creds=creds)
+
+    try:
+        import services.notes_service as notes_service
+        res = notes_service.delete_course_notes(
+            course_name=course_name,
+            user_email=user_email,
+            creds=creds
+        )
+        return res
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 @app.get("/api/announcements")
 async def api_announcements(request: Request):
     """
@@ -543,6 +648,17 @@ async def ask_ai(request: Request):
         except Exception:
             pass
 
+    # Enriquecer con apuntes de clase de la materia si están disponibles
+    c_name = task_context.get("course_name")
+    if c_name and "student_notes" not in task_context:
+        try:
+            import services.notes_service as notes_service
+            notes_text = notes_service.get_course_notes_text(c_name)
+            if notes_text:
+                task_context["student_notes"] = notes_text
+        except Exception:
+            pass
+
     response_text = await ask_copilot(
         provider=provider,
         mentor=mentor,
@@ -568,6 +684,15 @@ async def socrates_exam(request: Request):
         "title": f"Examen Departamental ({mode.upper()})",
         "description": f"Simulación de evaluación oral bajo modalidad {mode}. Evalúa al estudiante con rigor sobre los temas de {course_name}."
     }
+
+    if course_name and "student_notes" not in task_context:
+        try:
+            import services.notes_service as notes_service
+            notes_text = notes_service.get_course_notes_text(course_name)
+            if notes_text:
+                task_context["student_notes"] = notes_text
+        except Exception:
+            pass
 
     response_text = await ask_copilot(
         provider=provider,

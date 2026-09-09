@@ -273,7 +273,7 @@
     <div class="flex-1 flex w-full min-h-0 overflow-hidden relative">
 
         <!-- Sidebar con Scroll Vertical -->
-        <aside id="sidebar" class="w-[340px] h-full shrink-0 bg-cantera-100 dark:bg-night-900 border-r border-cantera-300 dark:border-slate-800 p-5 pb-10 flex flex-col gap-5 custom-scroll overflow-y-auto z-10 transition-colors">
+        <aside id="sidebar" class="hidden md:flex w-[340px] h-full shrink-0 bg-cantera-100 dark:bg-night-900 border-r border-cantera-300 dark:border-slate-800 p-5 pb-10 flex-col gap-5 custom-scroll overflow-y-auto z-10 transition-colors">
             
             <!-- Materias -->
             <details class="shrink-0 group bg-white dark:bg-night-800/80 rounded-xl border border-cantera-300 dark:border-slate-700/80 overflow-hidden shadow-sm" open>
@@ -470,14 +470,67 @@
         <div id="ignis-workspace-backdrop" style="display: none;" onclick="if(event.target === this) closeIgnisWorkspace()" class="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-6">
             <div id="ignis-workspace-modal" class="w-full max-w-6xl h-[92vh] flex flex-col bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
                 <!-- Fila 1: Encabezado -->
-                <div class="p-3 px-5 border-b border-cantera-300 dark:border-slate-700 flex justify-between items-center bg-cantera-50 dark:bg-night-800 shrink-0">
+                <!-- 1.A: Header Móvil (< md) -->
+                <div class="md:hidden p-2.5 px-4 border-b border-cantera-300 dark:border-slate-800 flex items-center justify-between bg-cantera-50 dark:bg-night-800 shrink-0 relative z-30">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <button type="button" onclick="openMentorsModal()" class="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-500 active:scale-95 transition-transform shrink-0" title="Seleccionar Mentor">
+                            <i class="fa-solid fa-fire text-sm"></i>
+                        </button>
+                        <span id="mobile-mentor-name" class="font-bold text-sm text-cantera-900 dark:text-white tracking-tight truncate">Alan Turing</span>
+                    </div>
+
+                    <!-- Botón Selector de IA con Isotipo Oficial en Móvil -->
+                    <div class="relative">
+                        <button type="button" onclick="toggleMobileAiMenu()" id="btn-mobile-ia-selector" class="w-8 h-8 rounded-xl bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 shadow-xs" title="Seleccionar Proveedor de IA">
+                            <span id="mobile-active-ia-svg">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M12 2C12 7.52 7.52 12 2 12C7.52 12 12 16.48 12 22C12 16.48 16.48 12 22 12C16.48 12 12 7.52 12 2Z" fill="url(#mobileGeminiGrad)" /><defs><linearGradient id="mobileGeminiGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#4E88F5" /><stop offset="0.5" stop-color="#7B61FF" /><stop offset="1" stop-color="#FA5560" /></linearGradient></defs></svg>
+                            </span>
+                        </button>
+
+                        <!-- Menú Desplegable con Isotipos Oficiales -->
+                        <div id="mobile-ai-popup-menu" style="display: none;" class="absolute right-0 mt-2 w-48 rounded-2xl bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 shadow-2xl p-2 z-50 text-xs space-y-1">
+                            <span class="text-[10px] font-mono text-cantera-600 dark:text-slate-400 px-2 py-0.5 block uppercase tracking-wider">Proveedor de IA:</span>
+                            <button type="button" onclick="selectMobileAiProvider('gemini')" class="w-full flex items-center gap-2 p-2 rounded-xl hover:bg-cantera-100 dark:hover:bg-slate-800 text-left font-semibold text-cantera-900 dark:text-white">
+                                <div class="w-6 h-6 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><path d="M12 2C12 7.52 7.52 12 2 12C7.52 12 12 16.48 12 22C12 16.48 16.48 12 22 12C16.48 12 12 7.52 12 2Z" fill="url(#mobileGeminiGrad)"/></svg>
+                                </div>
+                                <span>Google Gemini</span>
+                                <span id="m-mark-gemini" class="ml-auto text-indigo-600 dark:text-indigo-400 font-bold">✓</span>
+                            </button>
+                            <button type="button" onclick="selectMobileAiProvider('groq')" class="w-full flex items-center gap-2 p-2 rounded-xl hover:bg-cantera-100 dark:hover:bg-slate-800 text-left font-semibold text-cantera-900 dark:text-white">
+                                <div class="w-6 h-6 rounded-lg bg-orange-500/20 flex items-center justify-center shrink-0">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="6" fill="#F55036"/><path d="M12 5C8.13 5 5 8.13 5 12s3.13 7 7 7c3.2 0 5.92-2.16 6.72-5.12h-2.14c-.7 1.83-2.48 3.12-4.58 3.12-2.76 0-5-2.24-5-5s2.24-5 5-5c1.86 0 3.47 1.02 4.31 2.52H14v2h6V6h-2v1.85C16.73 6.16 14.51 5 12 5z" fill="white"/></svg>
+                                </div>
+                                <span>Groq</span>
+                                <span id="m-mark-groq" class="ml-auto text-indigo-600 dark:text-indigo-400 font-bold hidden">✓</span>
+                            </button>
+                            <button type="button" onclick="selectMobileAiProvider('openrouter')" class="w-full flex items-center gap-2 p-2 rounded-xl hover:bg-cantera-100 dark:hover:bg-slate-800 text-left font-semibold text-cantera-900 dark:text-white">
+                                <div class="w-6 h-6 rounded-lg bg-indigo-500/20 flex items-center justify-center shrink-0">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none"><path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" stroke="#6366F1" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 12L3 7M12 12v10M12 12l9-5" stroke="#6366F1" stroke-width="2.2" stroke-linejoin="round"/></svg>
+                                </div>
+                                <span>OpenRouter</span>
+                                <span id="m-mark-openrouter" class="ml-auto text-indigo-600 dark:text-indigo-400 font-bold hidden">✓</span>
+                            </button>
+                            <button type="button" onclick="selectMobileAiProvider('openai')" class="w-full flex items-center gap-2 p-2 rounded-xl hover:bg-cantera-100 dark:hover:bg-slate-800 text-left font-semibold text-cantera-900 dark:text-white">
+                                <div class="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-500">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9 6.06 6.06 0 0 0-10.28 2.17 5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.51 2.9A5.98 5.98 0 0 0 13.26 24a6.05 6.05 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.05 6.05 0 0 0-.75-7.07zm-9.02 12.61a4.48 4.48 0 0 1-2.88-1.04l.14-.08 4.78-2.76a.8.8 0 0 0 .39-.68v-6.74l2.02 1.17v5.58a4.5 4.5 0 0 1-4.49 4.49zm-9.66-4.13a4.47 4.47 0 0 1-.53-3.01l.14.08 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33l-4.83 2.79a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.48 4.48 0 0 1 2.37-1.98v5.69a.77.77 0 0 0 .38.68l5.82 3.35-2.02 1.17-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9z"/></svg>
+                                </div>
+                                <span>OpenAI</span>
+                                <span id="m-mark-openai" class="ml-auto text-indigo-600 dark:text-indigo-400 font-bold hidden">✓</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.B: Header Escritorio (>= md, intacto) -->
+                <div class="hidden md:flex p-3 px-5 border-b border-cantera-300 dark:border-slate-700 justify-between items-center bg-cantera-50 dark:bg-night-800 shrink-0">
                     <div class="flex items-center gap-3 min-w-0">
                         <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
                             <i class="fa-solid fa-fire text-amber-500"></i>
                         </div>
                         <span class="font-extrabold text-sm tracking-tight text-cantera-900 dark:text-white">Ignis</span>
                         <span class="text-cantera-400 dark:text-slate-600">|</span>
-                        <select id="mentor-select" class="bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-indigo-700 dark:text-indigo-300 font-medium max-w-[260px] truncate">
+                        <select id="mentor-select" onchange="updateMobileMentorName()" class="bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs text-indigo-700 dark:text-indigo-300 font-medium max-w-[260px] truncate">
                             <optgroup label="Exactas, Computación y Hardware">
                                 <option value="newton">Isaac Newton (Exactas / Dinámica / Cálculo)</option>
                                 <option value="tesla">Nikola Tesla (Hardware / Circuitos / Embebidos)</option>
@@ -510,16 +563,17 @@
                             </optgroup>
                             <optgroup label="Módulos Autónomos">
                                 <option value="socrates">Sócrates (Simulador de Parciales)</option>
-                                <option value="franklin">Benjamin Franklin (Estratega de Rutina y La Antorcha)</option>
+                                <option value="franklin">Benjamin Franklin (Evaluador de Carga)</option>
                             </optgroup>
                         </select>
                     </div>
 
                     <div class="flex items-center gap-3">
                         <div class="hidden sm:flex gap-1 border border-cantera-300 dark:border-slate-700 rounded p-1 bg-white dark:bg-slate-900">
-                            <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="gemini" checked class="hidden"><span>Gemini</span></label>
-                            <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="groq" class="hidden"><span>Groq</span></label>
-                            <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="openrouter" class="hidden"><span>OpenRouter</span></label>
+                            <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="gemini" checked class="hidden" onchange="syncAiProviderPill(this.value)"><span>Gemini</span></label>
+                            <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="groq" class="hidden" onchange="syncAiProviderPill(this.value)"><span>Groq</span></label>
+                            <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="openrouter" class="hidden" onchange="syncAiProviderPill(this.value)"><span>OpenRouter</span></label>
+                            <label class="model-pill px-2 py-0.5 rounded text-[11px] cursor-pointer"><input type="radio" name="ai_provider" value="openai" class="hidden" onchange="syncAiProviderPill(this.value)"><span>OpenAI</span></label>
                         </div>
                         <button onclick="closeIgnisWorkspace()" class="text-cantera-600 dark:text-slate-400 hover:text-red-500 w-8 h-8 rounded-lg flex items-center justify-center cursor-pointer">
                             <i class="fa-solid fa-xmark text-lg"></i>
@@ -527,8 +581,13 @@
                     </div>
                 </div>
 
-                <!-- Fila 2: Barra de herramientas, controles y título -->
-                <div class="p-2.5 px-5 border-b border-cantera-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-cantera-100/60 dark:bg-night-900 shrink-0 text-xs">
+                <!-- Fila 2 Móvil (< md): Renglón 2 Limpio (Solo nombre de la tarea) -->
+                <div class="md:hidden p-2.5 px-4 border-b border-cantera-200 dark:border-slate-800 bg-cantera-100/80 dark:bg-night-950 text-center shrink-0">
+                    <p id="modal-task-title-mobile" class="text-xs font-bold text-cantera-900 dark:text-slate-200 truncate"></p>
+                </div>
+
+                <!-- Fila 2 Escritorio (>= md): Barra de herramientas, controles y título intactos -->
+                <div class="hidden md:flex p-2.5 px-5 border-b border-cantera-200 dark:border-slate-800 flex-wrap items-center justify-between gap-3 bg-cantera-100/60 dark:bg-night-900 shrink-0 text-xs">
                     <!-- Izquierda: Botones de Alternancia [ 📄 PDF ] [ 🔥 Ignis ] -->
                     <div class="flex items-center gap-1.5">
                         <button id="btn-view-pdf" onclick="toggleIgnisView('pdf')" class="px-2.5 py-1 rounded-lg text-xs font-medium bg-cantera-200 dark:bg-slate-800 text-cantera-700 dark:text-slate-300 hover:bg-cantera-300 dark:hover:bg-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer" title="Expandir visor de PDF">
@@ -556,20 +615,6 @@
                     </div>
                 </div>
 
-                <!-- Pestañas Superiores para Celulares (Modo Deslizamiento Horizontal) -->
-                <div class="md:hidden flex items-center justify-between p-2 px-4 bg-cantera-100 dark:bg-night-950 border-b border-cantera-300 dark:border-slate-800 text-xs shrink-0">
-                    <div class="flex items-center gap-1.5 bg-cantera-200/80 dark:bg-slate-900 p-1 rounded-xl border border-cantera-300 dark:border-slate-700 shadow-xs w-full max-w-sm mx-auto">
-                        <button id="mobile-tab-doc" onclick="setMobileIgnisTab('doc')" class="flex-1 py-2 rounded-lg font-bold transition-all text-center flex items-center justify-center gap-1.5 bg-indigo-600 text-white shadow-xs text-xs">
-                            <i class="fa-regular fa-file-pdf"></i>
-                            <span>1. Documentos</span>
-                        </button>
-                        <button id="mobile-tab-chat" onclick="setMobileIgnisTab('chat')" class="flex-1 py-2 rounded-lg font-medium transition-all text-center flex items-center justify-center gap-1.5 text-cantera-700 dark:text-slate-400 text-xs">
-                            <i class="fa-solid fa-fire text-amber-500"></i>
-                            <span>2. Ignis Chat</span>
-                        </button>
-                    </div>
-                </div>
-
                 <!-- Contenedor con Deslizamiento Horizontal Tipo Fotos (Swipe) -->
                 <div class="flex-1 w-full min-h-0 overflow-hidden relative">
                     <div id="ignis-panes-slider" class="h-full flex flex-row w-[200%] md:w-full transition-transform duration-300 ease-out">
@@ -593,9 +638,13 @@
                             </div>
                             <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
                             <div class="p-3 border-t border-cantera-300 dark:border-slate-700 bg-cantera-50 dark:bg-slate-800">
-                                <form id="chat-form" onsubmit="handleChatSubmit(event)" class="flex gap-2">
-                                    <input type="text" id="chat-input" placeholder="Pregunta a Ignis sobre el documento..." autocomplete="off" class="flex-1 bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-600 rounded-lg px-3.5 py-2 text-sm text-cantera-900 dark:text-white focus:outline-none focus:border-indigo-500">
-                                    <button type="submit" id="chat-submit-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-bold cursor-pointer"><i class="fa-solid fa-paper-plane text-sm"></i></button>
+                                <form id="chat-form" onsubmit="handleChatSubmit(event)" class="flex gap-2 items-center">
+                                    <button type="button" onclick="triggerNotesUpload()" class="w-9 h-9 rounded-xl bg-cantera-200 dark:bg-slate-700 text-cantera-700 dark:text-slate-300 hover:bg-cantera-300 dark:hover:bg-slate-600 transition-colors cursor-pointer flex items-center justify-center shrink-0 shadow-2xs" title="Adjuntar apunte o foto a Drive">
+                                        <i class="fa-solid fa-paperclip text-sm"></i>
+                                    </button>
+                                    <input type="file" id="notes-file-input" class="hidden" accept=".pdf,image/*" onchange="handleNotesFileUpload(event)">
+                                    <input type="text" id="chat-input" placeholder="Pregunta a Ignis sobre el documento..." autocomplete="off" class="flex-1 bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-600 rounded-xl px-3.5 py-2 text-sm text-cantera-900 dark:text-white focus:outline-none focus:border-indigo-500">
+                                    <button type="submit" id="chat-submit-btn" class="w-9 h-9 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center justify-center shrink-0 cursor-pointer shadow-2xs"><i class="fa-solid fa-paper-plane text-sm"></i></button>
                                 </form>
                             </div>
                         </div>
@@ -605,10 +654,77 @@
         </div>
     </div>
 
-    <!-- Reloj Digital en Vivo & Botón Cincelado de Franklin -->
-    <div class="fixed bottom-5 right-6 z-20 pointer-events-none select-none flex flex-col items-end gap-2">
-        <!-- Botón Cincelado de Franklin (La Antorcha y Rutina) -->
-        <button onclick="openFranklinModal()" aria-label="El Reloj de Franklin" class="pointer-events-auto w-10 h-10 rounded-2xl bg-white/95 dark:bg-night-900/95 border border-cantera-300 dark:border-slate-700 shadow-xl backdrop-blur-md flex items-center justify-center text-amber-500 hover:text-amber-400 hover:border-amber-500/50 hover:scale-105 active:scale-95 transition-all cursor-pointer group" title="El Reloj de Franklin — Rutina y La Antorcha">
+    <!-- Botón Flotante del Almanaque Móvil (Esquina inferior izquierda) -->
+    <button id="btn-floating-almanac" onclick="openAlmanaqueModal()" aria-label="Almanaque" class="fixed bottom-20 left-4 md:hidden z-30 w-12 h-12 rounded-2xl bg-white/95 dark:bg-night-900/95 border border-cantera-300 dark:border-slate-700 shadow-xl backdrop-blur-md flex flex-col items-center justify-center text-indigo-600 dark:text-indigo-400 active:scale-90 transition-transform" title="Abrir Almanaque y Carga Académica">
+        <i class="fa-regular fa-calendar-days text-base"></i>
+        <span class="text-[8px] font-bold uppercase tracking-tight mt-0.5">Almanaque</span>
+    </button>
+
+    <!-- Modal Almanaque Móvil (Calendario Superior + Diagnóstico Pragmático Franklin Inferior) -->
+    <div id="modal-almanaque" style="display: none;" onclick="if(event.target === this) closeAlmanaqueModal()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs items-center justify-center p-3 md:p-6">
+        <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl max-w-lg w-full p-4 md:p-6 shadow-2xl max-h-[90vh] overflow-y-auto custom-scroll flex flex-col gap-4">
+            <!-- Encabezado -->
+            <div class="flex justify-between items-center border-b border-cantera-200 dark:border-slate-800 pb-3 shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                        <i class="fa-regular fa-calendar-days text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm md:text-base font-bold text-cantera-900 dark:text-white">Almanaque y Carga Académica</h3>
+                        <p class="text-[11px] text-cantera-600 dark:text-slate-400">Calendario de entregas y evaluación de Benjamin Franklin</p>
+                    </div>
+                </div>
+                <button onclick="closeAlmanaqueModal()" class="text-slate-400 hover:text-red-500 cursor-pointer p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- PARTE SUPERIOR: Calendario con los 4 puntos de colores -->
+            <div class="p-3.5 rounded-2xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-regular fa-calendar text-xs text-indigo-500"></i>
+                        <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-200">Calendario de Entregas</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 text-[10px] text-cantera-600 dark:text-slate-400 font-mono">
+                        <span id="almanaque-cal-month-label" class="font-bold text-indigo-600 dark:text-indigo-400"></span>
+                    </div>
+                </div>
+                <div id="almanaque-mini-calendar" class="grid grid-cols-7 gap-1 text-center text-xs">
+                    <!-- Dinámico: Días con sus 4 puntos -->
+                </div>
+                <!-- Leyenda de 4 puntos -->
+                <div class="flex items-center justify-center gap-3 text-[10px] text-cantera-600 dark:text-slate-400 mt-2.5 pt-2 border-t border-cantera-200 dark:border-slate-700/60 flex-wrap">
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span> Pendiente</span>
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span> Entregada</span>
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-indigo-500 inline-block"></span> Examen</span>
+                    <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block"></span> Aviso</span>
+                </div>
+            </div>
+
+            <!-- PARTE INFERIOR: Diagnóstico Pragmático de Franklin -->
+            <div class="space-y-3">
+                <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-hourglass-half text-amber-500 text-sm"></i>
+                        <div>
+                            <span class="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider block">Evaluación Pragmática (Franklin)</span>
+                            <p id="almanaque-franklin-status" class="text-[11px] text-cantera-800 dark:text-slate-300">Priorizado por desgaste cognoscitivo</p>
+                        </div>
+                    </div>
+                    <span id="almanaque-pending-count" class="text-lg font-black font-mono text-amber-600 dark:text-amber-400">0</span>
+                </div>
+                <div id="almanaque-franklin-recommendations" class="space-y-2 text-xs">
+                    <!-- Tareas priorizadas con botón directo a Ignis -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reloj Digital en Vivo & Botón de Franklin (Solo Escritorio) -->
+    <div class="hidden md:flex fixed bottom-5 right-6 z-20 pointer-events-none select-none flex-col items-end gap-2">
+        <!-- Botón de Franklin (Evaluador Pragmático de Carga Académica) -->
+        <button onclick="openFranklinModal()" aria-label="Evaluador de Carga Franklin" class="pointer-events-auto w-10 h-10 rounded-2xl bg-white/95 dark:bg-night-900/95 border border-cantera-300 dark:border-slate-700 shadow-xl backdrop-blur-md flex items-center justify-center text-amber-500 hover:text-amber-400 hover:border-amber-500/50 hover:scale-105 active:scale-95 transition-all cursor-pointer group" title="Evaluador Pragmático de Carga Académica — Benjamin Franklin">
             <i class="fa-solid fa-hourglass-half text-sm group-hover:rotate-180 transition-transform duration-500"></i>
         </button>
 
@@ -634,29 +750,85 @@
                     <button onclick="toggleMainMenu()" class="text-cantera-600 dark:text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark text-lg"></i></button>
                 </div>
 
-                <nav class="space-y-2 text-sm font-medium">
-                    <button onclick="openFranklinModal(); toggleMainMenu();" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
-                        <i class="fa-solid fa-hourglass-half text-amber-500 w-5"></i>
-                        <span>El Reloj de Franklin (Rutina y Racha)</span>
+                <!-- Materias Activas en Móvil -->
+                <div class="space-y-1.5">
+                    <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-book-bookmark text-indigo-500"></i> Materias</span>
+                        <button onclick="clearCourseSelection(); toggleMainMenu();" class="text-[10px] text-indigo-500 hover:underline">Ver todas</button>
+                    </span>
+                    <div id="drawer-courses-list" class="space-y-1 text-xs max-h-36 overflow-y-auto custom-scroll">
+                        <p class="text-[11px] text-slate-400 italic">Cargando materias...</p>
+                    </div>
+                </div>
+
+                <!-- Filtros del Centro de Misiones -->
+                <div class="space-y-1.5">
+                    <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-list-check text-amber-500"></i>
+                        <span>Filtro de Misiones</span>
+                    </span>
+                    <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+                        <button onclick="setMissionFilter('all'); toggleMainMenu();" class="p-2 rounded-lg bg-cantera-100 dark:bg-slate-800 text-left font-semibold flex items-center justify-between">
+                            <span>Todas</span>
+                            <span id="drawer-count-all" class="text-[9px] bg-white dark:bg-slate-900 px-1 py-0.5 rounded">0</span>
+                        </button>
+                        <button onclick="setMissionFilter('main'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1">
+                            <i class="fa-solid fa-khanda text-amber-500 text-[10px]"></i>
+                            <span>Principal</span>
+                        </button>
+                        <button onclick="setMissionFilter('secondary'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1">
+                            <i class="fa-solid fa-shield-halved text-indigo-500 text-[10px]"></i>
+                            <span>Secundarias</span>
+                        </button>
+                        <button onclick="setMissionFilter('daily'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1">
+                            <i class="fa-solid fa-bolt text-sky-500 text-[10px]"></i>
+                            <span>Diarias</span>
+                        </button>
+                        <button onclick="setMissionFilter('special'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1">
+                            <i class="fa-solid fa-wand-magic-sparkles text-purple-500 text-[10px]"></i>
+                            <span>Especiales</span>
+                        </button>
+                        <button onclick="setMissionFilter('rescue'); toggleMainMenu();" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1 text-orange-500">
+                            <i class="fa-solid fa-life-ring text-[10px]"></i>
+                            <span>Rescate</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Temporizador de Estudio en Menú Móvil -->
+                <div class="space-y-2 p-3 rounded-2xl bg-cantera-100/70 dark:bg-slate-800/50 border border-cantera-200 dark:border-slate-700/70 text-center">
+                    <div class="flex items-center justify-between text-xs font-bold text-cantera-800 dark:text-slate-200">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-stopwatch text-sky-500"></i> Temporizador</span>
+                        <span id="drawer-timer-display" class="font-mono text-base font-black text-indigo-600 dark:text-indigo-400">25:00</span>
+                    </div>
+                    <div class="flex justify-center gap-1.5 text-xs">
+                        <button onclick="startTimer()" class="px-3 py-1 rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-xs">Iniciar</button>
+                        <button onclick="pauseTimer()" class="px-2.5 py-1 rounded-lg bg-cantera-200 dark:bg-slate-700 text-cantera-800 dark:text-slate-200 text-xs">Pausa</button>
+                        <button onclick="resetTimer()" class="px-2 py-1 rounded-lg bg-cantera-200 dark:bg-slate-700 text-cantera-600 dark:text-slate-400 text-xs"><i class="fa-solid fa-rotate-right"></i></button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1 text-[10px] pt-1">
+                        <button onclick="setTimerPreset('pomodoro')" class="p-1 rounded bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 font-medium">Pomodoro 25/5</button>
+                        <button onclick="setTimerPreset('52-17')" class="p-1 rounded bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 font-medium">52/17</button>
+                        <button onclick="setTimerPreset('ultradiano')" class="p-1 rounded bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 font-medium">90/20</button>
+                        <button onclick="setTimerPreset('5min')" class="p-1 rounded bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 font-medium">5 min</button>
+                    </div>
+                </div>
+
+                <nav class="space-y-1.5 text-xs font-medium border-t border-cantera-200 dark:border-slate-800 pt-3">
+                    <button onclick="openFranklinModal(); toggleMainMenu();" class="w-full text-left p-2.5 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-2.5 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-hourglass-half text-amber-500 w-4"></i>
+                        <span>Evaluador de Carga (Franklin)</span>
                     </button>
-                    <button onclick="openSocratesModal(); toggleMainMenu();" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
-                        <i class="fa-solid fa-graduation-cap text-indigo-500 w-5"></i>
+                    <button onclick="openSocratesModal(); toggleMainMenu();" class="w-full text-left p-2.5 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-2.5 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-graduation-cap text-indigo-500 w-4"></i>
                         <span>Simulador de Parciales</span>
                     </button>
-                    <button onclick="openMentorsModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors">
-                        <i class="fa-solid fa-user-graduate text-indigo-500 w-5"></i>
-                        <span>Profesores de Ignis</span>
+                    <button onclick="openMentorsModal()" class="w-full text-left p-2.5 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-2.5 text-cantera-800 dark:text-slate-200 transition-colors">
+                        <i class="fa-solid fa-user-graduate text-indigo-500 w-4"></i>
+                        <span>Mentores de Ignis</span>
                     </button>
-                    <button onclick="openTechniquesModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors">
-                        <i class="fa-solid fa-stopwatch text-sky-500 w-5"></i>
-                        <span>Técnicas y Consejos</span>
-                    </button>
-                    <button onclick="openGradesModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors">
-                        <i class="fa-solid fa-chart-line text-emerald-500 w-5"></i>
-                        <span>Calificaciones y Avance</span>
-                    </button>
-                    <button onclick="openSettingsModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors">
-                        <i class="fa-solid fa-sliders text-amber-500 w-5"></i>
+                    <button onclick="openSettingsModal(); toggleMainMenu();" class="w-full text-left p-2.5 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-2.5 text-cantera-800 dark:text-slate-200 transition-colors">
+                        <i class="fa-solid fa-sliders text-amber-500 w-4"></i>
                         <span>Configuración de la App</span>
                     </button>
                 </nav>
@@ -965,6 +1137,92 @@
                         <button onclick="toggleSettingAutofocus()" id="switch-autofocus" class="relative w-12 h-6 rounded-full transition-colors p-0.5 bg-indigo-600">
                             <div id="thumb-autofocus" class="w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform translate-x-6"></div>
                         </button>
+                    </div>
+                </div>
+
+                <!-- Gestión de Apuntes por Asignatura en Google Drive -->
+                <div class="p-3.5 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-cantera-900 dark:text-white block text-sm flex items-center gap-2">
+                            <i class="fa-brands fa-google-drive text-amber-500 text-base"></i>
+                            <span>Gestión de Apuntes en Drive</span>
+                        </span>
+                        <span class="text-[10px] text-cantera-600 dark:text-slate-400 font-mono">Ágora - Apuntes</span>
+                    </div>
+                    <p class="text-[11px] text-cantera-600 dark:text-slate-400 leading-relaxed">
+                        Accede a tus unidades temáticas, formularios analíticos y documentos maestros compilados organizados por materia.
+                    </p>
+
+                    <div class="space-y-1.5">
+                        <label class="font-semibold text-cantera-800 dark:text-slate-200 text-xs">Selecciona Asignatura:</label>
+                        <select id="settings-course-select" onchange="onSettingsCourseChanged(this.value)" class="w-full bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 rounded-lg p-2 text-xs font-medium text-cantera-900 dark:text-white">
+                            <option value="">Seleccione una materia...</option>
+                        </select>
+                    </div>
+
+                    <!-- Lista de Documentos Modulares para Descargar -->
+                    <div id="settings-notes-docs-list" class="space-y-1.5 pt-1">
+                        <button type="button" onclick="downloadModularNote('unit1')" class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-indigo-400 flex items-center justify-between text-left transition-colors">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <i class="fa-regular fa-file-pdf text-rose-500"></i>
+                                <span class="font-medium truncate">Apuntes Teóricos (Unidad 1)</span>
+                            </div>
+                            <span class="text-indigo-600 dark:text-indigo-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-download"></i> Descargar</span>
+                        </button>
+                        <button type="button" onclick="downloadModularNote('formula_sheet')" class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-indigo-400 flex items-center justify-between text-left transition-colors">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <i class="fa-solid fa-square-root-variable text-sky-500"></i>
+                                <span class="font-medium truncate">Formulario Resumido</span>
+                            </div>
+                            <span class="text-indigo-600 dark:text-indigo-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-download"></i> Descargar</span>
+                        </button>
+                        <button type="button" onclick="downloadModularNote('master_document')" class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-indigo-400 flex items-center justify-between text-left transition-colors">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <i class="fa-solid fa-book-atlas text-amber-500"></i>
+                                <span class="font-medium truncate">Documento Maestro Compilado</span>
+                            </div>
+                            <span class="text-indigo-600 dark:text-indigo-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-download"></i> Descargar</span>
+                        </button>
+                    </div>
+
+                    <!-- Botón de eliminación con confirmación nativa -->
+                    <div class="pt-2 border-t border-cantera-200 dark:border-slate-700/60">
+                        <button type="button" onclick="deleteCurrentCourseNotes()" id="btn-delete-course-notes" class="w-full py-2 px-3 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-semibold text-xs flex items-center justify-center gap-2 transition-colors">
+                            <i class="fa-solid fa-trash-can"></i>
+                            <span>Eliminar apuntes de esta asignatura</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Preferencias de Notificaciones y Límite Nocturno -->
+                <div class="p-3.5 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700 space-y-3">
+                    <span class="font-bold text-cantera-900 dark:text-white block text-sm flex items-center gap-2">
+                        <i class="fa-regular fa-bell text-indigo-500"></i>
+                        <span>Preferencias de Notificaciones</span>
+                    </span>
+
+                    <div class="space-y-1">
+                        <label class="font-semibold text-cantera-800 dark:text-slate-200 text-xs">Frecuencia de Notificaciones:</label>
+                        <select id="setting-notif-frequency" onchange="saveNotificationPreferences()" class="w-full bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 rounded-lg p-2 text-xs font-medium text-cantera-900 dark:text-white">
+                            <option value="immediate">Inmediata (Al detectar avisos y entregas)</option>
+                            <option value="hourly">Cada hora (Resumen de pendientes)</option>
+                            <option value="daily_morning">Diaria matutina (Planificación a las 8:00 AM)</option>
+                            <option value="silent">Silencioso (Solo indicadores visuales sin sonido)</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="font-semibold text-cantera-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                            <i class="fa-solid fa-moon text-indigo-400 text-xs"></i>
+                            <span>Límite Nocturno (Silenciar avisos):</span>
+                        </label>
+                        <select id="setting-notif-night-limit" onchange="saveNotificationPreferences()" class="w-full bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-700 rounded-lg p-2 text-xs font-medium text-cantera-900 dark:text-white">
+                            <option value="22">No notificar después de las 22:00 (10:00 PM)</option>
+                            <option value="23">No notificar después de las 23:00 (11:00 PM)</option>
+                            <option value="0" selected>No notificar después de las 00:00 (Medianoche)</option>
+                            <option value="none">Sin restricción de horario nocturno</option>
+                        </select>
+                        <span class="text-[10px] text-cantera-500 dark:text-slate-400">Protege tu descanso evitando campanas y alertas durante la noche.</span>
                     </div>
                 </div>
 
@@ -1497,6 +1755,16 @@
             const chimeEnabled = localStorage.getItem('setting-chime') !== 'false';
             if (!chimeEnabled) return;
 
+            // Respetar horario límite nocturno configurado por el estudiante
+            const nightLimit = localStorage.getItem('agora_notif_night_limit') || '0';
+            if (nightLimit !== 'none') {
+                const curHour = new Date().getHours();
+                const limitHour = parseInt(nightLimit, 10);
+                if (limitHour === 0 && (curHour >= 0 && curHour < 7)) return;
+                if (limitHour === 23 && (curHour >= 23 || curHour < 7)) return;
+                if (limitHour === 22 && (curHour >= 22 || curHour < 7)) return;
+            }
+
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = audioCtx.createOscillator();
@@ -1553,6 +1821,20 @@
             if (g && document.getElementById('key-gemini')) document.getElementById('key-gemini').value = g;
             if (gr && document.getElementById('key-groq')) document.getElementById('key-groq').value = gr;
             if (op && document.getElementById('key-openrouter')) document.getElementById('key-openrouter').value = op;
+
+            const notifFreq = localStorage.getItem('agora_notif_pref') || 'immediate';
+            const notifNight = localStorage.getItem('agora_notif_night_limit') || '0';
+            const selFreq = document.getElementById('setting-notif-frequency');
+            const selNight = document.getElementById('setting-notif-night-limit');
+            if (selFreq) selFreq.value = notifFreq;
+            if (selNight) selNight.value = notifNight;
+        }
+
+        function saveNotificationPreferences() {
+            const selFreq = document.getElementById('setting-notif-frequency');
+            const selNight = document.getElementById('setting-notif-night-limit');
+            if (selFreq) localStorage.setItem('agora_notif_pref', selFreq.value);
+            if (selNight) localStorage.setItem('agora_notif_night_limit', selNight.value);
         }
 
         function saveApiKeys() {
@@ -1562,6 +1844,7 @@
             if (g) localStorage.setItem('key-gemini', g);
             if (gr) localStorage.setItem('key-groq', gr);
             if (op) localStorage.setItem('key-openrouter', op);
+            saveNotificationPreferences();
             alert("¡Configuración guardada en este dispositivo!");
             closeSettingsModal();
         }
@@ -2169,37 +2452,68 @@
 
         function renderCoursesFilter() {
             const listEl = document.getElementById('courses-filter-list');
-            if (!listEl) return;
-            listEl.innerHTML = '';
+            const drawerListEl = document.getElementById('drawer-courses-list');
+            const drawerCount = document.getElementById('drawer-count-all');
 
             const all = [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks, ...allNoDateTasks];
+            if (drawerCount) drawerCount.textContent = all.length;
+
             const taskCourses = all.map(t => (t.course_name || '').replace(/_/g, ' ')).filter(Boolean);
             const enrolled = allEnrolledCourses.map(c => (c || '').replace(/_/g, ' ')).filter(Boolean);
             const courses = [...new Set([...enrolled, ...taskCourses])].sort((a, b) => a.localeCompare(b));
 
-            if (courses.length === 0) {
-                listEl.innerHTML = `<p class="text-cantera-600 dark:text-slate-500 italic text-[11px] py-1">Sin materias activas</p>`;
-                return;
+            if (listEl) {
+                listEl.innerHTML = '';
+                if (courses.length === 0) {
+                    listEl.innerHTML = `<p class="text-cantera-600 dark:text-slate-500 italic text-[11px] py-1">Sin materias activas</p>`;
+                } else {
+                    courses.forEach(course => {
+                        const isSelected = selectedCourses.has(course);
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = `w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                            isSelected 
+                                ? 'bg-indigo-900/30 text-indigo-700 dark:text-indigo-200 border border-indigo-500 shadow-sm' 
+                                : 'text-cantera-700 dark:text-slate-400 hover:text-cantera-900 dark:hover:text-slate-200 hover:bg-cantera-200/50 dark:hover:bg-slate-800/60'
+                        }`;
+
+                        btn.innerHTML = `
+                            <span class="truncate pr-2">${course}</span>
+                            ${isSelected ? '<i class="fa-solid fa-check text-indigo-600 dark:text-indigo-400 text-[10px]"></i>' : ''}
+                        `;
+
+                        btn.onclick = () => toggleCourseSelection(course);
+                        listEl.appendChild(btn);
+                    });
+                }
             }
 
-            courses.forEach(course => {
-                const isSelected = selectedCourses.has(course);
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = `w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${
-                    isSelected 
-                        ? 'bg-indigo-900/30 text-indigo-700 dark:text-indigo-200 border border-indigo-500 shadow-sm' 
-                        : 'text-cantera-700 dark:text-slate-400 hover:text-cantera-900 dark:hover:text-slate-200 hover:bg-cantera-200/50 dark:hover:bg-slate-800/60'
-                }`;
-
-                btn.innerHTML = `
-                    <span class="truncate pr-2">${course}</span>
-                    ${isSelected ? '<i class="fa-solid fa-check text-indigo-600 dark:text-indigo-400 text-[10px]"></i>' : ''}
-                `;
-
-                btn.onclick = () => toggleCourseSelection(course);
-                listEl.appendChild(btn);
-            });
+            if (drawerListEl) {
+                drawerListEl.innerHTML = '';
+                if (courses.length === 0) {
+                    drawerListEl.innerHTML = `<p class="text-cantera-600 dark:text-slate-500 italic text-[11px] py-1">Sin materias activas</p>`;
+                } else {
+                    courses.forEach(course => {
+                        const isSelected = selectedCourses.has(course);
+                        const dBtn = document.createElement('button');
+                        dBtn.type = 'button';
+                        dBtn.className = `w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${
+                            isSelected 
+                                ? 'bg-indigo-900/30 text-indigo-700 dark:text-indigo-200 border border-indigo-500 shadow-sm' 
+                                : 'text-cantera-700 dark:text-slate-400 hover:text-cantera-900 dark:hover:text-slate-200 hover:bg-cantera-200/50 dark:hover:bg-slate-800/60'
+                        }`;
+                        dBtn.innerHTML = `
+                            <span class="truncate pr-2">${course}</span>
+                            ${isSelected ? '<i class="fa-solid fa-check text-indigo-600 dark:text-indigo-400 text-[10px]"></i>' : ''}
+                        `;
+                        dBtn.onclick = () => {
+                            toggleCourseSelection(course);
+                            toggleMainMenu();
+                        };
+                        drawerListEl.appendChild(dBtn);
+                    });
+                }
+            }
         }
 
         function toggleCourseSelection(course) {
@@ -2905,6 +3219,22 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ notes: notesContent })
                 });
+
+                // Sincronizar en Google Drive y servicio de apuntes de Ágora
+                const all = [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks, ...allNoDateTasks];
+                const task = all.find(t => String(t.id) === String(taskId));
+                const courseName = task ? (task.course_name || coursesMap[task.course_id] || "General") : "General";
+
+                fetch('/api/notes/personal', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        course_name: courseName,
+                        task_id: String(taskId),
+                        note_text: notesContent
+                    })
+                }).catch(err => console.error("Error sincronizando nota personal en apuntes:", err));
+
                 if (btn) {
                     btn.textContent = '¡Guardado!';
                     btn.classList.add('text-emerald-600');
@@ -2916,6 +3246,376 @@
                 }
             } catch (error) {
                 if (btn) { btn.textContent = 'Error'; btn.disabled = false; }
+            }
+        }
+
+        // --- Isotipos Oficiales e Interfaz Móvil de IA ---
+        const AI_ISOTYPES = {
+            gemini: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M12 2C12 7.52 7.52 12 2 12C7.52 12 12 16.48 12 22C12 16.48 16.48 12 22 12C16.48 12 12 7.52 12 2Z" fill="url(#mobileGeminiGrad)" /><defs><linearGradient id="mobileGeminiGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#4E88F5" /><stop offset="0.5" stop-color="#7B61FF" /><stop offset="1" stop-color="#FA5560" /></linearGradient></defs></svg>`,
+            groq: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="6" fill="#F55036"/><path d="M12 5C8.13 5 5 8.13 5 12s3.13 7 7 7c3.2 0 5.92-2.16 6.72-5.12h-2.14c-.7 1.83-2.48 3.12-4.58 3.12-2.76 0-5-2.24-5-5s2.24-5 5-5c1.86 0 3.47 1.02 4.31 2.52H14v2h6V6h-2v1.85C16.73 6.16 14.51 5 12 5z" fill="white"/></svg>`,
+            openrouter: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"><path d="M12 2L3 7v10l9 5 9-5V7l-9-5z" stroke="#6366F1" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 12L3 7M12 12v10M12 12l9-5" stroke="#6366F1" stroke-width="2.2" stroke-linejoin="round"/></svg>`,
+            openai: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" class="text-emerald-500"><path d="M22.28 9.82a5.98 5.98 0 0 0-.51-4.91 6.05 6.05 0 0 0-6.51-2.9 6.06 6.06 0 0 0-10.28 2.17 5.98 5.98 0 0 0-4 2.9 6.05 6.05 0 0 0 .74 7.1 5.98 5.98 0 0 0 .51 4.91 6.05 6.05 0 0 0 6.51 2.9A5.98 5.98 0 0 0 13.26 24a6.05 6.05 0 0 0 5.77-4.21 5.99 5.99 0 0 0 4-2.9 6.05 6.05 0 0 0-.75-7.07zm-9.02 12.61a4.48 4.48 0 0 1-2.88-1.04l.14-.08 4.78-2.76a.8.8 0 0 0 .39-.68v-6.74l2.02 1.17v5.58a4.5 4.5 0 0 1-4.49 4.49zm-9.66-4.13a4.47 4.47 0 0 1-.53-3.01l.14.08 4.78 2.76a.77.77 0 0 0 .78 0l5.84-3.37v2.33l-4.83 2.79a4.5 4.5 0 0 1-6.14-1.65zM2.34 7.9a4.48 4.48 0 0 1 2.37-1.98v5.69a.77.77 0 0 0 .38.68l5.82 3.35-2.02 1.17-4.83-2.79A4.5 4.5 0 0 1 2.34 7.9z"/></svg>`
+        };
+
+        function toggleMobileAiMenu() {
+            const menu = document.getElementById('mobile-ai-popup-menu');
+            if (!menu) return;
+            menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'block' : 'none';
+        }
+
+        function syncAiProviderPill(val) {
+            document.querySelectorAll('input[name="ai_provider"]').forEach(radio => {
+                const parent = radio.closest('.model-pill');
+                if (parent) {
+                    if (radio.value === val) {
+                        parent.classList.add('bg-indigo-600', 'text-white', 'font-bold');
+                        parent.classList.remove('text-slate-400');
+                    } else {
+                        parent.classList.remove('bg-indigo-600', 'text-white', 'font-bold');
+                        parent.classList.add('text-slate-400');
+                    }
+                }
+            });
+
+            const activeSvgSpan = document.getElementById('mobile-active-ia-svg');
+            if (activeSvgSpan && AI_ISOTYPES[val]) {
+                activeSvgSpan.innerHTML = AI_ISOTYPES[val];
+            }
+            ['gemini', 'groq', 'openrouter', 'openai'].forEach(p => {
+                const mark = document.getElementById(`m-mark-${p}`);
+                if (mark) {
+                    if (p === val) mark.classList.remove('hidden');
+                    else mark.classList.add('hidden');
+                }
+            });
+        }
+
+        function selectMobileAiProvider(prov) {
+            const menu = document.getElementById('mobile-ai-popup-menu');
+            if (menu) menu.style.display = 'none';
+
+            const radio = document.querySelector(`input[name="ai_provider"][value="${prov}"]`);
+            if (radio) {
+                radio.checked = true;
+            }
+            syncAiProviderPill(prov);
+        }
+
+        function updateMobileMentorName() {
+            const select = document.getElementById('mentor-select');
+            const mobileName = document.getElementById('mobile-mentor-name');
+            if (select && mobileName) {
+                const optText = select.options[select.selectedIndex]?.text || 'Mentor';
+                const cleanName = optText.split('(')[0].trim();
+                mobileName.textContent = cleanName;
+            }
+        }
+
+        function triggerNotesUpload() {
+            const fileInp = document.getElementById('notes-file-input');
+            if (fileInp) fileInp.click();
+        }
+
+        async function handleNotesFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const chatContainer = document.getElementById('chat-messages');
+            const courseName = currentTaskContext ? (currentTaskContext.course_name || coursesMap[currentTaskContext.course_id] || "General") : "General";
+
+            const loadingBubble = document.createElement('div');
+            loadingBubble.className = "flex items-start gap-3";
+            loadingBubble.innerHTML = `
+                <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-cloud-arrow-up animate-pulse text-xs"></i>
+                </div>
+                <div class="bg-cantera-50 dark:bg-slate-900 p-3 rounded-2xl rounded-tl-none border border-cantera-300 dark:border-slate-700 text-xs text-cantera-800 dark:text-slate-300">
+                    <p class="font-semibold flex items-center gap-1.5"><i class="fa-solid fa-spinner fa-spin"></i> Subiendo y procesando apunte en Drive...</p>
+                    <p class="text-[10px] text-cantera-500 dark:text-slate-400 mt-1">${file.name} (${Math.round(file.size / 1024)} KB)</p>
+                </div>
+            `;
+            if (chatContainer) {
+                chatContainer.appendChild(loadingBubble);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('course_name', courseName);
+
+                const resp = await fetch('/api/notes/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const res = await resp.json();
+
+                if (res.success) {
+                    const statusText = res.is_duplicate 
+                        ? `Archivo reconocido y deduplicado (SHA-256). Ya integrado en tus apuntes.`
+                        : `Apunte clasificado en Google Drive (<em>Ágora - Apuntes / ${courseName}</em>) como <strong>${res.unit || 'Unidad 1'}</strong>.`;
+                    
+                    loadingBubble.innerHTML = `
+                        <div class="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-check text-xs"></i>
+                        </div>
+                        <div class="bg-cantera-50 dark:bg-slate-900 p-3 rounded-2xl rounded-tl-none border border-emerald-500/30 text-xs text-cantera-900 dark:text-slate-200">
+                            <p class="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                                <i class="fa-brands fa-google-drive"></i> Apunte Sincronizado
+                            </p>
+                            <p class="mt-1">${statusText}</p>
+                            ${res.preview_url ? `<div class="mt-2"><a href="${res.preview_url}" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline"><i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Ver en Google Drive</a></div>` : ''}
+                        </div>
+                    `;
+                } else {
+                    loadingBubble.innerHTML = `
+                        <div class="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                        </div>
+                        <div class="bg-cantera-50 dark:bg-slate-900 p-3 rounded-2xl rounded-tl-none border border-rose-500/30 text-xs text-rose-600 dark:text-rose-400">
+                            <p class="font-semibold">Error al procesar apunte</p>
+                            <p class="mt-1">${res.error || 'Ocurrió un error inesperado al subir el archivo.'}</p>
+                        </div>
+                    `;
+                }
+            } catch(err) {
+                loadingBubble.innerHTML = `
+                    <div class="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                    </div>
+                    <div class="bg-cantera-50 dark:bg-slate-900 p-3 rounded-2xl rounded-tl-none border border-rose-500/30 text-xs text-rose-600 dark:text-rose-400">
+                        <p class="font-semibold">Error de conexión</p>
+                        <p class="mt-1">${err.message}</p>
+                    </div>
+                `;
+            }
+
+            event.target.value = '';
+        }
+
+        // --- Almanaque Móvil (Calendario + Franklin) ---
+        function openAlmanaqueModal() {
+            const modal = document.getElementById('modal-almanaque');
+            if (!modal) return;
+            renderAlmanaqueCalendar();
+            renderAlmanaqueFranklin();
+            modal.style.display = 'flex';
+        }
+
+        function closeAlmanaqueModal() {
+            const modal = document.getElementById('modal-almanaque');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function renderAlmanaqueCalendar() {
+            const calEl = document.getElementById('almanaque-mini-calendar');
+            if (!calEl) return;
+            calEl.innerHTML = '';
+
+            const daysOfWeek = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+            daysOfWeek.forEach(d => {
+                calEl.innerHTML += `<span class="text-[11px] text-cantera-600 dark:text-slate-500 font-bold">${d}</span>`;
+            });
+
+            const now = new Date();
+            const mLabel = document.getElementById('almanaque-cal-month-label');
+            if (mLabel) mLabel.textContent = now.toLocaleString('es-ES', { month: 'short' }).toUpperCase();
+
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const firstDay = new Date(year, month, 1).getDay();
+            const totalDays = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) {
+                calEl.innerHTML += `<span></span>`;
+            }
+
+            const dayStatus = {};
+
+            [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks].forEach(t => {
+                if (t.due_date) {
+                    const parsedD = parseDueDate(t.due_date);
+                    const d = parsedD ? parsedD.getDate() : null;
+                    if (!d) return;
+                    if (!dayStatus[d]) dayStatus[d] = { pending: false, done: false, exam: false, announcement: false };
+                    
+                    const titleLower = (t.title || '').toLowerCase();
+                    const isExam = titleLower.includes('examen') || titleLower.includes('parcial') || titleLower.includes('evaluac') || titleLower.includes('departamental');
+                    if (isExam) dayStatus[d].exam = true;
+
+                    const isDone = t.status === 'done' || t.classroom_status === 'ENTREGADA' || t.classroom_status === 'CALIFICADA';
+                    if (isDone) dayStatus[d].done = true;
+                    else dayStatus[d].pending = true;
+                }
+            });
+
+            cachedAnnouncements.forEach(a => {
+                if (a.date) {
+                    const d = new Date(a.date).getDate();
+                    if (!dayStatus[d]) dayStatus[d] = { pending: false, done: false, exam: false, announcement: false };
+                    dayStatus[d].announcement = true;
+                }
+            });
+
+            for (let day = 1; day <= totalDays; day++) {
+                const info = dayStatus[day];
+                const isToday = day === now.getDate();
+                const isSelected = selectedCalendarDay === day;
+
+                let dotsHtml = '';
+                if (info) {
+                    dotsHtml = `<div class="flex items-center justify-center gap-0.5 mt-0.5">`;
+                    if (info.pending) dotsHtml += `<span class="w-1.5 h-1.5 rounded-full bg-amber-500" title="Pendiente"></span>`;
+                    if (info.done) dotsHtml += `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Entregada"></span>`;
+                    if (info.exam) dotsHtml += `<span class="w-1.5 h-1.5 rounded-full bg-indigo-500" title="Examen"></span>`;
+                    if (info.announcement) dotsHtml += `<span class="w-1.5 h-1.5 rounded-full bg-rose-500" title="Aviso"></span>`;
+                    dotsHtml += `</div>`;
+                }
+
+                let selectRing = isSelected ? 'ring-2 ring-indigo-500 font-extrabold bg-indigo-50 dark:bg-indigo-950/60' : '';
+                let todayClass = isToday ? 'bg-indigo-600 text-white font-bold' : 'text-cantera-800 dark:text-slate-400 hover:bg-cantera-200 dark:hover:bg-slate-800/60';
+
+                calEl.innerHTML += `
+                    <button onclick="filterByCalendarDay(${day}); closeAlmanaqueModal();" class="h-8 flex flex-col items-center justify-center rounded-lg ${todayClass} ${selectRing} transition-all cursor-pointer">
+                        <span class="leading-none">${day}</span>
+                        ${dotsHtml}
+                    </button>
+                `;
+            }
+        }
+
+        function renderAlmanaqueFranklin() {
+            const container = document.getElementById('almanaque-franklin-recommendations');
+            const statusEl = document.getElementById('almanaque-franklin-status');
+            const countEl = document.getElementById('almanaque-pending-count');
+            if (!container) return;
+
+            const pendingTasks = [...allUpcomingTasks, ...allOverdueTasks];
+            if (countEl) countEl.textContent = pendingTasks.length;
+
+            if (statusEl) {
+                if (allOverdueTasks.length > 0) {
+                    statusEl.textContent = `Atención: ${allOverdueTasks.length} entrega(s) en zona de rescate. Prioriza lo urgente primero.`;
+                } else if (pendingTasks.length === 0) {
+                    statusEl.textContent = `¡Al día! No hay entregas pendientes urgentes.`;
+                } else {
+                    statusEl.textContent = `${pendingTasks.length} pendiente(s) ordenadas por carga cognoscitiva para evitar desvelos.`;
+                }
+            }
+
+            container.innerHTML = '';
+            if (pendingTasks.length === 0) {
+                container.innerHTML = `<div class="p-3 text-center text-emerald-500 italic">No tienes entregas pendientes. ¡Excelente trabajo!</div>`;
+                return;
+            }
+
+            function getCognitiveWeight(task) {
+                const title = (task.title || '').toLowerCase();
+                if (title.includes('código') || title.includes('programaci') || title.includes('algoritmo') || 
+                    title.includes('laboratorio') || title.includes('práctica') || title.includes('cálculo') || 
+                    title.includes('ecuacion') || title.includes('proyecto') || title.includes('taller')) {
+                    return 3;
+                }
+                if (title.includes('lectura') || title.includes('ensayo') || title.includes('resumen') || title.includes('cuestionario')) {
+                    return 2;
+                }
+                return 1;
+            }
+
+            const sorted = [...pendingTasks].sort((a, b) => {
+                const isOverdueA = allOverdueTasks.some(o => o.id === a.id);
+                const isOverdueB = allOverdueTasks.some(o => o.id === b.id);
+                if (isOverdueA && !isOverdueB) return -1;
+                if (!isOverdueA && isOverdueB) return 1;
+
+                const wA = getCognitiveWeight(a);
+                const wB = getCognitiveWeight(b);
+                if (wB !== wA) return wB - wA;
+
+                const da = parseDueDate(a.due_date);
+                const db = parseDueDate(b.due_date);
+                return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+            }).slice(0, 5);
+
+            sorted.forEach(t => {
+                const rec = getTaskRecommendedPreset(t);
+                const item = document.createElement('div');
+                item.className = "p-2.5 rounded-xl bg-white dark:bg-slate-800/80 border border-cantera-200 dark:border-slate-700 flex items-center justify-between gap-2";
+                item.innerHTML = `
+                    <div class="min-w-0 flex-1">
+                        <p class="font-bold text-cantera-900 dark:text-white truncate text-xs">${t.title}</p>
+                        <p class="text-[10px] text-cantera-600 dark:text-slate-400 truncate">${(t.course_name || '').replace(/_/g, ' ')} • ${rec.label}</p>
+                    </div>
+                    <button onclick="closeAlmanaqueModal(); openIgnisWorkspace('${t.id}');" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] shrink-0 flex items-center gap-1">
+                        <i class="fa-solid fa-fire text-amber-400 text-[10px]"></i>
+                        <span>Abrir</span>
+                    </button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // --- Gestión de Apuntes en Configuración ---
+        let currentCourseNotesData = null;
+
+        async function onSettingsCourseChanged(courseName) {
+            if (!courseName) {
+                currentCourseNotesData = null;
+                return;
+            }
+            try {
+                const res = await fetch(`/api/notes/${encodeURIComponent(courseName)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    currentCourseNotesData = data;
+                }
+            } catch(e) {
+                console.error("Error cargando notas de materia:", e);
+            }
+        }
+
+        function downloadModularNote(type) {
+            const select = document.getElementById('settings-course-select');
+            const courseName = select ? select.value : '';
+            if (!courseName) {
+                alert("Por favor selecciona una materia primero en el selector superior.");
+                return;
+            }
+
+            if (!currentCourseNotesData || !currentCourseNotesData.documents) {
+                alert(`No se han cargado apuntes todavía para '${courseName}'. Puedes adjuntarlos con el botón [📎] en el chat de Ignis.`);
+                return;
+            }
+
+            const doc = currentCourseNotesData.documents.find(d => d.type === type || (type === 'unit1' && d.unit === 'Unidad 1'));
+            if (doc && doc.preview_url && doc.preview_url !== '#') {
+                window.open(doc.preview_url, '_blank');
+            } else {
+                alert(`El documento (${type}) para '${courseName}' aún no tiene archivos cargados. Sube apuntes en PDF o fotos de clase en Ignis para generarlo.`);
+            }
+        }
+
+        async function deleteCurrentCourseNotes() {
+            const select = document.getElementById('settings-course-select');
+            const courseName = select ? select.value : '';
+            if (!courseName) {
+                alert("Por favor selecciona una materia primero.");
+                return;
+            }
+            if (!confirm(`¿Estás seguro de que deseas eliminar los apuntes de '${courseName}'? Esta acción borrará la carpeta de la materia en Google Drive y el caché local.`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/notes/${encodeURIComponent(courseName)}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                alert(data.message || "Apuntes eliminados correctamente.");
+                currentCourseNotesData = null;
+                onSettingsCourseChanged(courseName);
+            } catch(e) {
+                alert("Error al eliminar los apuntes: " + e.message);
             }
         }
 
@@ -3031,6 +3731,8 @@
             }
         }
 
+        let ignisHistoryPushed = false;
+
         function openIgnisWorkspace(taskId) {
             const task = typeof taskId === 'object' ? taskId : tasksMap.get(String(taskId));
             if (!task) return;
@@ -3039,7 +3741,11 @@
             const tTitle = document.getElementById('modal-task-title');
             if (tTitle) tTitle.textContent = `${task.course_name}: ${task.title}`;
 
+            const tTitleMobile = document.getElementById('modal-task-title-mobile');
+            if (tTitleMobile) tTitleMobile.textContent = task.title;
+
             autoSelectMentor(task.course_name);
+            updateMobileMentorName();
             setupDocumentCarousel(task);
 
             const chatContainer = document.getElementById('chat-messages');
@@ -3074,6 +3780,8 @@
             updateIgnisPanes();
             if (window.innerWidth < 768) {
                 setMobileIgnisTab('doc');
+                history.pushState({ modal: 'ignis' }, '');
+                ignisHistoryPushed = true;
             }
 
             const backdrop = document.getElementById('ignis-workspace-backdrop');
@@ -3084,11 +3792,26 @@
             }, 80);
         }
 
-        function closeIgnisWorkspace() {
+        function closeIgnisWorkspace(fromPopState = false) {
             const backdrop = document.getElementById('ignis-workspace-backdrop');
             if (backdrop) backdrop.style.display = 'none';
             currentTaskContext = null;
+            if (ignisHistoryPushed && !fromPopState) {
+                ignisHistoryPushed = false;
+                history.back();
+            }
         }
+
+        window.addEventListener('popstate', (e) => {
+            const ignisBackdrop = document.getElementById('ignis-workspace-backdrop');
+            if (ignisBackdrop && ignisBackdrop.style.display !== 'none') {
+                closeIgnisWorkspace(true);
+            }
+            const modalAlmanaque = document.getElementById('modal-almanaque');
+            if (modalAlmanaque && modalAlmanaque.style.display !== 'none') {
+                closeAlmanaqueModal(true);
+            }
+        });
 
         function toggleIgnisView(view) {
             if (ignisViewMode === view) {
@@ -3748,6 +4471,26 @@
             toggleMainMenu();
             const el = document.getElementById('modal-settings');
             if (el) el.style.display = 'flex';
+
+            const select = document.getElementById('settings-course-select');
+            if (select) {
+                const curVal = select.value;
+                select.innerHTML = '<option value="">Seleccione una materia...</option>';
+                const courses = getActiveCoursesList();
+                courses.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    if (c === curVal) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                if (!select.value && courses.length > 0) {
+                    select.value = courses[0];
+                    onSettingsCourseChanged(courses[0]);
+                }
+            }
+
+            loadPreferences();
         }
 
         function closeSettingsModal() {

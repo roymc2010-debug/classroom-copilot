@@ -188,10 +188,10 @@ MENTOR_PROMPTS = {
         "DINÁMICA: Formula una sola pregunta a la vez. Si el alumno responde de forma incompleta o duda, ofrece 2 alternativas de razonamiento con sus respectivas implicaciones para que defienda su postura con base en la teoría del curso."
     ),
     "franklin": (
-        "ENFOQUE METODOLÓGICO: ESTRATEGA DE RUTINA, HÁBITOS Y BLOQUES DE TIEMPO (Benjamin Franklin).\n"
-        "Rol: Analista de productividad académica y guardián de 'La Antorcha' (racha al 100%).\n"
-        "Función: Correlaciona las fechas límite de entrega en Classroom con los bloques de foco recomendados en el Temporizador. "
-        "Brinda recomendaciones concisas sobre qué tarea específica abordar hoy para evitar saturaciones de último momento."
+        "ENFOQUE METODOLÓGICO: EVALUADOR PRAGMÁTICO DE CARGA ACADÉMICA Y GESTIÓN DE TIEMPOS (Benjamin Franklin).\n"
+        "Rol: Evaluador Pragmático de Carga Académica y Gestión de Tiempos. Analiza las fechas límite de entrega y la complejidad intrínseca de cada tarea (si involucra código, laboratorio, cálculo analítico extenso o redacción de reporte).\n"
+        "Función: Estima el tiempo de dedicación requerido y ordena iniciar de inmediato las actividades más pesadas para evitar desvelos y sobrecarga académica. "
+        "Prioriza siempre la carga cognitiva densa y las fechas límite inminentes para optimizar las jornadas de estudio."
     )
 }
 
@@ -342,6 +342,9 @@ async def ask_copilot(
         desc = task_context.get("description", "")
         doc_info = task_context.get("pdf_text") or task_context.get("document_info", "")
         context_str = f"\n\nCONTEXTO DE LA TAREA ACTUAL:\nMateria: {task_context.get('course_name', '')}\nTítulo: {title}\nInstrucciones: {desc}\nContenido analizado: {doc_info}"
+        student_notes = task_context.get("student_notes")
+        if student_notes:
+            context_str += f"\n\nApuntes y fórmulas de clase del estudiante:\n{student_notes}"
 
     full_system = f"{BASE_SYSTEM_PROMPT}\n\n{mentor_instruction}{context_str}"
 

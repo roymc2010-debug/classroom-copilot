@@ -19,6 +19,7 @@ SCOPES = [
     'https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly',
     'https://www.googleapis.com/auth/classroom.announcements.readonly',
     'https://www.googleapis.com/auth/drive.readonly',
+    'https://www.googleapis.com/auth/drive.file',
     'https://www.googleapis.com/auth/gmail.readonly',
     'https://www.googleapis.com/auth/userinfo.email'
 ]

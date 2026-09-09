@@ -1,4 +1,4 @@
-﻿fastapi
+fastapi
 uvicorn[standard]
 jinja2
 python-dotenv
@@ -9,3 +9,4 @@ google-auth-httplib2
 google-auth-oauthlib
 itsdangerous
 fonttools
+python-multipart

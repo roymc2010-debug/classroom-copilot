@@ -234,5 +234,131 @@ class TestBrotherClassroomData(unittest.TestCase):
 
         print("[OK] Test 8 superado: Fechas de entrega integran zona horaria UTC explícita para conversión local exacta.")
 
+    def test_9_sha256_deduplication_and_notes_service(self):
+        """
+        Prueba que el cálculo de hash SHA-256 detecte duplicados exactos y evite resubir
+        archivos idénticos a Google Drive.
+        """
+        import services.notes_service as notes_service
+        content = b"Apuntes de calculo diferencial: Teorema Fundamental del Calculo."
+        hash1 = notes_service.compute_sha256(content)
+        hash2 = notes_service.compute_sha256(content)
+        self.assertEqual(hash1, hash2)
+        self.assertEqual(len(hash1), 64)
+
+        # Probar procesamiento con deduplicación
+        res1 = notes_service.process_and_upload_note(
+            file_bytes=content,
+            filename="Calculo_Unidad1.pdf",
+            course_name="Calculo_Diferencial_Test",
+            user_email="test@universidad.edu.mx"
+        )
+        self.assertTrue(res1.get("success"))
+
+        # Segunda llamada con exactamente los mismos bytes debe activar is_duplicate
+        res2 = notes_service.process_and_upload_note(
+            file_bytes=content,
+            filename="Calculo_Copia.pdf",
+            course_name="Calculo_Diferencial_Test",
+            user_email="test@universidad.edu.mx"
+        )
+        self.assertTrue(res2.get("is_duplicate"))
+        self.assertIn("deduplicación SHA-256", res2.get("message", ""))
+
+        # Limpiar datos de prueba
+        notes_service.delete_course_notes("Calculo_Diferencial_Test")
+        print("[OK] Test 9 superado: Deduplicación SHA-256 detecta archivos idénticos y optimiza almacenamiento en Drive.")
+
+    def test_10_personal_notes_addition_and_persistence(self):
+        """
+        Prueba la inserción de notas personales tomadas en clase por el estudiante
+        y su persistencia para la asignatura.
+        """
+        import services.notes_service as notes_service
+        course = "Fisica_Vectorial_Test"
+        task_id = "tarea_vectores_77"
+        note_text = "Recordatorio del profe: Usar radianes para el producto cruz en el examen."
+
+        add_res = notes_service.add_personal_note(
+            course_name=course,
+            task_id=task_id,
+            note_text=note_text
+        )
+        self.assertTrue(add_res.get("success"))
+
+        notes_txt = notes_service.get_course_notes_text(course)
+        self.assertIn("radianes para el producto cruz", notes_txt)
+        self.assertIn("NOTAS PERSONALES DEL ESTUDIANTE", notes_txt)
+
+        # Limpiar
+        notes_service.delete_course_notes(course)
+        print("[OK] Test 10 superado: Notas personales se guardan y formatean correctamente para la asignatura.")
+
+    def test_11_franklin_pragmatic_evaluator_prompt(self):
+        """
+        Prueba que el perfil de Benjamin Franklin sea estrictamente un Evaluador Pragmático
+        de Carga Académica y NO contenga términos de gamificación ("racha", "antorcha").
+        """
+        from services.ai_service import MENTOR_PROMPTS
+        franklin_prompt = MENTOR_PROMPTS.get("franklin", "").lower()
+        
+        self.assertTrue(len(franklin_prompt) > 0)
+        self.assertNotIn("racha", franklin_prompt)
+        self.assertNotIn("antorcha", franklin_prompt)
+        self.assertIn("evaluador pragmático", franklin_prompt)
+        self.assertTrue("cognitiva" in franklin_prompt or "cognitivo" in franklin_prompt or "cognoscitivo" in franklin_prompt)
+        print("[OK] Test 11 superado: Benjamin Franklin redefinido como Evaluador Pragmático sin rastros de gamificación.")
+
+    def test_12_notes_injection_into_copilot_context(self):
+        """
+        Prueba que las notas y fórmulas del estudiante se inyecten limpiamente
+        en el contexto del Mentor / Copilot.
+        """
+        import asyncio
+        import services.notes_service as notes_service
+        from services.ai_service import ask_copilot
+
+        course = "Circuitos_Logicos_Test"
+        notes_service.add_personal_note(
+            course_name=course,
+            task_id="tarea_mapas_karnaugh",
+            note_text="Tip del profesor: agrupar esquinas en mapas 4x4."
+        )
+
+        notes_context = notes_service.get_course_notes_text(course)
+        self.assertIn("mapas 4x4", notes_context)
+
+        # Mockear client retornado por get_client
+        mock_client = MagicMock()
+        mock_completion = MagicMock()
+        mock_completion.choices = [MagicMock(message=MagicMock(content="Explicación paso a paso"))]
+        
+        async def mock_create(**kwargs):
+            # Verificar que el mensaje de sistema contenga los apuntes inyectados
+            messages = kwargs.get("messages", [])
+            sys_msg = messages[0]["content"] if messages else ""
+            self.assertIn("Apuntes y fórmulas de clase del estudiante", sys_msg)
+            self.assertIn("agrupar esquinas en mapas 4x4", sys_msg)
+            return mock_completion
+
+        mock_client.chat.completions.create = mock_create
+
+        with patch('services.ai_service.get_client', return_value=mock_client):
+            resp = asyncio.run(ask_copilot(
+                provider="gemini",
+                messages=[{"role": "user", "content": "¿Cómo agrupo las esquinas?"}],
+                mentor="turing",
+                task_context={
+                    "course_name": course,
+                    "title": "Mapas de Karnaugh",
+                    "student_notes": notes_context
+                }
+            ))
+            self.assertEqual(resp, "Explicación paso a paso")
+
+        # Limpiar
+        notes_service.delete_course_notes(course)
+        print("[OK] Test 12 superado: Apuntes y fórmulas del alumno se inyectan correctamente al contexto del mentor.")
+
 if __name__ == '__main__':
     unittest.main()
