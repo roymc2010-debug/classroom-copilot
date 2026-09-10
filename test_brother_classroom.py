@@ -579,6 +579,81 @@ class TestBrotherClassroomData(unittest.TestCase):
 
         print("[OK] Test 17 superado: Endpoints de listado granular y borrado individual en Drive operativos y validados.")
 
+    def test_18_web_push_and_background_sync(self):
+        """
+        Prueba la suite de Notificaciones Web Push 24/7:
+        1. Generación y exportación de claves VAPID (RFC 8292).
+        2. Registro y consulta de suscripciones en SQLite.
+        3. Endpoints /api/push/vapid-public-key y /api/push/subscribe.
+        4. Detección de tareas nuevas y asignación de modo silencioso nocturno.
+        """
+        import db.database as db
+        import services.push_service as push_service
+        import services.background_sync as bg_sync
+        from fastapi.testclient import TestClient
+        from main import app
+
+        # 1. Validar clave pública VAPID
+        pub_key = push_service.get_public_key()
+        self.assertIsInstance(pub_key, str)
+        self.assertGreater(len(pub_key), 50)
+
+        # 2. Validar persistencia de suscripción en DB
+        test_endpoint = "https://fcm.googleapis.com/fcm/send/test_device_token_123"
+        test_p256dh = "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QT9AcQg3PHGm3-0..."
+        test_auth = "tBHItDaQLIo..."
+        test_email = "alexmunoz918@gmail.com"
+
+        db.save_push_subscription(test_endpoint, test_p256dh, test_auth, user_email=test_email)
+        subs = db.get_push_subscriptions_for_user(test_email)
+        self.assertGreater(len(subs), 0)
+        found_sub = next(s for s in subs if s["endpoint"] == test_endpoint)
+        self.assertEqual(found_sub["keys"]["p256dh"], test_p256dh)
+        self.assertEqual(found_sub["keys"]["auth"], test_auth)
+
+        # 3. Validar endpoints de FastAPI
+        client = TestClient(app)
+        res_key = client.get("/api/push/vapid-public-key")
+        self.assertEqual(res_key.status_code, 200)
+        self.assertEqual(res_key.json().get("publicKey"), pub_key)
+
+        res_sub = client.post("/api/push/subscribe", json={
+            "endpoint": test_endpoint,
+            "keys": {"p256dh": test_p256dh, "auth": test_auth}
+        })
+        self.assertEqual(res_sub.status_code, 200)
+        self.assertEqual(res_sub.json().get("status"), "ok")
+
+        # 4. Validar ruta de service-worker.js
+        res_sw = client.get("/service-worker.js")
+        self.assertEqual(res_sw.status_code, 200)
+        self.assertIn("Service-Worker-Allowed", res_sw.headers)
+
+        # 5. Validar lógica de modo silencioso nocturno
+        with patch("services.background_sync.datetime") as mock_dt:
+            mock_dt.datetime.now.return_value.hour = 23 # 11:00 PM
+            self.assertTrue(bg_sync.is_night_time())
+            mock_dt.datetime.now.return_value.hour = 14 # 2:00 PM
+            self.assertFalse(bg_sync.is_night_time())
+
+        # 6. Validar despacho de prueba simulado
+        with patch("services.push_service.webpush") as mock_wp:
+            mock_wp.return_value = MagicMock(status_code=201)
+            ok, msg = push_service.send_web_push(
+                subscription_info=found_sub,
+                title="Nueva Tarea",
+                body="Práctica 4",
+                silent=True
+            )
+            self.assertTrue(ok)
+            self.assertEqual(msg, "sent")
+            self.assertTrue(mock_wp.called)
+
+        # Limpiar suscripción de prueba
+        db.delete_push_subscription(test_endpoint)
+        print("[OK] Test 18 superado: Arquitectura Web Push 24/7, VAPID y modo silencioso nocturno validados.")
+
 if __name__ == '__main__':
     unittest.main()
+
 

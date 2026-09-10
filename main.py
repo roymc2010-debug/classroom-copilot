@@ -121,13 +121,31 @@ app = FastAPI(title="Agora")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+@app.on_event("startup")
+async def on_startup():
+    import asyncio
+    try:
+        from services.background_sync import run_background_sync_loop
+        asyncio.create_task(run_background_sync_loop(interval_seconds=180))
+    except Exception as e:
+        print(f"[Startup] Error iniciando vigilante en segundo plano: {e}")
+
 @app.get("/manifest.json")
 def get_manifest():
     return FileResponse("manifest.json", media_type="application/manifest+json")
 
+@app.get("/service-worker.js")
+def get_service_worker():
+    return FileResponse(
+        "service-worker.js",
+        media_type="application/javascript",
+        headers={"Service-Worker-Allowed": "/"}
+    )
+
 @app.get("/favicon.ico")
 def get_favicon():
     return FileResponse("static/favicon.ico", media_type="image/x-icon")
+
 
 
 
@@ -903,3 +921,71 @@ async def socrates_exam(request: Request):
         messages=messages
     )
     return {"response": response_text}
+
+# ==============================================================================
+# Endpoints de Notificaciones Web Push (PWA RFC 8291 / RFC 8292)
+# ==============================================================================
+
+@app.get("/api/push/vapid-public-key")
+def get_vapid_key():
+    from services.push_service import get_public_key
+    return {"publicKey": get_public_key()}
+
+@app.post("/api/push/subscribe")
+async def push_subscribe(req: Request):
+    try:
+        data = await req.json()
+        endpoint = data.get("endpoint")
+        keys = data.get("keys", {})
+        p256dh = keys.get("p256dh", "")
+        auth = keys.get("auth", "")
+        session_id = req.cookies.get("session_id", "")
+        user_email = user_sessions.get(session_id, {}).get("email", "") if session_id else ""
+
+        if not endpoint or not p256dh or not auth:
+            return JSONResponse(status_code=400, content={"error": "Suscripción Push incompleta"})
+
+        import db.database as db
+        db.save_push_subscription(endpoint, p256dh, auth, user_email=user_email)
+        return {"status": "ok", "message": "Suscripción guardada exitosamente"}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/push/unsubscribe")
+async def push_unsubscribe(req: Request):
+    try:
+        data = await req.json()
+        endpoint = data.get("endpoint")
+        if endpoint:
+            import db.database as db
+            db.delete_push_subscription(endpoint)
+        return {"status": "ok"}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/push/test")
+async def push_test(req: Request):
+    try:
+        data = await req.json()
+        endpoint = data.get("endpoint")
+        keys = data.get("keys", {})
+        sub = {
+            "endpoint": endpoint,
+            "keys": {
+                "p256dh": keys.get("p256dh", ""),
+                "auth": keys.get("auth", "")
+            }
+        }
+        from services.push_service import send_web_push
+        ok, msg = send_web_push(
+            subscription_info=sub,
+            title="🔔 Notificación de Prueba Ágora",
+            body="¡Las notificaciones Push 24/7 están funcionando perfectamente en tu dispositivo!",
+            url="/",
+            silent=False,
+            tag="test-notification"
+        )
+        return {"status": "ok" if ok else "error", "message": msg}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+

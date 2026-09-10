@@ -1605,7 +1605,31 @@
                             <option value="0" selected>No notificar después de las 00:00 (Medianoche)</option>
                             <option value="none">Sin restricción de horario nocturno</option>
                         </select>
-                        <span class="text-[10px] text-cantera-500 dark:text-slate-400">Protege tu descanso evitando campanas y alertas durante la noche.</span>
+                        <span class="text-[10px] text-cantera-500 dark:text-slate-400">En horario nocturno, las alertas se reciben en silencio para proteger tu descanso.</span>
+                    </div>
+
+                    <!-- Notificaciones Web Push 24/7 en Segundo Plano -->
+                    <div class="p-2.5 rounded-lg bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700/80 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-cantera-900 dark:text-white flex items-center gap-1.5">
+                                <i class="fa-solid fa-mobile-screen-button text-indigo-500"></i>
+                                <span>Alertas 24/7 (App Cerrada)</span>
+                            </span>
+                            <span id="push-status-badge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Verificando...</span>
+                        </div>
+                        <p class="text-[10px] text-cantera-600 dark:text-slate-400 leading-tight">
+                            Recibe tareas nuevas y avisos de cancelación en tu teléfono aunque Ágora esté totalmente cerrada.
+                        </p>
+                        <div class="flex items-center gap-2 pt-0.5">
+                            <button type="button" onclick="toggleWebPushSubscription()" id="btn-push-subscribe" class="flex-1 py-1.5 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer">
+                                <i class="fa-solid fa-bell"></i>
+                                <span id="btn-push-text">Activar en este Dispositivo</span>
+                            </button>
+                            <button type="button" onclick="sendTestWebPushNotification()" id="btn-push-test" style="display: none;" class="py-1.5 px-2.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer" title="Probar sonido y vibración">
+                                <i class="fa-solid fa-play text-[9px]"></i>
+                                <span>Probar</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -1960,6 +1984,7 @@
             initTheme();
             initLiveClock();
             loadPreferences();
+            initServiceWorker();
         }
 
         if (document.readyState === 'loading') {
@@ -2375,6 +2400,7 @@
             const selNight = document.getElementById('setting-notif-night-limit');
             if (selFreq) selFreq.value = notifFreq;
             if (selNight) selNight.value = notifNight;
+            checkPushSubscriptionStatus();
         }
 
         function saveNotificationPreferences() {
@@ -2383,6 +2409,153 @@
             if (selFreq) localStorage.setItem('agora_notif_pref', selFreq.value);
             if (selNight) localStorage.setItem('agora_notif_night_limit', selNight.value);
         }
+
+        // ==============================================================================
+        // Web Push 24/7 con Service Worker y VAPID
+        // ==============================================================================
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        let swRegistration = null;
+
+        async function initServiceWorker() {
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+                try {
+                    swRegistration = await navigator.serviceWorker.register('/service-worker.js');
+                    await checkPushSubscriptionStatus();
+                } catch(e) {
+                    console.log('Aviso: Service Worker no registrado en este entorno:', e);
+                    updatePushUI(false, 'No compatible o HTTP');
+                }
+            } else {
+                updatePushUI(false, 'No compatible');
+            }
+        }
+
+        async function checkPushSubscriptionStatus() {
+            if (!swRegistration && 'serviceWorker' in navigator) {
+                try {
+                    swRegistration = await navigator.serviceWorker.getRegistration('/service-worker.js');
+                } catch(e) {}
+            }
+            if (!swRegistration || !swRegistration.pushManager) return;
+
+            try {
+                const sub = await swRegistration.pushManager.getSubscription();
+                if (sub) {
+                    updatePushUI(true, '🟢 Activo en este teléfono');
+                } else {
+                    updatePushUI(false, '⚪ Inactivo');
+                }
+            } catch(e) {
+                updatePushUI(false, '⚪ Inactivo');
+            }
+        }
+
+        function updatePushUI(isSubscribed, badgeText) {
+            const badge = document.getElementById('push-status-badge');
+            const btnText = document.getElementById('btn-push-text');
+            const btnTest = document.getElementById('btn-push-test');
+            const btnSub = document.getElementById('btn-push-subscribe');
+
+            if (badge) badge.textContent = badgeText;
+            if (isSubscribed) {
+                if (badge) badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30';
+                if (btnText) btnText.textContent = 'Desactivar Alertas';
+                if (btnSub) btnSub.className = 'flex-1 py-1.5 px-2.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer';
+                if (btnTest) btnTest.style.display = 'flex';
+            } else {
+                if (badge) badge.className = 'text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400';
+                if (btnText) btnText.textContent = 'Activar en este Dispositivo';
+                if (btnSub) btnSub.className = 'flex-1 py-1.5 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer';
+                if (btnTest) btnTest.style.display = 'none';
+            }
+        }
+
+        async function toggleWebPushSubscription() {
+            if (!swRegistration) {
+                alert("Tu navegador no soporta Service Workers o no está en un entorno HTTPS seguro.");
+                return;
+            }
+
+            try {
+                const existingSub = await swRegistration.pushManager.getSubscription();
+                if (existingSub) {
+                    // Desuscribir
+                    await existingSub.unsubscribe();
+                    await fetch('/api/push/unsubscribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ endpoint: existingSub.endpoint })
+                    });
+                    updatePushUI(false, '⚪ Inactivo');
+                    alert("Notificaciones desactivadas en este dispositivo.");
+                    return;
+                }
+
+                // Solicitar permiso
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    alert("Debes conceder permiso de notificaciones en tu navegador para recibir alertas 24/7.");
+                    return;
+                }
+
+                const keyRes = await fetch('/api/push/vapid-public-key');
+                const keyData = await keyRes.json();
+                const convertedKey = urlBase64ToUint8Array(keyData.publicKey);
+
+                const newSub = await swRegistration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: convertedKey
+                });
+
+                const subJson = newSub.toJSON();
+                await fetch('/api/push/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(subJson)
+                });
+
+                updatePushUI(true, '🟢 Activo en este teléfono');
+                alert("¡Notificaciones Push 24/7 activadas! Recibirás tareas y cancelaciones de clase aunque Ágora esté cerrada.");
+            } catch(e) {
+                console.error("Error suscribiendo Web Push:", e);
+                alert("No se pudo activar: " + e.message);
+            }
+        }
+
+        async function sendTestWebPushNotification() {
+            if (!swRegistration) return;
+            try {
+                const sub = await swRegistration.pushManager.getSubscription();
+                if (!sub) {
+                    alert("Primero debes activar las notificaciones en este dispositivo.");
+                    return;
+                }
+                const res = await fetch('/api/push/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sub.toJSON())
+                });
+                const data = await res.json();
+                if (data.status === 'ok') {
+                    // La alerta sonará en el teléfono
+                } else {
+                    alert("Respuesta del servidor: " + data.message);
+                }
+            } catch(e) {
+                alert("Error al enviar prueba: " + e.message);
+            }
+        }
+
 
         function saveApiKeys() {
             const g = document.getElementById('key-gemini').value.trim();

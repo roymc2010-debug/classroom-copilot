@@ -10,3 +10,4 @@ google-auth-oauthlib
 itsdangerous
 fonttools
 python-multipart
+pywebpush
