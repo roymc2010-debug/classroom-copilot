@@ -1,25 +1,27 @@
-# Environments
+# Variables de entorno y secretos
 .env
-.venv
+*.env
+
+# Tokens y sesiones de Google
+token.json
+credentials.json
+sessions.json
+
+# Archivos temporales y entornos
+__pycache__/
+*.pyc
+*.py[cod]
+*$py.class
+.venv/
 env/
 venv/
 ENV/
+data/notes/
+data/
 
-# Python cache
-__pycache__/
-*.py[cod]
-*$py.class
-
-# SQLite
+# Bases de datos locales
 *.sqlite
 *.sqlite3
 *.db
 
-# Google Auth Tokens
-credentials.json
-token.json
-sessions.json
-
-# Cache
-data/
 
