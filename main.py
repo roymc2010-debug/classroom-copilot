@@ -7,7 +7,7 @@ import urllib.parse
 import traceback
 from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, Request, UploadFile, File, Form
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from google.oauth2.credentials import Credentials
@@ -632,6 +632,25 @@ async def get_course_notes_endpoint(course_name: str, request: Request):
             tasks=tasks
         )
         return res
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/api/notes/{course_name}/study-summary")
+async def get_course_study_summary_endpoint(course_name: str, request: Request):
+    """
+    Devuelve la Guía y Resumen de Estudio estructurada por temas para esa materia.
+    """
+    session_id = request.cookies.get("agora_session")
+    creds_json = user_sessions.get(session_id)
+    creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
+    user_email = get_session_email(session_id, creds=creds)
+
+    try:
+        import services.notes_service as notes_service
+        tasks = get_user_tasks_cached(user_email=user_email, creds=creds)
+        summary_info = notes_service.get_thematic_study_summary(course_name, tasks=tasks)
+        return PlainTextResponse(summary_info.get("text", "Sin resumen disponible."), media_type="text/plain; charset=utf-8")
     except Exception as e:
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})

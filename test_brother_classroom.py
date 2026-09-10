@@ -476,5 +476,62 @@ class TestBrotherClassroomData(unittest.TestCase):
 
         print("[OK] Test 15 superado: Endpoint /api/notes sirve instantáneamente los PDFs de tareas del profesor.")
 
+    def test_16_thematic_study_summary_generation(self):
+        """
+        Prueba que el sistema genere una Guía y Resumen de Estudio estructurada por temas
+        para cada materia (en lugar de reproducir archivos individuales por tarea), y que
+        el endpoint /api/notes/{course_name}/study-summary lo sirva de forma estructurada.
+        """
+        import services.notes_service as notes_service
+        from fastapi.testclient import TestClient
+        from main import app, user_sessions, ALEX_EMAIL
+
+        course = "Teoría de Sistemas y Control Automático"
+        sample_tasks = [
+            {
+                "id": "cw_ctrl_1",
+                "course_name": course,
+                "title": "Práctica 3: Sistemas LTI y Respuesta al Escalón",
+                "description": "Determinar función de transferencia y parámetros temporales.",
+                "attachment_files": [{"id": "f_1", "title": "Guia_LTI.pdf", "link": "#"}]
+            },
+            {
+                "id": "cw_ctrl_2",
+                "course_name": course,
+                "title": "Proyecto Final: Control de Posición Motor DC con PID",
+                "description": "Sintonización PID y estabilidad Routh-Hurwitz.",
+                "attachment_files": [{"id": "f_2", "title": "Guia_PID.pdf", "link": "#"}]
+            }
+        ]
+
+        # 1. Generación del resumen temático
+        summary_res = notes_service.generate_thematic_study_summary(course, tasks=sample_tasks)
+        self.assertGreater(summary_res.get("topics_count", 0), 0)
+        self.assertIn("ÁGORA — GUÍA Y RESUMEN DE ESTUDIO POR TEMAS", summary_res["text"])
+        self.assertIn("CONCEPTOS TEÓRICOS ESENCIALES", summary_res["text"])
+
+        # 2. get_course_notes incorpora el resumen como documento primario
+        notes_res = notes_service.get_course_notes(course, user_email=ALEX_EMAIL, creds=None, tasks=sample_tasks)
+        docs = notes_res.get("documents", [])
+        thematic_docs = [d for d in docs if d.get("type") == "thematic_summary"]
+        self.assertEqual(len(thematic_docs), 1)
+        self.assertTrue(thematic_docs[0].get("available"))
+        self.assertIn("Resumen de Estudio por Temas", thematic_docs[0]["name"])
+
+        # 3. Endpoint /api/notes/{course_name}/study-summary
+        user_sessions["demo_alex_session"] = {
+            "email": ALEX_EMAIL,
+            "is_demo": True
+        }
+        client = TestClient(app, cookies={"agora_session": "demo_alex_session"})
+        resp = client.get(f"/api/notes/{course}/study-summary")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("GUÍA Y RESUMEN DE ESTUDIO POR TEMAS", resp.text)
+
+        # Limpiar
+        notes_service.delete_course_notes(course)
+        print("[OK] Test 16 superado: Resumen de estudio estructurado por tema se genera y sirve exitosamente sin reescribir PDFs de cada tarea.")
+
 if __name__ == '__main__':
     unittest.main()
+

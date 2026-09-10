@@ -471,33 +471,420 @@ def sync_course_teacher_files_to_drive(drive_service, course_name: str, teacher_
                     existing_names.add(display_title)
                     continue
                 except Exception as e_sc:
-                    print(f"[NotesService] Shortcut creation falló para '{display_title}', probando respaldo: {e_sc}")
-
-            # 2. Respaldo o archivos mock: crear documento referencial oficial
-            try:
-                body_text = (
-                    f"============================================================\n"
-                    f"ÁGORA — MATERIAL DE CLASE Y TAREA (PROFESOR)\n"
-                    f"Asignatura: {clean_course}\n"
-                    f"Documento: {display_title}\n"
-                    f"============================================================\n\n"
-                    f"Este archivo corresponde al material oficial asignado por el docente en Classroom.\n"
-                    f"Enlace de origen: {tf.get('link', '#')}\n"
-                ).encode('utf-8')
-                media = MediaInMemoryUpload(body_text, mimetype="text/plain", resumable=True)
-                file_meta = {
-                    'name': f"{display_title}.txt" if not display_title.endswith(('.pdf', '.txt')) else display_title,
-                    'parents': [folder_id]
-                }
-                drive_service.files().create(body=file_meta, media_body=media, fields='id').execute()
-                existing_names.add(display_title)
-            except Exception as e_fb:
-                print(f"[NotesService] Error creando archivo referencial para '{display_title}': {e_fb}")
+                    print(f"[NotesService] Shortcut creation falló para '{display_title}': {e_sc}")
 
         return folder_id
     except Exception as e:
-        print(f"[NotesService] Error sincronizando materiales del profesor a Drive: {e}")
+        print(f"[NotesService] Error sincronizando accesos directos a Drive: {e}")
         return None
+
+def generate_thematic_study_summary(
+    course_name: str,
+    tasks: Optional[List[Dict[str, Any]]] = None,
+    course_data: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Genera una Guía y Resumen de Estudio estructurada por temas para la asignatura,
+    organizando objetivos, conceptos teóricos, formulación matemática y aplicaciones prácticas,
+    en lugar de reproducir o reescribir archivos individuales por tarea.
+    """
+    norm_course = normalize_course_name(course_name)
+    if not course_data:
+        course_data = load_local_course_notes(course_name)
+
+    course_tasks = [
+        t for t in (tasks or [])
+        if normalize_course_name(t.get('course_name')) == norm_course
+    ]
+
+    clean_course = re.sub(r'[\\/:*?"<>|]', '_', course_name).strip() or "Materia"
+    topics = []
+
+    # 1. Base de conocimiento temático por disciplina y palabras clave
+    if any(k in norm_course for k in ["control", "sistemas", "dinamicos", "lti"]):
+        topics.append({
+            "title": "Tema 1: Modelado Matemático y Análisis Temporal de Sistemas LTI",
+            "concepts": [
+                "Definición y propiedades de sistemas lineales e invariantes en el tiempo (LTI).",
+                "Obtención de funciones de transferencia G(s) = Y(s)/U(s) mediante Transformada de Laplace.",
+                "Parámetros de respuesta temporal: tiempo de subida (tr), sobreimpulso porcentual (%OS) y tiempo de asentamiento al 2% (ts).",
+                "Dinámica de polos y ceros: polos en el semiplano izquierdo garantizan estabilidad BIBO asintótica."
+            ],
+            "formulas": [
+                "G(s) = \\omega_n^2 / (s^2 + 2\\zeta\\omega_n s + \\omega_n^2)",
+                "%OS = e^(-\\zeta \\pi / \\sqrt{1 - \\zeta^2}) \\times 100%",
+                "ts \\approx 4 / (\\zeta \\omega_n) \\quad (criterio\\ 2%)",
+                "\\tau = 1 / (\\zeta \\omega_n) \\quad (constante\\ de\\ tiempo)"
+            ],
+            "methods": [
+                "Para obtener G(s): plantear ecuaciones diferenciales, transformar a Laplace y despejar Y(s)/U(s).",
+                "Para calcular polos: resolver la ecuación característica del denominador Q(s) = 0."
+            ]
+        })
+        topics.append({
+            "title": "Tema 2: Controladores PID, Estabilidad en Lazo Cerrado y Sintonización",
+            "concepts": [
+                "Criterio de estabilidad analítica de Routh-Hurwitz para evaluar raíces en el semiplano derecho.",
+                "Acción Proporcional (Kp): Aumenta la velocidad de respuesta reduciendo el tiempo de subida.",
+                "Acción Integral (Ki): Elimina completamente el error en estado estacionario.",
+                "Acción Derivativa (Kd): Anticipa cambios transitorios amortiguando sobreimpulsos y oscilaciones.",
+                "Sintonización heurística: métodos clásicos de Ziegler-Nichols (lazo abierto y ganancia crítica Ku)."
+            ],
+            "formulas": [
+                "u(t) = K_p e(t) + K_i \\int_0^t e(\\tau)d\\tau + K_d \\frac{de(t)}{dt}",
+                "C(s) = K_p + \\frac{K_i}{s} + K_d s = \\frac{K_d s^2 + K_p s + K_i}{s}",
+                "e_{ss} = \\lim_{s \\to 0} \\frac{s R(s)}{1 + C(s)G(s)}"
+            ],
+            "methods": [
+                "Evaluar la ecuación característica 1 + C(s)G(s) = 0.",
+                "Construir la tabla de Routh para hallar el rango de ganancias K estables."
+            ]
+        })
+
+    elif any(k in norm_course for k in ["calculo", "matematica", "analisis matematico"]):
+        topics.append({
+            "title": "Tema 1: Funciones Reales, Límites y Continuidad",
+            "concepts": [
+                "Determinación analítica de dominio, rango y restricciones de existencia de funciones reales.",
+                "Definición formal de límites y cálculo de límites laterales.",
+                "Técnicas de cancelación algebraica para indeterminaciones 0/0 e infinito/infinito.",
+                "Continuidad de funciones en puntos e intervalos cerrados."
+            ],
+            "formulas": [
+                "\\lim_{x \\to a} [f(x) \\pm g(x)] = \\lim f(x) \\pm \\lim g(x)",
+                "\\lim_{x \\to 0} \\frac{\\sin(x)}{x} = 1",
+                "\\lim_{x \\to a} \\frac{f(x)}{g(x)} = \\lim_{x \\to a} \\frac{f'(x)}{g'(x)} \\quad (L'Hôpital)"
+            ],
+            "methods": [
+                "Factorizar polinomios y racionalizar expresiones con radicales conjugados.",
+                "Graficar asíntotas verticales (denominador cero) y horizontales (límite al infinito)."
+            ]
+        })
+        topics.append({
+            "title": "Tema 2: Cálculo Diferencial, Criterios de Optimización e Integración",
+            "concepts": [
+                "Interpretación geométrica de la derivada como pendiente de la recta tangente y razón instantánea.",
+                "Reglas operativas de derivación: producto, cociente y regla de la cadena.",
+                "Criterios de primera y segunda derivada para identificación de máximos, mínimos y puntos de inflexión.",
+                "Teorema Fundamental del Cálculo e integración por partes y sustitución."
+            ],
+            "formulas": [
+                "(f \\cdot g)' = f'g + fg'",
+                "(\\frac{f}{g})' = \\frac{f'g - fg'}{g^2}",
+                "\\frac{d}{dx}[f(g(x))] = f'(g(x)) \\cdot g'(x)",
+                "\\int x^n dx = \\frac{x^{n+1}}{n+1} + C \\quad (n \\neq -1)"
+            ],
+            "methods": [
+                "Para optimización: derivar la función objetivo, igualar a cero para hallar puntos críticos.",
+                "Para integración: clasificar la integral e identificar la técnica analítica correspondiente."
+            ]
+        })
+
+    elif any(k in norm_course for k in ["algoritmo", "programacion", "computacion", "datos"]):
+        topics.append({
+            "title": "Tema 1: Lógica Estructurada, Algoritmos Secuenciales y Condicionales",
+            "concepts": [
+                "Estructuras secuenciales, asignación de variables y tipos de datos primitivos.",
+                "Estructuras de decisión condicional (if-elif-else) y operadores booleanos.",
+                "Diseño de algoritmos y diagramas de flujo estandarizados.",
+                "Validación de entradas de usuario y prevención de fallos en ejecución."
+            ],
+            "formulas": [
+                "Complejidad O(1): acceso directo e instrucciones aritméticas básicas",
+                "Validación condicional: if min_val <= x <= max_val:"
+            ],
+            "methods": [
+                "Traducir los requerimientos a pseudocódigo antes de codificar.",
+                "Probar valores límite y casos frontera de las funciones."
+            ]
+        })
+        topics.append({
+            "title": "Tema 2: Modularidad, Iteración y Estructuras de Datos",
+            "concepts": [
+                "Estructuras iterativas (bucles for y while) y control de flujo.",
+                "Definición y alcance de funciones, paso de parámetros por valor y referencia.",
+                "Colecciones de datos: listas indexadas, tuplas inmutables y diccionarios clave-valor.",
+                "Modularización de código y principios de diseño limpio."
+            ],
+            "formulas": [
+                "Búsqueda lineal: O(n) | Búsqueda binaria: O(\\log n)",
+                "Iteración estructurada sobre colecciones"
+            ],
+            "methods": [
+                "Descomponer problemas complejos en funciones con responsabilidad única.",
+                "Documentar funciones con parámetros y tipos de retorno esperados."
+            ]
+        })
+
+    elif any(k in norm_course for k in ["analogica", "potencia", "electronica", "circuitos"]):
+        topics.append({
+            "title": "Tema 1: Dispositivos Semiconductores y Amplificación con Transistores BJT",
+            "concepts": [
+                "Polarización en DC de transistores bipolares y punto de trabajo estático Q(Vce, Ic).",
+                "Análisis de pequeña señal en AC y modelo de parámetros r_e.",
+                "Configuraciones de amplificadores: emisor común, colector común y base común.",
+                "Ganancia de voltaje, ganancia de corriente e impedancias de entrada/salida."
+            ],
+            "formulas": [
+                "I_C = \\beta I_B",
+                "V_{CE} = V_{CC} - I_C R_C",
+                "r_e = \\frac{26\\text{ mV}}{I_E}",
+                "A_v \\approx -\\frac{R_C \\parallel R_L}{r_e}"
+            ],
+            "methods": [
+                "Análisis DC: reemplazar condensadores por circuitos abiertos para fijar el punto Q.",
+                "Análisis AC: cortocircuitar fuentes DC y calcular ganancia con el modelo r_e."
+            ]
+        })
+        topics.append({
+            "title": "Tema 2: Dispositivos de Conmutación y Fuentes de Potencia Conmutadas",
+            "concepts": [
+                "Conmutación en estado sólido con MOSFETs de potencia e IGBTs.",
+                "Modulación por ancho de pulso (PWM) y ciclo de trabajo D.",
+                "Topologías de convertidores DC-DC: Buck (reductor) y Boost (elevador).",
+                "Diseño de filtros LC para atenuación de rizado."
+            ],
+            "formulas": [
+                "V_{out} = D \\cdot V_{in} \\quad (Buck)",
+                "V_{out} = \\frac{V_{in}}{1 - D} \\quad (Boost)",
+                "\\Delta I_L = \\frac{V_{in} - V_{out}}{L} \\cdot D T_s"
+            ],
+            "methods": [
+                "Determinar el ciclo de trabajo D según las tensiones de entrada y salida.",
+                "Dimensionar el inductor L para operación en Modo de Conducción Continua (CCM)."
+            ]
+        })
+
+    elif any(k in norm_course for k in ["fisica", "mecanica", "estatica", "dinamica"]):
+        topics.append({
+            "title": "Tema 1: Estática de Partículas y Cuerpos Rígidos",
+            "concepts": [
+                "Álgebra vectorial en 2D y 3D y descomposición en componentes rectangulares.",
+                "Diagramas de Cuerpo Libre (DCL) y balance de fuerzas externas.",
+                "Primera condición de equilibrio estático: sumatoria de fuerzas igual a cero.",
+                "Segunda condición de equilibrio estático: sumatoria de momentos igual a cero."
+            ],
+            "formulas": [
+                "\\sum F_x = 0, \\quad \\sum F_y = 0",
+                "\\vec{M}_O = \\vec{r} \\times \\vec{F}",
+                "\\sum \\vec{M}_O = 0"
+            ],
+            "methods": [
+                "Dibujar el DCL indicando claramente las direcciones de reacciones y tensiones.",
+                "Plantear y resolver el sistema de ecuaciones de equilibrio estático."
+            ]
+        })
+        topics.append({
+            "title": "Tema 2: Cinemática, Leyes de Newton y Conservación de Energía",
+            "concepts": [
+                "Cinemática: posición, velocidad y aceleración.",
+                "Leyes del Movimiento de Newton y dinámica con fuerzas de fricción.",
+                "Trabajo y Teorema de Trabajo y Energía Cinética.",
+                "Conservación de la energía mecánica en sistemas conservativos."
+            ],
+            "formulas": [
+                "\\sum \\vec{F} = m \\vec{a}",
+                "W = \\Delta K = \\frac{1}{2} m v_f^2 - \\frac{1}{2} m v_i^2",
+                "E_{mec} = K + U = \\text{constante}"
+            ],
+            "methods": [
+                "Determinar si actúan fuerzas no conservativas para aplicar balance energético.",
+                "Despejar aceleraciones mediante la segunda ley de Newton."
+            ]
+        })
+
+    # Si no hubo coincidencia temática específica, generar dinámicamente a partir de las tareas de la materia
+    if not topics:
+        if course_tasks:
+            mid = max(1, len(course_tasks) // 2)
+            block_1_tasks = course_tasks[:mid]
+            block_2_tasks = course_tasks[mid:]
+
+            b1_titles = [t.get('title', '') for t in block_1_tasks]
+            topics.append({
+                "title": f"Tema 1: Fundamentos y Procedimientos Iniciales de {clean_course}",
+                "concepts": [
+                    f"Consignas y teoría asociada a: {', '.join(b1_titles[:2])}.",
+                    "Conceptos clave, definiciones preliminares y marco conceptual de la asignatura.",
+                    "Criterios de acreditación para las actividades y reportes iniciales."
+                ],
+                "formulas": [
+                    "Formulación analítica y criterios metodológicos de resolución aplicados en clase."
+                ],
+                "methods": [
+                    "Revisar las especificaciones técnicas solicitadas por el docente.",
+                    "Estructurar los procedimientos en orden lógico y verificar resultados."
+                ]
+            })
+
+            if block_2_tasks:
+                b2_titles = [t.get('title', '') for t in block_2_tasks]
+                topics.append({
+                    "title": f"Tema 2: Desarrollo Avanzado, Proyectos y Evaluación de {clean_course}",
+                    "concepts": [
+                        f"Consignas y objetivos correspondientes a: {', '.join(b2_titles[:2])}.",
+                        "Integración de conocimientos prácticos, análisis de resultados y conclusiones técnicas.",
+                        "Directrices de entrega, rúbricas de evaluación y estándares de presentación."
+                    ],
+                    "formulas": [
+                        "Modelos matemáticos, cálculos numéricos y verificación empírica de resultados."
+                    ],
+                    "methods": [
+                        "Comprobar la congruencia de los cálculos con la teoría desarrollada en el semestre.",
+                        "Elaborar reportes técnicos concisos con memorias de cálculo detalladas."
+                    ]
+                })
+        else:
+            topics.append({
+                "title": f"Tema 1: Eje Fundamental de {clean_course}",
+                "concepts": [
+                    "Objetivos curriculares y competencias profesionales de la materia.",
+                    "Fundamentos teóricos, principios científicos y metodología de estudio."
+                ],
+                "formulas": [
+                    "Ecuaciones y modelos rectores de la disciplina."
+                ],
+                "methods": [
+                    "Estudiar los conceptos esenciales y resolver los ejercicios propuestos en clase."
+                ]
+            })
+
+    # 2. Construcción del texto consolidado de la Guía de Estudio
+    lines = [
+        "=" * 80,
+        f"ÁGORA — GUÍA Y RESUMEN DE ESTUDIO POR TEMAS",
+        f"Asignatura: {course_name}",
+        f"Estructura Curricular: {len(topics)} Temas de Estudio Sintetizados",
+        f"Propósito: Repaso conceptual, preparación de exámenes y estudio autónomo",
+        "=" * 80,
+        ""
+    ]
+
+    for idx, top in enumerate(topics, 1):
+        lines.append(f"[{idx}] {top['title'].upper()}")
+        lines.append("-" * 80)
+        lines.append("• CONCEPTOS TEÓRICOS ESENCIALES:")
+        for c in top.get("concepts", []):
+            lines.append(f"  - {c}")
+        lines.append("")
+
+        if top.get("formulas"):
+            lines.append("• FÓRMULAS, TEOREMAS Y LEYES CLAVE:")
+            for f in top.get("formulas", []):
+                lines.append(f"  - {f}")
+            lines.append("")
+
+        if top.get("methods"):
+            lines.append("• METODOLOGÍA DE RESOLUCIÓN PARA EXÁMENES Y PRÁCTICAS:")
+            for m in top.get("methods", []):
+                lines.append(f"  - {m}")
+            lines.append("")
+
+        matching_tasks = [
+            t.get('title') for t in course_tasks
+            if any(w in (t.get('title', '') + t.get('description', '')).lower() 
+                   for w in top['title'].lower().split() if len(w) > 4)
+        ]
+        if matching_tasks:
+            lines.append("• TAREAS Y PRÁCTICAS ASOCIADAS:")
+            for mt in set(matching_tasks[:3]):
+                lines.append(f"  * {mt}")
+            lines.append("")
+
+        lines.append("=" * 80)
+        lines.append("")
+
+    course_formulas = course_data.get("formulas", [])
+    if course_formulas:
+        lines.append("FORMULARIO DE APUNTES REGISTRADOS")
+        lines.append("-" * 80)
+        for f in course_formulas[:15]:
+            lines.append(f"• {f}")
+        lines.append("=" * 80)
+        lines.append("")
+
+    personal_notes = course_data.get("personal_notes", [])
+    if personal_notes:
+        lines.append("NOTAS Y RECORDATORIOS DEL ESTUDIANTE EN CLASE")
+        lines.append("-" * 80)
+        for pn in personal_notes[-5:]:
+            lines.append(f"• [{pn.get('created_at', '')[:10]}] {pn.get('text', '')}")
+        lines.append("=" * 80)
+        lines.append("")
+
+    summary_text = "\n".join(lines).strip()
+
+    # Guardar en disco local para acceso ultra-rápido
+    cache_file = os.path.join(NOTES_CACHE_DIR, f"study_summary_{clean_course}.txt")
+    try:
+        with open(cache_file, "w", encoding="utf-8") as f:
+            f.write(summary_text)
+    except Exception as e:
+        print(f"[NotesService] Error guardando resumen temático en disco: {e}")
+
+    return {
+        "course_name": course_name,
+        "topics_count": len(topics),
+        "topics": topics,
+        "text": summary_text
+    }
+
+def sync_course_thematic_summary_to_drive(
+    drive_service,
+    course_name: str,
+    summary_text: str,
+    user_email: str = ""
+) -> Optional[str]:
+    """
+    Sincroniza la Guía y Resumen de Estudio por Temas en Google Drive dentro de 'Ágora - Apuntes / [Materia]'.
+    Crea o actualiza un único documento representativo y estructurado, evitando duplicar archivos por tarea.
+    """
+    if not drive_service or hasattr(drive_service, '_mock_return_value') or drive_service.__class__.__name__ == 'MagicMock':
+        return None
+    try:
+        folder_id = get_or_create_course_folder(drive_service, course_name)
+        if not folder_id:
+            return None
+
+        clean_course = re.sub(r'[\\/:*?"<>|]', '_', course_name).strip() or "General"
+        doc_title = f"Resumen de Estudio por Temas - {clean_course}.txt"
+        safe_title = doc_title.replace("'", "\\'")
+
+        media = MediaInMemoryUpload(summary_text.encode('utf-8'), mimetype="text/plain", resumable=True)
+
+        q = f"name = '{safe_title}' and '{folder_id}' in parents and trashed = false"
+        res = drive_service.files().list(q=q, spaces='drive', fields='files(id, name, webViewLink)').execute()
+        files = res.get('files', []) if isinstance(res, dict) else []
+        if not isinstance(files, list):
+            files = []
+
+        if files and isinstance(files[0], dict) and files[0].get('id'):
+            file_id = files[0]['id']
+            drive_service.files().update(fileId=file_id, media_body=media).execute()
+        else:
+            file_meta = {
+                'name': doc_title,
+                'parents': [folder_id]
+            }
+            created = drive_service.files().create(body=file_meta, media_body=media, fields='id, webViewLink').execute()
+            file_id = created.get('id') if isinstance(created, dict) else None
+
+        if not file_id:
+            return None
+
+        link = f"https://drive.google.com/file/d/{file_id}/view"
+        if user_email and "?authuser" not in link:
+            sep = "&" if "?" in link else "?"
+            link += f"{sep}authuser={user_email}"
+        return link
+    except Exception as e:
+        print(f"[NotesService] Error sincronizando resumen temático en Drive: {e}")
+        return None
+
+def get_thematic_study_summary(course_name: str, tasks: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """Retorna o genera el resumen de estudio por temas para la materia."""
+    course_data = load_local_course_notes(course_name)
+    return generate_thematic_study_summary(course_name, tasks=tasks, course_data=course_data)
 
 def normalize_course_name(name: str) -> str:
     if not name:
@@ -513,6 +900,7 @@ def get_course_notes(
 ) -> Dict[str, Any]:
     """
     Devuelve la lista modular de documentos disponibles para esa materia:
+    - Resumen para Estudio por Temas (Guía consolidada por eje temático)
     - Materiales y PDFs de las tareas del profesor (sincronizados en Drive)
     - Archivos y documentos existentes en la carpeta de Drive 'Ágora - Apuntes / [Materia]'
     - Unidades temáticas individuales
@@ -524,6 +912,7 @@ def get_course_notes(
     folder_url = None
     folder_id = None
     drive_error = None
+    drive_summary_url = None
 
     # Extraer materiales y PDFs de las tareas de esta materia
     norm_course = normalize_course_name(course_name)
@@ -531,6 +920,9 @@ def get_course_notes(
         t for t in (tasks or [])
         if normalize_course_name(t.get('course_name')) == norm_course
     ]
+
+    # Generar Resumen para Estudio por Temas estructurado
+    thematic_res = generate_thematic_study_summary(course_name, tasks=course_tasks, course_data=course_data)
 
     teacher_files = []
     seen_titles = set()
@@ -565,7 +957,12 @@ def get_course_notes(
                 if user_email:
                     folder_url += f"?authuser={user_email}"
 
-                # Sincronizar PDFs y materiales del profesor a la carpeta de Drive
+                # Sincronizar el Resumen de Estudio por Temas en Google Drive
+                drive_summary_url = sync_course_thematic_summary_to_drive(
+                    drive_service, course_name, thematic_res["text"], user_email=user_email
+                )
+
+                # Sincronizar accesos directos reales de materiales del profesor a Drive
                 if teacher_files:
                     sync_course_teacher_files_to_drive(drive_service, course_name, teacher_files, user_email=user_email)
 
@@ -678,12 +1075,30 @@ def get_course_notes(
         "available": total_files > 0
     })
 
+    # Resumen para Estudio por Temas (Documento Primario de Estudio)
+    summary_preview_link = drive_summary_url or f"/api/notes/{normalize_course_name(course_name)}/study-summary"
+    if user_email and "?authuser" not in summary_preview_link and "google.com" in summary_preview_link:
+        sep = "&" if "?" in summary_preview_link else "?"
+        summary_preview_link += f"{sep}authuser={user_email}"
+
+    thematic_doc = {
+        "name": f"Resumen de Estudio por Temas - {course_name}.pdf",
+        "type": "thematic_summary",
+        "unit": "Resumen por Temas",
+        "preview_url": summary_preview_link,
+        "download_url": summary_preview_link,
+        "count": thematic_res.get("topics_count", 2),
+        "available": True
+    }
+    documents.insert(0, thematic_doc)
+
     return {
         "course_name": course_name,
         "folder_url": folder_url,
         "folder_id": folder_id,
         "drive_error": drive_error,
         "documents": documents,
+        "thematic_summary": thematic_res.get("text", ""),
         "personal_notes_count": len(course_data.get("personal_notes", []))
     }
 

@@ -1123,7 +1123,6 @@
                                 <i class="fa-solid fa-moon text-indigo-400 text-sm hidden dark:block"></i>
                                 <span class="font-bold text-xs text-cantera-900 dark:text-white">Tema: <span id="mobile-theme-name">Selene (Noche)</span></span>
                             </div>
-                            <span class="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800">Alternar</span>
                         </button>
                     </div>
 
@@ -1134,7 +1133,6 @@
                                 <i class="fa-solid fa-book-bookmark text-indigo-500"></i>
                                 <span>Materias</span>
                             </span>
-                            <button type="button" onclick="clearCourseSelection(); toggleMainMenu(false);" class="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer">Ver todas</button>
                         </div>
                         <div id="mobile-drawer-courses-list" class="space-y-1 max-h-48 overflow-y-auto custom-scroll pr-1"></div>
                     </div>
@@ -4106,15 +4104,20 @@
                             btn.className = "w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-indigo-400 flex items-center justify-between text-left transition-colors cursor-pointer";
                             
                             let icon = '<i class="fa-regular fa-file-pdf text-rose-500"></i>';
-                            if (doc.type === 'formula_sheet') icon = '<i class="fa-solid fa-square-root-variable text-sky-500"></i>';
+                            if (doc.type === 'thematic_summary') icon = '<i class="fa-solid fa-graduation-cap text-purple-500"></i>';
+                            else if (doc.type === 'formula_sheet') icon = '<i class="fa-solid fa-square-root-variable text-sky-500"></i>';
                             else if (doc.type === 'master_document') icon = '<i class="fa-solid fa-book-atlas text-amber-500"></i>';
                             else if (doc.type === 'drive_file') icon = '<i class="fa-brands fa-google-drive text-emerald-500"></i>';
                             else if (doc.type === 'teacher_material') icon = '<i class="fa-solid fa-chalkboard-user text-indigo-500"></i>';
 
                             const isAvailable = doc.available || (doc.preview_url && doc.preview_url !== '#');
-                            const actionLabel = isAvailable 
+                            let actionLabel = isAvailable 
                                 ? '<span class="text-indigo-600 dark:text-indigo-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Ver en Drive</span>'
                                 : '<span class="text-slate-400 text-xs font-medium shrink-0 flex items-center gap-1"><i class="fa-solid fa-cloud-arrow-up text-[10px]"></i> Pendiente</span>';
+
+                            if (isAvailable && doc.type === 'thematic_summary') {
+                                actionLabel = '<span class="text-purple-600 dark:text-purple-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-book-open-reader text-[10px]"></i> Guía de Estudio</span>';
+                            }
 
                             btn.innerHTML = `
                                 <div class="flex items-center gap-2 min-w-0">
