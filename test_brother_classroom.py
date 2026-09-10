@@ -232,7 +232,22 @@ class TestBrotherClassroomData(unittest.TestCase):
             self.assertTrue('+00:00' in due_iso or due_iso.endswith('Z'))
             self.assertIn('2026-09-08T15:59:00', due_iso)
 
-        print("[OK] Test 8 superado: Fechas de entrega integran zona horaria UTC explícita para conversión local exacta.")
+            # Caso adicional: cuando Google omite 'minutes' porque es 0 (ej. 15:00 UTC -> 09:00 AM local México)
+            mock_service.courses().courseWork().list().execute.return_value = {
+                'courseWork': [{
+                    'id': 'cw_sistemas_4b',
+                    'title': 'Teoría de sistemas II - Entrega 9:00 AM',
+                    'dueDate': {'year': 2026, 'month': 9, 'day': 8},
+                    'dueTime': {'hours': 15},
+                    'materials': []
+                }]
+            }
+            tasks_omitted = get_all_tasks(creds=MagicMock())
+            self.assertEqual(len(tasks_omitted), 1)
+            due_iso_omitted = tasks_omitted[0].get('due_date')
+            self.assertIn('2026-09-08T15:00:00', due_iso_omitted)
+
+        print("[OK] Test 8 superado: Fechas de entrega integran zona horaria UTC y omisión de minutos (9:00 vs 9:59) exacta.")
 
     def test_9_sha256_deduplication_and_notes_service(self):
         """
@@ -359,6 +374,38 @@ class TestBrotherClassroomData(unittest.TestCase):
         # Limpiar
         notes_service.delete_course_notes(course)
         print("[OK] Test 12 superado: Apuntes y fórmulas del alumno se inyectan correctamente al contexto del mentor.")
+
+    def test_13_demo_mode_auth_and_data_serving(self):
+        """
+        Prueba que el endpoint /auth/demo genere la sesión demo y que los endpoints
+        /api/tasks y /api/courses sirvan los datos de prueba de Alex sin necesidad de Google.
+        """
+        from fastapi.testclient import TestClient
+        from main import app, ALEX_EMAIL
+
+        client = TestClient(app, follow_redirects=False)
+        demo_resp = client.get("/auth/demo")
+        self.assertEqual(demo_resp.status_code, 302)
+        self.assertIn("agora_session=demo_alex_session", demo_resp.headers.get("set-cookie", ""))
+
+        # Llamar a /api/tasks con la cookie de sesión demo
+        client_with_cookie = TestClient(app)
+        client_with_cookie.cookies.set("agora_session", "demo_alex_session")
+
+        tasks_resp = client_with_cookie.get("/api/tasks")
+        self.assertEqual(tasks_resp.status_code, 200)
+        tasks_data = tasks_resp.json()
+        self.assertEqual(tasks_data.get("user_email"), ALEX_EMAIL)
+        total_tasks = len(tasks_data.get("tasks_with_dates", [])) + len(tasks_data.get("tasks_without_dates", []))
+        self.assertGreater(total_tasks, 0)
+
+        # Llamar a /api/courses
+        courses_resp = client_with_cookie.get("/api/courses")
+        self.assertEqual(courses_resp.status_code, 200)
+        courses = courses_resp.json().get("courses", [])
+        self.assertGreater(len(courses), 0)
+
+        print("[OK] Test 13 superado: Modo de Prueba (Demo) inicializa sesión y sirve misiones y materias instantáneamente.")
 
 if __name__ == '__main__':
     unittest.main()

@@ -86,6 +86,55 @@
 </head>
 <body class="h-screen overflow-hidden font-sans flex flex-col transition-colors duration-300">
 
+    <!-- Definiciones Globales SVG (Gradientes y Filtros de la Antorcha para Móvil y Web) -->
+    <svg class="absolute w-0 h-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        <defs>
+            <linearGradient id="flame-off" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#A8A29E"/>
+                <stop offset="1" stop-color="#78716C"/>
+            </linearGradient>
+            <linearGradient id="flame-amber" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#FBBF24"/>
+                <stop offset="1" stop-color="#D97706"/>
+            </linearGradient>
+            <linearGradient id="flame-bronze" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#FB923C"/>
+                <stop offset="1" stop-color="#EA580C"/>
+            </linearGradient>
+            <linearGradient id="flame-gold" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#FEF08A"/>
+                <stop offset="1" stop-color="#EAB308"/>
+            </linearGradient>
+            <linearGradient id="flame-emerald" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#34D399"/>
+                <stop offset="1" stop-color="#059669"/>
+            </linearGradient>
+            <linearGradient id="flame-cyan" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#38BDF8"/>
+                <stop offset="1" stop-color="#0891B2"/>
+            </linearGradient>
+            <linearGradient id="flame-sapphire" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#60A5FA"/>
+                <stop offset="1" stop-color="#2563EB"/>
+            </linearGradient>
+            <linearGradient id="flame-violet" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#C084FC"/>
+                <stop offset="1" stop-color="#7C3AED"/>
+            </linearGradient>
+            <linearGradient id="flame-white" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#FFFFFF"/>
+                <stop offset="1" stop-color="#FFFFFF"/>
+            </linearGradient>
+            <filter id="flame-glow-soft" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="1.2" result="blur" />
+                <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+            <filter id="flame-glow-gold" x="-30%" y="-30%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="#F59E0B" flood-opacity="0.95"/>
+            </filter>
+        </defs>
+    </svg>
+
     <!-- Splash Screen Inicial: Presentación Heroica y Gran Logo -->
     <div id="splash-screen" class="fixed inset-0 z-[100] bg-[#070B14] flex flex-col items-center justify-center p-6 transition-all duration-700 select-none">
         <!-- Glow ambiental majestuoso de fondo -->
@@ -112,13 +161,17 @@
             </div>
 
             <!-- Estado de Login (Si no tiene sesión activa) -->
-            <div id="splash-auth-state" style="display: none;" class="flex flex-col items-center gap-4 w-full max-w-sm mt-1">
-                <p class="text-xs text-slate-300 leading-relaxed">
+            <div id="splash-auth-state" style="display: none;" class="flex flex-col items-center gap-3 w-full max-w-sm mt-1">
+                <p class="text-xs text-slate-300 leading-relaxed text-center">
                     Conecta tu cuenta de Google Classroom para sincronizar tus materias, misiones y activar a tu tutor Ignis.
                 </p>
-                <a href="/auth/login" class="w-full py-4 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-sm flex items-center justify-center gap-3 shadow-xl shadow-indigo-600/35 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer">
+                <a href="/auth/login" class="w-full py-3.5 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-sm flex items-center justify-center gap-3 shadow-xl shadow-indigo-600/35 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer">
                     <i class="fa-brands fa-google text-base"></i>
                     <span>Iniciar sesión con Google</span>
+                </a>
+                <a href="/auth/demo" class="w-full py-3 px-5 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/40 font-bold text-xs flex items-center justify-center gap-2.5 shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer">
+                    <i class="fa-solid fa-flask text-sm"></i>
+                    <span>Modo de Prueba (Demo sin cuenta)</span>
                 </a>
             </div>
         </div>
@@ -129,14 +182,11 @@
     <header class="sticky top-0 z-30 backdrop-blur-md bg-cantera-100/90 dark:bg-night-900/90 border-b border-cantera-300 dark:border-slate-800 transition-colors shrink-0">
         <div class="w-full px-6 py-3 flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <button onclick="toggleMainMenu()" aria-label="Menú principal" class="w-9 h-9 rounded-xl bg-white dark:bg-night-800 border border-cantera-300 dark:border-slate-700 flex items-center justify-center text-cantera-800 dark:text-slate-200 hover:border-indigo-500 transition-all shadow-sm">
-                    <i class="fa-solid fa-bars text-sm"></i>
-                </button>
-                <!-- Logo Adaptativo: Fondo según el tema activo -->
-                <div class="w-10 h-10 rounded-xl overflow-hidden shadow-md shrink-0 border border-cantera-300 dark:border-sky-500/30">
+                <!-- Logo Interactivo: Botón de Menú Ágora en Ambas Versiones (Móvil y Escritorio) -->
+                <button type="button" onclick="toggleMainMenu()" aria-label="Abrir Menú Ágora" class="w-10 h-10 rounded-xl overflow-hidden shadow-md shrink-0 border border-cantera-300 dark:border-sky-500/30 cursor-pointer active:scale-95 hover:border-indigo-500 transition-all focus:outline-none" title="Menú Ágora">
                     <img src="/static/agora_logo_dark_64.png?v=4" alt="Ágora Logo" class="w-full h-full object-cover hidden dark:block">
                     <img src="/static/agora_logo_light_64.png?v=4" alt="Ágora Logo" class="w-full h-full object-cover block dark:hidden">
-                </div>
+                </button>
                 <div>
                     <h1 class="text-xl md:text-2xl font-black tracking-tight leading-none text-cantera-900 dark:text-white">Ágora</h1>
                     <p class="text-xs text-cantera-600 dark:text-slate-400 mt-0.5">Espacio de estudio y misiones</p>
@@ -418,6 +468,9 @@
                     <a href="/auth/login" class="w-full py-3.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2.5 shadow-md hover:shadow-lg transition-all">
                         <i class="fa-brands fa-google text-sm"></i> Iniciar sesión con Google
                     </a>
+                    <a href="/auth/demo" class="w-full py-3 px-5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold text-xs flex items-center justify-center gap-2 shadow-xs hover:shadow-sm transition-all cursor-pointer">
+                        <i class="fa-solid fa-flask text-xs"></i> Modo de Prueba (Demo sin cuenta)
+                    </a>
                 </div>
             </div>
 
@@ -496,13 +549,51 @@
                 <div onclick="handleTorchClick()" class="flex items-center gap-3.5 p-3 rounded-xl bg-cantera-50 dark:bg-slate-800/60 border border-cantera-200 dark:border-slate-700/60 cursor-pointer active:scale-[0.99] transition-transform">
                     <div class="w-12 h-12 rounded-xl bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-inner">
                         <svg class="w-8 h-8 shrink-0" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="m-flame-off" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#A8A29E"/>
+                                    <stop offset="1" stop-color="#78716C"/>
+                                </linearGradient>
+                                <linearGradient id="m-flame-amber" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#FBBF24"/>
+                                    <stop offset="1" stop-color="#D97706"/>
+                                </linearGradient>
+                                <linearGradient id="m-flame-bronze" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#FB923C"/>
+                                    <stop offset="1" stop-color="#EA580C"/>
+                                </linearGradient>
+                                <linearGradient id="m-flame-gold" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#FEF08A"/>
+                                    <stop offset="1" stop-color="#EAB308"/>
+                                </linearGradient>
+                                <linearGradient id="m-flame-emerald" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#34D399"/>
+                                    <stop offset="1" stop-color="#059669"/>
+                                </linearGradient>
+                                <linearGradient id="m-flame-cyan" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#38BDF8"/>
+                                    <stop offset="1" stop-color="#0891B2"/>
+                                </linearGradient>
+                                <linearGradient id="m-flame-sapphire" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#60A5FA"/>
+                                    <stop offset="1" stop-color="#2563EB"/>
+                                </linearGradient>
+                                <linearGradient id="m-flame-violet" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#C084FC"/>
+                                    <stop offset="1" stop-color="#7C3AED"/>
+                                </linearGradient>
+                                <linearGradient id="m-flame-white" x1="18" y1="2" x2="18" y2="28" gradientUnits="userSpaceOnUse">
+                                    <stop stop-color="#FFFFFF"/>
+                                    <stop offset="1" stop-color="#FFFFFF"/>
+                                </linearGradient>
+                            </defs>
                             <path d="M16 26L15 32H21L20 26H16Z" fill="#78716C"/>
                             <path d="M14 24H22V26H14V24Z" fill="#A8A29E"/>
-                            <path id="mobile-torch-flame" d="M16.87 2.5 L16.69 6.51 L10.07 16.09 L10.07 19.75 L11.81 22.89 L15.65 25.33 L14.25 23.06 L14.08 20.27 L15.65 16.79 L18.26 14.87 L18.78 19.58 L20.0 20.45 L21.05 19.23 L21.75 20.62 L20.53 25.33 L24.53 21.84 L25.75 19.05 L25.75 15.74 L23.49 11.21 L22.97 13.3 L21.4 14.0 L20.88 7.55 Z" fill="url(#flame-off)"/>
+                            <path id="mobile-torch-flame" d="M16.87 2.5 L16.69 6.51 L10.07 16.09 L10.07 19.75 L11.81 22.89 L15.65 25.33 L14.25 23.06 L14.08 20.27 L15.65 16.79 L18.26 14.87 L18.78 19.58 L20.0 20.45 L21.05 19.23 L21.75 20.62 L20.53 25.33 L24.53 21.84 L25.75 19.05 L25.75 15.74 L23.49 11.21 L22.97 13.3 L21.4 14.0 L20.88 7.55 Z" fill="url(#flame-amber)"/>
                         </svg>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p id="mobile-streak-text" class="text-sm font-extrabold text-cantera-900 dark:text-white truncate">0 días de racha</p>
+                        <p id="mobile-streak-text" class="text-sm font-extrabold text-amber-600 dark:text-amber-400 truncate">0 días de racha</p>
                         <p class="text-[11px] text-cantera-600 dark:text-slate-400 mt-0.5">Toca aquí para alternar nivel de fuego y racha</p>
                     </div>
                 </div>
@@ -536,12 +627,12 @@
 
             <!-- 3. Tarjeta de Benjamin Franklin (Evaluador Pragmático de Carga) -->
             <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-800 rounded-2xl p-4 shadow-sm space-y-3">
-                <div class="flex items-center justify-between pb-2 border-b border-cantera-200 dark:border-slate-800">
-                    <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center gap-1.5">
-                        <i class="fa-solid fa-hourglass-half text-amber-500"></i>
-                        <span>Evaluador Pragmático Franklin</span>
+                <div class="flex items-center justify-between gap-2 pb-2 border-b border-cantera-200 dark:border-slate-800">
+                    <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center gap-1.5 min-w-0 truncate">
+                        <i class="fa-solid fa-hourglass-half text-amber-500 shrink-0"></i>
+                        <span class="truncate">Evaluador Franklin</span>
                     </span>
-                    <span id="mobile-franklin-count" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">0 pendientes</span>
+                    <span id="mobile-franklin-count" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap shrink-0">0 pendientes</span>
                 </div>
 
                 <p id="mobile-franklin-status" class="text-xs text-cantera-700 dark:text-slate-300 leading-relaxed bg-cantera-50 dark:bg-slate-800/50 p-3 rounded-xl border border-cantera-200 dark:border-slate-700/60">
@@ -952,55 +1043,152 @@
 
     <!-- Menú Principal Drawer -->
     <div id="main-menu-drawer" style="display: none;" onclick="toggleMainMenu(false)" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs">
-        <div onclick="event.stopPropagation()" class="w-80 h-full bg-cantera-50 dark:bg-night-900 border-r border-cantera-300 dark:border-slate-800 p-6 flex flex-col justify-between shadow-2xl custom-scroll overflow-y-auto cursor-default">
-            <div class="space-y-6">
-                <!-- Encabezado -->
-                <div class="flex items-center justify-between pb-4 border-b border-cantera-200 dark:border-slate-800">
-                    <div class="flex items-center gap-2.5">
-                        <i class="fa-solid fa-landmark text-indigo-500 dark:text-indigo-400 text-lg"></i>
-                        <span class="font-extrabold text-base text-cantera-900 dark:text-white">Menú Ágora</span>
+        <div onclick="event.stopPropagation()" class="w-80 h-full bg-cantera-50 dark:bg-night-900 border-r border-cantera-300 dark:border-slate-800 p-5 flex flex-col justify-between shadow-2xl custom-scroll overflow-y-auto cursor-default">
+            
+            <!-- CONTENIDO ESCRITORIO (>= md): Menú Ágora Original Intacto -->
+            <div class="hidden md:flex flex-col justify-between h-full">
+                <div class="space-y-6">
+                    <!-- Encabezado Escritorio -->
+                    <div class="flex items-center justify-between pb-4 border-b border-cantera-200 dark:border-slate-800">
+                        <div class="flex items-center gap-2.5">
+                            <i class="fa-solid fa-landmark text-indigo-500 dark:text-indigo-400 text-lg"></i>
+                            <span class="font-extrabold text-base text-cantera-900 dark:text-white">Menú Ágora</span>
+                        </div>
+                        <button onclick="toggleMainMenu(false)" class="text-cantera-600 dark:text-slate-400 hover:text-red-500 cursor-pointer p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
                     </div>
-                    <button onclick="toggleMainMenu(false)" class="text-cantera-600 dark:text-slate-400 hover:text-red-500 cursor-pointer p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+
+                    <!-- Opciones de Navegación del Menú Web (4 opciones) -->
+                    <nav class="space-y-2 text-sm font-medium">
+                        <!-- 1. 👨‍🏫 Mentores de Ignis -->
+                        <button onclick="openMentorsModal(); toggleMainMenu(false);" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                            <i class="fa-solid fa-user-graduate text-indigo-500 w-5"></i>
+                            <span>Mentores de Ignis</span>
+                        </button>
+
+                        <!-- 2. 💡 Técnicas y Consejos -->
+                        <button onclick="openTechniquesModal(); toggleMainMenu(false);" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                            <i class="fa-solid fa-lightbulb text-amber-500 w-5"></i>
+                            <span>Técnicas y Consejos</span>
+                        </button>
+
+                        <!-- 3. 📊 Calificaciones y Avance -->
+                        <button onclick="openGradesModal(); toggleMainMenu(false);" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                            <i class="fa-solid fa-chart-line text-emerald-500 w-5"></i>
+                            <span>Calificaciones y Avance</span>
+                        </button>
+
+                        <!-- 4. ⚙️ Configuración de la App -->
+                        <button onclick="openSettingsModal(); toggleMainMenu(false);" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                            <i class="fa-solid fa-sliders text-sky-500 w-5"></i>
+                            <span>Configuración de la App</span>
+                        </button>
+                    </nav>
                 </div>
 
-                <!-- Opciones de Navegación del Menú Web -->
-                <nav class="space-y-2 text-sm font-medium">
-                    <!-- 1. 👨‍🏫 Mentores de Ignis -->
-                    <button onclick="openMentorsModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
-                        <i class="fa-solid fa-user-graduate text-indigo-500 w-5"></i>
-                        <span>Mentores de Ignis</span>
-                    </button>
-
-                    <!-- 2. 💡 Técnicas y Consejos -->
-                    <button onclick="openTechniquesModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
-                        <i class="fa-solid fa-lightbulb text-amber-500 w-5"></i>
-                        <span>Técnicas y Consejos</span>
-                    </button>
-
-                    <!-- 3. 📊 Calificaciones y Avance -->
-                    <button onclick="openGradesModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
-                        <i class="fa-solid fa-chart-line text-emerald-500 w-5"></i>
-                        <span>Calificaciones y Avance</span>
-                    </button>
-
-                    <!-- 4. ⚙️ Configuración de la App -->
-                    <button onclick="openSettingsModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
-                        <i class="fa-solid fa-sliders text-sky-500 w-5"></i>
-                        <span>Configuración de la App</span>
-                    </button>
-                </nav>
+                <!-- Pie del Menú Escritorio -->
+                <div class="pt-6 border-t border-cantera-200 dark:border-slate-800 space-y-2">
+                    <div class="px-2 text-[11px] text-cantera-600 dark:text-slate-400">
+                        <span>Cuenta activa:</span>
+                        <p id="user-email-display" class="font-mono text-xs font-semibold text-amber-500 dark:text-amber-400 truncate">{{ user_email if user_email else 'Conectando...' }}</p>
+                    </div>
+                    <a href="/auth/logout" class="w-full p-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-2 font-bold text-xs transition-colors">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Cerrar Sesión</span>
+                    </a>
+                </div>
             </div>
 
-            <!-- Pie del Menú -->
-            <div class="pt-6 border-t border-cantera-200 dark:border-slate-800 space-y-2">
-                <div class="px-2 text-[11px] text-cantera-600 dark:text-slate-400">
-                    <span>Cuenta activa:</span>
-                    <p id="user-email-display" class="font-mono text-xs font-semibold text-amber-500 dark:text-amber-400 truncate">{{ user_email if user_email else 'Conectando...' }}</p>
+            <!-- CONTENIDO MÓVIL (< md): EXCLUSIVAMENTE TIERS, MATERIAS Y BOTÓN SELENE/HELIOS -->
+            <div class="md:hidden flex flex-col justify-between h-full space-y-4">
+                <div class="space-y-4 flex-1 overflow-y-auto custom-scroll pr-0.5">
+                    <!-- Encabezado Móvil -->
+                    <div class="flex items-center justify-between pb-3 border-b border-cantera-200 dark:border-slate-800">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-7 h-7 rounded-lg overflow-hidden shadow-xs border border-cantera-300 dark:border-sky-500/30">
+                                <img src="/static/agora_logo_dark_64.png?v=4" alt="Ágora Logo" class="w-full h-full object-cover hidden dark:block">
+                                <img src="/static/agora_logo_light_64.png?v=4" alt="Ágora Logo" class="w-full h-full object-cover block dark:hidden">
+                            </div>
+                            <span class="font-extrabold text-base text-cantera-900 dark:text-white">Filtros y Tema</span>
+                        </div>
+                        <button onclick="toggleMainMenu(false)" class="text-cantera-600 dark:text-slate-400 hover:text-red-500 cursor-pointer p-1">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
+
+                    <!-- 1. Botón Selene / Helios (Tema Día/Noche) -->
+                    <div>
+                        <button type="button" onclick="toggleTheme(); updateMobileThemeButton();" id="mobile-theme-btn" class="w-full p-3 rounded-xl bg-white dark:bg-night-800 border border-cantera-300 dark:border-slate-700 flex items-center justify-between transition-colors shadow-xs cursor-pointer active:scale-98">
+                            <div class="flex items-center gap-2.5">
+                                <i class="fa-solid fa-sun text-amber-500 text-sm block dark:hidden"></i>
+                                <i class="fa-solid fa-moon text-indigo-400 text-sm hidden dark:block"></i>
+                                <span class="font-bold text-xs text-cantera-900 dark:text-white">Tema: <span id="mobile-theme-name">Selene (Noche)</span></span>
+                            </div>
+                            <span class="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800">Alternar</span>
+                        </button>
+                    </div>
+
+                    <!-- 2. Materias (Para filtrar misiones) -->
+                    <div class="bg-white dark:bg-night-800/80 rounded-xl border border-cantera-300 dark:border-slate-700/80 p-3 space-y-2 shadow-xs">
+                        <div class="flex items-center justify-between pb-1 border-b border-cantera-200 dark:border-slate-700/50">
+                            <span class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300">
+                                <i class="fa-solid fa-book-bookmark text-indigo-500"></i>
+                                <span>Materias</span>
+                            </span>
+                            <button type="button" onclick="clearCourseSelection(); toggleMainMenu(false);" class="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer">Ver todas</button>
+                        </div>
+                        <div id="mobile-drawer-courses-list" class="space-y-1 max-h-48 overflow-y-auto custom-scroll pr-1"></div>
+                    </div>
+
+                    <!-- 3. Tiers de Misiones (Para filtrar misiones) -->
+                    <div class="bg-white dark:bg-night-800/80 rounded-xl border border-cantera-300 dark:border-slate-700/80 p-3 space-y-1.5 shadow-xs">
+                        <span class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 pb-1 border-b border-cantera-200 dark:border-slate-700/50">
+                            <i class="fa-solid fa-list-check text-amber-500"></i>
+                            <span>Tiers de Misiones</span>
+                        </span>
+                        <div class="space-y-1 text-xs pt-1">
+                            <button type="button" onclick="setMissionFilter('all'); toggleMainMenu(false);" id="m-btn-filter-all" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-cantera-200 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-cantera-300 dark:border-slate-700 font-semibold cursor-pointer">
+                                <span>Todas</span>
+                                <span id="m-count-all" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
+                            </button>
+                            <button type="button" onclick="setMissionFilter('main'); toggleMainMenu(false);" id="m-btn-filter-main" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50 cursor-pointer">
+                                <span class="flex items-center gap-1.5"><i class="fa-solid fa-khanda text-amber-500"></i> Principal</span>
+                                <span id="m-count-main" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
+                            </button>
+                            <button type="button" onclick="setMissionFilter('secondary'); toggleMainMenu(false);" id="m-btn-filter-secondary" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50 cursor-pointer">
+                                <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-halved text-indigo-500"></i> Secundarias</span>
+                                <span id="m-count-secondary" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
+                            </button>
+                            <button type="button" onclick="setMissionFilter('daily'); toggleMainMenu(false);" id="m-btn-filter-daily" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50 cursor-pointer">
+                                <span class="flex items-center gap-1.5"><i class="fa-solid fa-bolt text-sky-500"></i> Diarias</span>
+                                <span id="m-count-daily" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
+                            </button>
+                            <button type="button" onclick="setMissionFilter('special'); toggleMainMenu(false);" id="m-btn-filter-special" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50 cursor-pointer">
+                                <span class="flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles text-purple-500"></i> Especiales</span>
+                                <span id="m-count-special" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
+                            </button>
+                            <button type="button" onclick="setMissionFilter('rescue'); toggleMainMenu(false);" id="m-btn-filter-rescue" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50 cursor-pointer">
+                                <span class="flex items-center gap-1.5"><i class="fa-solid fa-life-ring text-orange-500"></i> Rescate</span>
+                                <span id="m-count-rescue" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
+                            </button>
+                            <button type="button" onclick="setMissionFilter('open'); toggleMainMenu(false);" id="m-btn-filter-open" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50 cursor-pointer">
+                                <span class="flex items-center gap-1.5"><i class="fa-solid fa-compass text-teal-500"></i> Abiertas</span>
+                                <span id="m-count-open" class="text-[10px] bg-white dark:bg-slate-900 px-1.5 py-0.5 rounded">0</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <a href="/auth/logout" class="w-full p-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-2 font-bold text-xs transition-colors">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                    <span>Cerrar Sesión</span>
-                </a>
+
+                <!-- Pie Móvil -->
+                <div class="pt-3 border-t border-cantera-200 dark:border-slate-800 space-y-2 shrink-0">
+                    <div class="px-1 text-[11px] text-cantera-600 dark:text-slate-400">
+                        <span>Cuenta:</span>
+                        <p id="user-email-display-mobile" class="font-mono text-xs font-semibold text-amber-500 dark:text-amber-400 truncate">{{ user_email if user_email else 'Conectando...' }}</p>
+                    </div>
+                    <a href="/auth/logout" class="w-full p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-2 font-bold text-xs transition-colors">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Cerrar Sesión</span>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -1763,11 +1951,18 @@
             initApp();
         }
 
+        function updateMobileThemeButton() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const nameEl = document.getElementById('mobile-theme-name');
+            if (nameEl) nameEl.textContent = isDark ? 'Selene (Noche)' : 'Helios (Día)';
+        }
+
         // Control del Tema
         function toggleTheme() {
             const html = document.documentElement;
             const isDark = html.classList.toggle('dark');
             localStorage.setItem('agora-theme', isDark ? 'dark' : 'light');
+            updateMobileThemeButton();
         }
 
         function initTheme() {
@@ -1777,6 +1972,7 @@
             } else {
                 document.documentElement.classList.add('dark');
             }
+            updateMobileThemeButton();
         }
 
         // Reloj en Vivo
@@ -2706,6 +2902,7 @@
 
         function renderCoursesFilter() {
             const listEl = document.getElementById('courses-filter-list');
+            const mobileListEl = document.getElementById('mobile-drawer-courses-list');
 
             const all = [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks, ...allNoDateTasks];
 
@@ -2713,10 +2910,11 @@
             const enrolled = allEnrolledCourses.map(c => (c || '').replace(/_/g, ' ')).filter(Boolean);
             const courses = [...new Set([...enrolled, ...taskCourses])].sort((a, b) => a.localeCompare(b));
 
-            if (listEl) {
-                listEl.innerHTML = '';
+            [listEl, mobileListEl].forEach(targetList => {
+                if (!targetList) return;
+                targetList.innerHTML = '';
                 if (courses.length === 0) {
-                    listEl.innerHTML = `<p class="text-cantera-600 dark:text-slate-500 italic text-[11px] py-1">Sin materias activas</p>`;
+                    targetList.innerHTML = `<p class="text-cantera-600 dark:text-slate-500 italic text-[11px] py-1">Sin materias activas</p>`;
                 } else {
                     courses.forEach(course => {
                         const isSelected = selectedCourses.has(course);
@@ -2733,11 +2931,13 @@
                             ${isSelected ? '<i class="fa-solid fa-check text-indigo-600 dark:text-indigo-400 text-[10px]"></i>' : ''}
                         `;
 
-                        btn.onclick = () => toggleCourseSelection(course);
-                        listEl.appendChild(btn);
+                        btn.onclick = () => {
+                            toggleCourseSelection(course);
+                        };
+                        targetList.appendChild(btn);
                     });
                 }
-            }
+            });
         }
 
         function toggleCourseSelection(course) {
@@ -2757,12 +2957,15 @@
             currentMissionFilter = filter;
             ['all', 'main', 'secondary', 'daily', 'special', 'rescue', 'open'].forEach(f => {
                 const btn = document.getElementById(`btn-filter-${f}`);
-                if (!btn) return;
-                if (f === filter) {
-                    btn.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-cantera-200 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-cantera-300 dark:border-slate-700 font-semibold";
-                } else {
-                    btn.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50";
-                }
+                const mBtn = document.getElementById(`m-btn-filter-${f}`);
+                [btn, mBtn].forEach(b => {
+                    if (!b) return;
+                    if (f === filter) {
+                        b.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-cantera-200 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-cantera-300 dark:border-slate-700 font-semibold cursor-pointer";
+                    } else {
+                        b.className = "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-cantera-700 dark:text-slate-400 hover:bg-cantera-100 dark:hover:bg-slate-800/50 cursor-pointer";
+                    }
+                });
             });
             applyAllFilters();
         }
@@ -2780,13 +2983,38 @@
             const cRescue = document.getElementById('count-rescue');
             const cOpen = document.getElementById('count-open');
 
-            if (cAll) cAll.textContent = base.length;
-            if (cMain) cMain.textContent = base.filter(t => t.mission_type === 'main').length;
-            if (cSec) cSec.textContent = base.filter(t => t.mission_type === 'secondary').length;
-            if (cDaily) cDaily.textContent = base.filter(t => t.mission_type === 'daily').length;
-            if (cSpecial) cSpecial.textContent = base.filter(t => t.mission_type === 'special').length;
-            if (cRescue) cRescue.textContent = allOverdueTasks.length;
-            if (cOpen) cOpen.textContent = allNoDateTasks.length;
+            const mAll = document.getElementById('m-count-all');
+            const mMain = document.getElementById('m-count-main');
+            const mSec = document.getElementById('m-count-secondary');
+            const mDaily = document.getElementById('m-count-daily');
+            const mSpecial = document.getElementById('m-count-special');
+            const mRescue = document.getElementById('m-count-rescue');
+            const mOpen = document.getElementById('m-count-open');
+
+            const counts = {
+                all: base.length,
+                main: base.filter(t => t.mission_type === 'main').length,
+                secondary: base.filter(t => t.mission_type === 'secondary').length,
+                daily: base.filter(t => t.mission_type === 'daily').length,
+                special: base.filter(t => t.mission_type === 'special').length,
+                rescue: allOverdueTasks.length,
+                open: allNoDateTasks.length
+            };
+
+            if (cAll) cAll.textContent = counts.all;
+            if (mAll) mAll.textContent = counts.all;
+            if (cMain) cMain.textContent = counts.main;
+            if (mMain) mMain.textContent = counts.main;
+            if (cSec) cSec.textContent = counts.secondary;
+            if (mSec) mSec.textContent = counts.secondary;
+            if (cDaily) cDaily.textContent = counts.daily;
+            if (mDaily) mDaily.textContent = counts.daily;
+            if (cSpecial) cSpecial.textContent = counts.special;
+            if (mSpecial) mSpecial.textContent = counts.special;
+            if (cRescue) cRescue.textContent = counts.rescue;
+            if (mRescue) mRescue.textContent = counts.rescue;
+            if (cOpen) cOpen.textContent = counts.open;
+            if (mOpen) mOpen.textContent = counts.open;
         }
 
         function toggleProgressMetric() {
@@ -3762,7 +3990,7 @@
             if (!container) return;
 
             const pendingTasks = [...allUpcomingTasks, ...allOverdueTasks];
-            if (countEl) countEl.textContent = `${pendingTasks.length} pendiente(s)`;
+            if (countEl) countEl.textContent = `${pendingTasks.length} ${pendingTasks.length === 1 ? 'pendiente' : 'pendientes'}`;
 
             if (statusEl) {
                 if (allOverdueTasks.length > 0) {
@@ -4596,7 +4824,7 @@
                 }
                 container.innerHTML = `
                     <div class="w-full h-full flex flex-col">
-                        <iframe src="${previewUrl}" class="w-full flex-1 min-h-[460px] border-0 rounded-xl bg-white shadow-inner" allow="autoplay"></iframe>
+                        <iframe src="${previewUrl}" class="w-full flex-1 min-h-[460px] border-0 rounded-xl bg-white shadow-inner pointer-events-none md:pointer-events-auto" allow="autoplay"></iframe>
                         <div class="pt-2 px-1 flex items-center justify-between text-[11px] text-cantera-600 dark:text-slate-400">
                             <span>¿El visor no carga tu cuenta escolar?</span>
                             <a href="${doc.link}" target="_blank" class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center gap-1">
@@ -4748,9 +4976,16 @@
             if (!drawerEl) return;
             const isOpening = forceState !== undefined ? forceState : (drawerEl.style.display === 'none');
             drawerEl.style.display = isOpening ? 'block' : 'none';
-            if (isOpening && currentUserEmail) {
-                const userEmailDisplay = document.getElementById('user-email-display');
-                if (userEmailDisplay) userEmailDisplay.textContent = currentUserEmail;
+            if (isOpening) {
+                if (currentUserEmail) {
+                    const userEmailDisplay = document.getElementById('user-email-display');
+                    if (userEmailDisplay) userEmailDisplay.textContent = currentUserEmail;
+                    const userEmailDisplayMobile = document.getElementById('user-email-display-mobile');
+                    if (userEmailDisplayMobile) userEmailDisplayMobile.textContent = currentUserEmail;
+                }
+                renderCoursesFilter();
+                updateMissionCounts();
+                updateMobileThemeButton();
             }
         }
 

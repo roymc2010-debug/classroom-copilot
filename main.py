@@ -160,16 +160,40 @@ async def read_root(request: Request):
     has_session = False
     user_email = ""
     if session_id and session_id in user_sessions:
-        creds = restore_and_refresh_credentials(user_sessions[session_id], session_id=session_id)
-        if creds and (creds.token or creds.refresh_token):
+        sess = user_sessions[session_id]
+        if isinstance(sess, dict) and sess.get("is_demo"):
             has_session = True
-            user_email = get_session_email(session_id, creds=creds)
+            user_email = sess.get("email", ALEX_EMAIL)
+        else:
+            creds = restore_and_refresh_credentials(sess, session_id=session_id)
+            if creds and (creds.token or creds.refresh_token):
+                has_session = True
+                user_email = get_session_email(session_id, creds=creds)
 
     return templates.TemplateResponse(
         request=request,
         name="index.html",
         context={"has_session": has_session, "user_email": user_email}
     )
+
+@app.get("/auth/demo")
+async def auth_demo():
+    """Inicia sesión instantánea en Modo de Prueba (Alex Muñoz) con datos completos."""
+    demo_session_id = "demo_alex_session"
+    user_sessions[demo_session_id] = {
+        "email": ALEX_EMAIL,
+        "is_demo": True
+    }
+    save_sessions()
+    resp = RedirectResponse(url="/", status_code=302)
+    resp.set_cookie(
+        key="agora_session",
+        value=demo_session_id,
+        httponly=True,
+        max_age=60 * 60 * 24 * 30,
+        samesite="lax"
+    )
+    return resp
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
@@ -335,6 +359,12 @@ async def get_courses(request: Request):
     Devuelve las materias inscritas del usuario autenticado para la barra lateral.
     """
     session_id = request.cookies.get("agora_session")
+    sess = user_sessions.get(session_id)
+    if isinstance(sess, dict) and sess.get("is_demo"):
+        from services.mock_data_service import get_alex_stage_data
+        alex_data = get_alex_stage_data()
+        return {"courses": alex_data["courses"]}
+
     creds_json = user_sessions.get(session_id)
     creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
 
@@ -360,6 +390,24 @@ async def get_tasks(request: Request):
     Devuelve las tareas y misiones exclusivas del usuario autenticado.
     """
     session_id = request.cookies.get("agora_session")
+    sess = user_sessions.get(session_id)
+    if isinstance(sess, dict) and sess.get("is_demo"):
+        from services.mock_data_service import get_alex_stage_data
+        alex_data = get_alex_stage_data()
+        tasks = alex_data["tasks"]
+        tasks_with_dates = [t for t in tasks if t.get('due_date')]
+        tasks_without_dates = [t for t in tasks if not t.get('due_date')]
+        return {
+            "user_email": ALEX_EMAIL,
+            "enrolled_courses": alex_data.get("courses", []),
+            "mock_stage_id": alex_data["id"],
+            "mock_stage_name": alex_data["name"],
+            "mock_streak_weeks": alex_data["streak_weeks"],
+            "mock_streak_days": alex_data["streak_days"],
+            "tasks_with_dates": tasks_with_dates,
+            "tasks_without_dates": tasks_without_dates
+        }
+
     creds_json = user_sessions.get(session_id)
     creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
 
@@ -544,6 +592,12 @@ async def api_announcements(request: Request):
     Devuelve avisos de Classroom y Gmail del usuario autenticado.
     """
     session_id = request.cookies.get("agora_session")
+    sess = user_sessions.get(session_id)
+    if isinstance(sess, dict) and sess.get("is_demo"):
+        from services.mock_data_service import get_alex_stage_data
+        alex_data = get_alex_stage_data()
+        return {"announcements": alex_data["announcements"]}
+
     creds_json = user_sessions.get(session_id)
     creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
 
