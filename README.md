@@ -41,6 +41,9 @@ En lugar de saturar el almacenamiento reescribiendo o duplicando archivos indivi
 - **Visor Modular en Ágora:**
   - En el panel de notas, el documento aparece al inicio con icono de graduación (`fa-graduation-cap`) y botón directo de *"Guía de Estudio"*.
   - Endpoint dedicado: `GET /api/notes/{course_name}/study-summary`.
+- **Gestión Granular de Archivos en Google Drive:**
+  - En el modal de Configuración (*Gestión de Apuntes*), al seleccionar una asignatura se consulta dinámicamente el contenido de su carpeta en Drive (`GET /api/notes/files/{course_name}`).
+  - Cada archivo individual cuenta con enlace directo y botón de eliminación individual `[ 🗑️ ]` (`DELETE /api/notes/file/{file_id}`), permitiendo depurar archivos específicos sin borrar la carpeta ni los demás apuntes.
 
 ---
 
@@ -71,6 +74,13 @@ Un evaluador pragmático y ejecutivo de organización diaria:
     - *Cuestionarios / Lecturas regulares:* **Pomodoro (25 min)**.
     - *Trámites breves / Comprobantes:* **Arranque Rápido (5 min)**.
 - **Botón `[ ▶ Comenzar en Ignis ]`:** Carga el bloque de tiempo en el temporizador, cierra el modal y abre de inmediato la tarea en el espacio de trabajo de Ignis.
+- **Temporizador de Foco por Marca de Tiempo (Anti-Congelamiento Móvil):**
+  - Calcula `tiempoFin = Date.now() + duracionMs` en lugar de decrementar síncronamente segundos en reposo. Al bloquear o suspender la pantalla del teléfono, el reloj realiza un salto determinista al tiempo transcurrido sin retrasos ni desfasajes.
+  - **Alertas Hápticas, Acústicas y de Sistema al Llegar a Cero:**
+    - Solicita permiso de notificaciones push del sistema con `Notification.requestPermission()` al pulsar "Iniciar".
+    - Dispara vibración física en móviles: `navigator.vibrate([300, 150, 300, 150, 500])`.
+    - Reproduce campana armónica sintetizada nativamente con la Web Audio API (cero dependencias de archivos externos).
+    - Lanza notificación del sistema operativo: `new Notification("¡Foco completado!", ...)`.
 
 ---
 
@@ -143,7 +153,7 @@ Un evaluador pragmático y ejecutivo de organización diaria:
 
 ## 🧪 Pruebas Unitarias Automatizadas
 
-El proyecto cuenta con una suite completa de **16 pruebas unitarias** en [`test_brother_classroom.py`](test_brother_classroom.py):
+El proyecto cuenta con una suite completa de **17 pruebas unitarias** en [`test_brother_classroom.py`](test_brother_classroom.py):
 
 ```bash
 python -m unittest test_brother_classroom.py
@@ -167,6 +177,7 @@ python -m unittest test_brother_classroom.py
 | **Test 14** | Incorporación de PDFs de tareas del docente al catálogo de documentos de la materia. |
 | **Test 15** | Endpoint `/api/notes/{course}` sirviendo materiales y tareas del profesor. |
 | **Test 16** | Generación de la Guía y Resumen de Estudio por Temas y endpoint `/study-summary`. |
+| **Test 17** | Endpoints de listado granular (`/api/notes/files/{course}`) y borrado individual en Drive (`DELETE /api/notes/file/{id}`). |
 
 ---
 

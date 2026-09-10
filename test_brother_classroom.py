@@ -532,6 +532,53 @@ class TestBrotherClassroomData(unittest.TestCase):
         notes_service.delete_course_notes(course)
         print("[OK] Test 16 superado: Resumen de estudio estructurado por tema se genera y sirve exitosamente sin reescribir PDFs de cada tarea.")
 
+    def test_17_granular_drive_file_endpoints(self):
+        """
+        Prueba los endpoints de gestión granular de archivos de Drive:
+        - GET /api/notes/files/{course_name}: Lista archivos individuales con id, name, createdTime y enlace.
+        - DELETE /api/notes/file/{file_id}: Elimina únicamente el archivo específico vía Drive API.
+        """
+        import services.notes_service as notes_service
+        from fastapi.testclient import TestClient
+        from main import app, user_sessions, ALEX_EMAIL
+
+        course = "Cálculo Diferencial e Integral"
+        user_sessions["demo_alex_session"] = {
+            "email": ALEX_EMAIL,
+            "is_demo": True
+        }
+        client = TestClient(app, cookies={"agora_session": "demo_alex_session"})
+
+        # 1. Probar GET /api/notes/files/{course_name}
+        resp = client.get(f"/api/notes/files/{course}")
+        self.assertEqual(resp.status_code, 200)
+        files = resp.json()
+        self.assertIsInstance(files, list)
+        self.assertGreater(len(files), 0)
+        
+        first_file = files[0]
+        self.assertIn("id", first_file)
+        self.assertIn("name", first_file)
+        self.assertIn("createdTime", first_file)
+        self.assertIn("webViewLink", first_file)
+
+        # 2. Probar DELETE /api/notes/file/{file_id}
+        target_id = first_file["id"]
+        del_resp = client.delete(f"/api/notes/file/{target_id}")
+        self.assertEqual(del_resp.status_code, 200)
+        del_data = del_resp.json()
+        self.assertTrue(del_data.get("success"))
+        self.assertEqual(del_data.get("file_id"), target_id)
+
+        # 3. Probar llamada directa con mock del servicio de Google Drive
+        mock_drive = MagicMock()
+        mock_drive.files().delete().execute.return_value = {}
+        res = notes_service.delete_single_drive_file(file_id="drive-file-xyz", creds=mock_drive)
+        self.assertTrue(res.get("success"))
+        mock_drive.files().delete.assert_called_with(fileId="drive-file-xyz")
+
+        print("[OK] Test 17 superado: Endpoints de listado granular y borrado individual en Drive operativos y validados.")
+
 if __name__ == '__main__':
     unittest.main()
 

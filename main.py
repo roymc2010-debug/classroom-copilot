@@ -677,6 +677,54 @@ async def delete_course_notes_endpoint(course_name: str, request: Request):
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+@app.get("/api/notes/files/{course_name}")
+async def get_course_drive_files_endpoint(course_name: str, request: Request):
+    """
+    Consulta la carpeta de la materia en Google Drive y devuelve la lista de archivos:
+    [{"id": f["id"], "name": f["name"], "createdTime": f.get("createdTime"), "webViewLink": ...}]
+    """
+    session_id = request.cookies.get("agora_session")
+    creds_json = user_sessions.get(session_id)
+    creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
+    user_email = get_session_email(session_id, creds=creds)
+
+    try:
+        import services.notes_service as notes_service
+        tasks = get_user_tasks_cached(user_email=user_email, creds=creds)
+        files = notes_service.list_course_drive_files(
+            course_name=course_name,
+            creds=creds,
+            user_email=user_email,
+            tasks=tasks
+        )
+        return files
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.delete("/api/notes/file/{file_id}")
+async def delete_single_drive_file_endpoint(file_id: str, request: Request):
+    """
+    Recibe el ID de un archivo específico de Google Drive y lo elimina con:
+    service.files().delete(fileId=file_id).execute()
+    """
+    session_id = request.cookies.get("agora_session")
+    creds_json = user_sessions.get(session_id)
+    creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
+    user_email = get_session_email(session_id, creds=creds)
+
+    try:
+        import services.notes_service as notes_service
+        res = notes_service.delete_single_drive_file(
+            file_id=file_id,
+            creds=creds,
+            user_email=user_email
+        )
+        return res
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 @app.get("/api/announcements")
 async def api_announcements(request: Request):
     """

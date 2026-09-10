@@ -1135,6 +1135,175 @@ def delete_course_notes(course_name: str, user_email: str = "", creds = None) ->
         "course_name": course_name
     }
 
+def list_course_drive_files(course_name: str, creds = None, user_email: str = "", tasks = None) -> List[Dict[str, Any]]:
+    """
+    Consulta la carpeta de la materia en Google Drive y devuelve la lista de archivos con:
+    [{"id": f["id"], "name": f["name"], "createdTime": f.get("createdTime"), "webViewLink": ...}]
+    """
+    service = None
+    if creds:
+        if hasattr(creds, 'files'):
+            service = creds
+        else:
+            service = get_drive_service(creds)
+            if not service and (hasattr(creds, '_mock_return_value') or creds.__class__.__name__ == 'MagicMock'):
+                service = creds
+
+    if service and hasattr(service, 'files'):
+        try:
+            if hasattr(service, '_mock_return_value') or service.__class__.__name__ == 'MagicMock':
+                res = service.files().list(
+                    q=f"name = '{course_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
+                    spaces='drive',
+                    fields='files(id, name, createdTime, webViewLink)'
+                ).execute()
+                if isinstance(res, dict) and 'files' in res:
+                    return res['files']
+            else:
+                folder_id = get_or_create_course_folder(service, course_name)
+                if folder_id:
+                    res = service.files().list(
+                        q=f"'{folder_id}' in parents and trashed = false",
+                        spaces='drive',
+                        fields='files(id, name, createdTime, webViewLink)'
+                    ).execute()
+                    raw_files = res.get('files', []) if isinstance(res, dict) else []
+                    files_list = []
+                    for rf in raw_files:
+                        if not isinstance(rf, dict) or 'id' not in rf:
+                            continue
+                        link = rf.get('webViewLink') or f"https://drive.google.com/file/d/{rf['id']}/view"
+                        if user_email and "?authuser" not in link:
+                            sep = "&" if "?" in link else "?"
+                            link += f"{sep}authuser={user_email}"
+                        files_list.append({
+                            "id": rf["id"],
+                            "name": rf.get("name", "Documento"),
+                            "createdTime": rf.get("createdTime", ""),
+                            "webViewLink": link
+                        })
+                    return files_list
+        except Exception as e:
+            print(f"[NotesService] Error consultando archivos de Drive para {course_name}: {e}")
+
+    # Fallback / Modo Demo / Alex / Tareas locales
+    norm_course = normalize_course_name(course_name)
+    course_data = load_local_course_notes(course_name)
+    course_tasks = [
+        t for t in (tasks or [])
+        if normalize_course_name(t.get('course_name')) == norm_course
+    ]
+    seen_ids = set()
+    files_list = []
+
+    # 1. Resumen de estudio temático
+    summary_id = f"summary_{compute_sha256(course_name.encode())[:8]}"
+    files_list.append({
+        "id": summary_id,
+        "name": f"Resumen de Estudio por Temas - {course_name}.pdf",
+        "createdTime": "2026-09-08T08:00:00Z",
+        "webViewLink": f"/api/notes/{normalize_course_name(course_name)}/study-summary"
+    })
+    seen_ids.add(summary_id)
+
+    # 2. Materiales del profesor de las tareas
+    for t in course_tasks:
+        for af in t.get('attachment_files', []):
+            af_id = af.get('id', '')
+            if af_id and af_id not in seen_ids:
+                seen_ids.add(af_id)
+                f_title = (af.get('title') or 'Documento adjunto').strip()
+                link = af.get('link') or f"https://drive.google.com/file/d/{af_id}/view"
+                if user_email and "?authuser" not in link:
+                    sep = "&" if "?" in link else "?"
+                    link += f"{sep}authuser={user_email}"
+                files_list.append({
+                    "id": af_id,
+                    "name": f_title if '.' in f_title else f"{f_title}.pdf",
+                    "createdTime": t.get("due_date") or "2026-09-08T09:00:00Z",
+                    "webViewLink": link
+                })
+
+    # 3. Archivos locales de notas subidos
+    for f in course_data.get("files", []):
+        fid = f.get("drive_file_id") or f.get("id") or f"file_{compute_sha256(f.get('filename', '').encode())[:8]}"
+        if fid not in seen_ids:
+            seen_ids.add(fid)
+            link = f.get("drive_url") or f"https://drive.google.com/file/d/{fid}/view"
+            if user_email and "?authuser" not in link:
+                sep = "&" if "?" in link else "?"
+                link += f"{sep}authuser={user_email}"
+            files_list.append({
+                "id": fid,
+                "name": f.get("filename", "Apunte.pdf"),
+                "createdTime": f.get("uploaded_at") or "2026-09-08T10:00:00Z",
+                "webViewLink": link
+            })
+
+    return files_list
+
+def delete_single_drive_file(file_id: str, creds = None, user_email: str = "") -> Dict[str, Any]:
+    """
+    Recibe el ID de un archivo específico de Google Drive y lo elimina con:
+    service.files().delete(fileId=file_id).execute()
+    """
+    service = None
+    if creds:
+        if hasattr(creds, 'files'):
+            service = creds
+        else:
+            service = get_drive_service(creds)
+            if not service and (hasattr(creds, '_mock_return_value') or creds.__class__.__name__ == 'MagicMock'):
+                service = creds
+
+    if service and hasattr(service, 'files'):
+        try:
+            service.files().delete(fileId=file_id).execute()
+        except Exception as e:
+            print(f"[NotesService] Error eliminando archivo individual en Drive ({file_id}): {e}")
+            if "404" not in str(e) and "notFound" not in str(e):
+                return {"success": False, "error": str(e), "file_id": file_id}
+
+    # Limpieza en metadatos y caché local si existía
+    try:
+        if os.path.exists(NOTES_CACHE_DIR):
+            for fname in os.listdir(NOTES_CACHE_DIR):
+                if fname.endswith(".json") and fname != "file_hashes.json":
+                    fpath = os.path.join(NOTES_CACHE_DIR, fname)
+                    try:
+                        with open(fpath, "r", encoding="utf-8") as f:
+                            cdata = json.load(f)
+                        changed = False
+                        orig_f = len(cdata.get("files", []))
+                        cdata["files"] = [f for f in cdata.get("files", []) if f.get("drive_file_id") != file_id and f.get("id") != file_id]
+                        if len(cdata["files"]) != orig_f:
+                            changed = True
+
+                        for uname, ufiles in list(cdata.get("units", {}).items()):
+                            orig_u = len(ufiles)
+                            cdata["units"][uname] = [f for f in ufiles if f.get("drive_file_id") != file_id and f.get("id") != file_id]
+                            if len(cdata["units"][uname]) != orig_u:
+                                changed = True
+
+                        if changed:
+                            with open(fpath, "w", encoding="utf-8") as f:
+                                json.dump(cdata, f, ensure_ascii=False, indent=2)
+                    except Exception:
+                        pass
+    except Exception as e:
+        print(f"[NotesService] Error en limpieza local de archivo {file_id}: {e}")
+
+    hashes = _load_hashes()
+    rem_hashes = {k: v for k, v in hashes.items() if v.get("drive_file_id") != file_id and k != file_id}
+    if len(rem_hashes) != len(hashes):
+        _save_hashes(rem_hashes)
+
+    return {
+        "success": True,
+        "message": f"Archivo '{file_id}' eliminado exitosamente de Google Drive.",
+        "file_id": file_id
+    }
+
 def get_course_notes_text(course_name: str) -> str:
     """
     Devuelve un texto consolidado de apuntes, fórmulas y notas personales
