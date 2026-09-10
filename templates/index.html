@@ -2848,6 +2848,8 @@
 
             if (currentMissionFilter === 'open') {
                 filtered = [...allNoDateTasks];
+            } else if (currentMissionFilter === 'rescue') {
+                filtered = [...allOverdueTasks];
             }
 
             const titleEl = document.getElementById('current-view-title');
@@ -2878,7 +2880,7 @@
                 filtered = filtered.filter(t => selectedCourses.has((t.course_name || '').replace(/_/g, ' ')));
             }
 
-            if (currentMissionFilter !== 'all' && currentMissionFilter !== 'open') {
+            if (currentMissionFilter !== 'all' && currentMissionFilter !== 'open' && currentMissionFilter !== 'rescue') {
                 filtered = filtered.filter(t => t.mission_type === currentMissionFilter);
             }
 
@@ -2895,6 +2897,11 @@
                 filtered.sort((a, b) => (priority[a.mission_type] || 3) - (priority[b.mission_type] || 3));
             } else if (currentSortMode === 'course') {
                 filtered.sort((a, b) => (a.course_name || '').replace(/_/g, ' ').localeCompare((b.course_name || '').replace(/_/g, ' ')));
+            }
+
+            const overdueSection = document.getElementById('overdue-section');
+            if (overdueSection) {
+                overdueSection.style.display = (currentMissionFilter === 'rescue' || allOverdueTasks.length === 0) ? 'none' : 'block';
             }
 
             renderTasks(filtered, 'timeline');
@@ -2972,8 +2979,12 @@
 
         function updateMissionCounts() {
             let base = allUpcomingTasks;
+            let overdueBase = allOverdueTasks;
+            let openBase = allNoDateTasks;
             if (selectedCourses.size > 0) {
                 base = base.filter(t => selectedCourses.has((t.course_name || '').replace(/_/g, ' ')));
+                overdueBase = overdueBase.filter(t => selectedCourses.has((t.course_name || '').replace(/_/g, ' ')));
+                openBase = openBase.filter(t => selectedCourses.has((t.course_name || '').replace(/_/g, ' ')));
             }
             const cAll = document.getElementById('count-all');
             const cMain = document.getElementById('count-main');
@@ -2997,8 +3008,8 @@
                 secondary: base.filter(t => t.mission_type === 'secondary').length,
                 daily: base.filter(t => t.mission_type === 'daily').length,
                 special: base.filter(t => t.mission_type === 'special').length,
-                rescue: allOverdueTasks.length,
-                open: allNoDateTasks.length
+                rescue: overdueBase.length,
+                open: openBase.length
             };
 
             if (cAll) cAll.textContent = counts.all;
@@ -4098,6 +4109,7 @@
                             if (doc.type === 'formula_sheet') icon = '<i class="fa-solid fa-square-root-variable text-sky-500"></i>';
                             else if (doc.type === 'master_document') icon = '<i class="fa-solid fa-book-atlas text-amber-500"></i>';
                             else if (doc.type === 'drive_file') icon = '<i class="fa-brands fa-google-drive text-emerald-500"></i>';
+                            else if (doc.type === 'teacher_material') icon = '<i class="fa-solid fa-chalkboard-user text-indigo-500"></i>';
 
                             const isAvailable = doc.available || (doc.preview_url && doc.preview_url !== '#');
                             const actionLabel = isAvailable 

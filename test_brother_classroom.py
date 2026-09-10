@@ -407,5 +407,74 @@ class TestBrotherClassroomData(unittest.TestCase):
 
         print("[OK] Test 13 superado: Modo de Prueba (Demo) inicializa sesión y sirve misiones y materias instantáneamente.")
 
+    def test_14_teacher_task_pdfs_in_course_notes(self):
+        """
+        Prueba que get_course_notes extraiga y liste los PDFs adjuntos por el profesor
+        en las tareas de cada materia, garantizando que cada materia cuente con sus
+        documentos correspondientes.
+        """
+        import services.notes_service as notes_service
+        course = "Inteligencia_Artificial_Test"
+        sample_tasks = [
+            {
+                "id": "cw_ia_101",
+                "course_name": course,
+                "title": "Práctica 1: Búsqueda A* y Heurísticas",
+                "description": "Consigna de la práctica de laboratorio.",
+                "attachment_files": [
+                    {"id": "file_ia_pdf_1", "title": "Guia_Busqueda_A_Estrella.pdf", "link": "https://drive.google.com/file/d/file_ia_pdf_1/view"}
+                ]
+            }
+        ]
+
+        notes_res = notes_service.get_course_notes(
+            course_name=course,
+            user_email="estudiante@universidad.edu.mx",
+            creds=None,
+            tasks=sample_tasks
+        )
+        self.assertEqual(notes_res.get("course_name"), course)
+        docs = notes_res.get("documents", [])
+        self.assertGreater(len(docs), 0)
+
+        teacher_docs = [d for d in docs if d.get("type") == "teacher_material"]
+        self.assertEqual(len(teacher_docs), 1)
+        self.assertEqual(teacher_docs[0]["name"], "Guia_Busqueda_A_Estrella.pdf")
+        self.assertTrue(teacher_docs[0]["available"])
+        self.assertIn("authuser=estudiante@universidad.edu.mx", teacher_docs[0]["preview_url"])
+
+        # Limpiar
+        notes_service.delete_course_notes(course)
+        print("[OK] Test 14 superado: PDFs de las tareas del profesor se incorporan exitosamente a los documentos de la materia.")
+
+    def test_15_api_notes_endpoint_serves_task_pdfs(self):
+        """
+        Prueba que el endpoint /api/notes/{course_name} sirva los PDFs del profesor
+        usando las tareas de la sesión (incluyendo en Modo Demo).
+        """
+        from fastapi.testclient import TestClient
+        from main import app, user_sessions, ALEX_EMAIL
+
+        user_sessions["demo_alex_session"] = {
+            "email": ALEX_EMAIL,
+            "is_demo": True
+        }
+
+        client = TestClient(app, cookies={"agora_session": "demo_alex_session"})
+
+        # Consultar notas para una materia activa de Alex
+        resp = client.get("/api/notes/Teor%C3%ADa%20de%20Sistemas%20y%20Control%20Autom%C3%A1tico")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        docs = data.get("documents", [])
+        self.assertGreater(len(docs), 0)
+
+        pdf_names = [d.get("name") for d in docs]
+        self.assertIn("Proyecto_Final_Control_PID.pdf", pdf_names)
+        pid_doc = next(d for d in docs if d.get("name") == "Proyecto_Final_Control_PID.pdf")
+        self.assertTrue(pid_doc.get("available"))
+
+        print("[OK] Test 15 superado: Endpoint /api/notes sirve instantáneamente los PDFs de tareas del profesor.")
+
 if __name__ == '__main__':
     unittest.main()

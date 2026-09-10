@@ -1,9 +1,11 @@
 import os
+import re
 import json
 import uuid
 import urllib.request
 import urllib.parse
 import traceback
+from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -20,7 +22,7 @@ user_sessions = {}
 
 if os.path.exists(SESSIONS_FILE):
     try:
-        with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
+        with open(SESSIONS_FILE, "r", encoding="utf-8-sig") as f:
             user_sessions = json.load(f)
     except Exception as e:
         print(f"Error cargando sessions.json: {e}")
@@ -55,7 +57,7 @@ def load_client_secrets():
     # 2. Respaldo: Archivo físico credentials.json (para desarrollo local)
     if os.path.exists('credentials.json'):
         try:
-            with open('credentials.json', 'r', encoding='utf-8') as f:
+            with open('credentials.json', 'r', encoding='utf-8-sig') as f:
                 data = json.load(f)
                 cfg = data.get('web') or data.get('installed') or {}
                 return cfg.get('client_id'), cfg.get('client_secret')
@@ -77,6 +79,8 @@ def get_redirect_uri(request: Request):
 
 def restore_and_refresh_credentials(creds_data, session_id: str = None):
     if not creds_data:
+        return None
+    if isinstance(creds_data, dict) and creds_data.get("is_demo"):
         return None
     try:
         if isinstance(creds_data, dict):
@@ -142,17 +146,71 @@ def get_session_user_email(creds) -> str:
 
 def get_session_email(session_id: str, creds=None) -> str:
     if not session_id:
-        return get_session_user_email(creds) if creds else ""
+        email = get_session_user_email(creds) if creds else ""
+        return email if isinstance(email, str) else ""
     sess = user_sessions.get(session_id)
     if isinstance(sess, dict) and sess.get("email"):
-        return sess["email"].lower().strip()
+        email = sess["email"]
+        return email.lower().strip() if isinstance(email, str) else ""
     if creds:
         email = get_session_user_email(creds)
-        if email and isinstance(sess, dict):
+        if email and isinstance(email, str) and isinstance(sess, dict):
             sess["email"] = email
             save_sessions()
-        return email
+        return email if isinstance(email, str) else ""
     return ""
+
+USER_TASKS_CACHE: Dict[str, List[Dict[str, Any]]] = {}
+
+def get_user_tasks_cached(user_email: str, creds=None) -> List[Dict[str, Any]]:
+    if not isinstance(user_email, str):
+        user_email = ""
+    user_email = user_email.lower().strip()
+    if user_email and user_email in USER_TASKS_CACHE:
+        return USER_TASKS_CACHE[user_email]
+
+    if user_email == ALEX_EMAIL:
+        from services.mock_data_service import get_alex_stage_data, STAGES
+        data = get_alex_stage_data()
+        active_tasks = data.get("tasks", [])
+        all_stage_tasks = []
+        seen_ids = set()
+        for t in active_tasks:
+            seen_ids.add(t["id"])
+            all_stage_tasks.append(t)
+        for s in STAGES:
+            for t in s.get("tasks", []):
+                if t["id"] not in seen_ids:
+                    seen_ids.add(t["id"])
+                    all_stage_tasks.append(t)
+        USER_TASKS_CACHE[user_email] = all_stage_tasks
+        return all_stage_tasks
+
+    clean_email = re.sub(r'[^a-zA-Z0-9_.-]', '_', user_email.lower()) if user_email else "anonymous"
+    cache_file = os.path.join("data", "notes_cache", f"tasks_{clean_email}.json")
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, "r", encoding="utf-8") as f:
+                tasks = json.load(f)
+                if user_email:
+                    USER_TASKS_CACHE[user_email] = tasks
+                return tasks
+        except Exception:
+            pass
+
+    if creds:
+        try:
+            tasks = fetch_tasks(creds=creds, user_email=user_email)
+            if user_email:
+                USER_TASKS_CACHE[user_email] = tasks
+            os.makedirs(os.path.join("data", "notes_cache"), exist_ok=True)
+            with open(cache_file, "w", encoding="utf-8") as f:
+                json.dump(tasks, f, ensure_ascii=False)
+            return tasks
+        except Exception as e:
+            print(f"[Main] Error obteniendo tareas en get_user_tasks_cached: {e}")
+
+    return []
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -421,6 +479,7 @@ async def get_tasks(request: Request):
         from services.mock_data_service import get_alex_stage_data
         alex_data = get_alex_stage_data()
         tasks = alex_data["tasks"]
+        USER_TASKS_CACHE[user_email] = tasks
         tasks_with_dates = [t for t in tasks if t.get('due_date')]
         tasks_without_dates = [t for t in tasks if not t.get('due_date')]
         return {
@@ -447,6 +506,17 @@ async def get_tasks(request: Request):
                     t['notes'] = states[t_id].get('notes', '')
         except Exception:
             pass
+
+        if user_email:
+            USER_TASKS_CACHE[user_email] = tasks
+            clean_email = re.sub(r'[^a-zA-Z0-9_.-]', '_', user_email.lower())
+            cache_file = os.path.join("data", "notes_cache", f"tasks_{clean_email}.json")
+            try:
+                os.makedirs(os.path.join("data", "notes_cache"), exist_ok=True)
+                with open(cache_file, "w", encoding="utf-8") as f:
+                    json.dump(tasks, f, ensure_ascii=False)
+            except Exception:
+                pass
 
         tasks_with_dates = [t for t in tasks if t.get('due_date')]
         tasks_without_dates = [t for t in tasks if not t.get('due_date')]
@@ -554,10 +624,12 @@ async def get_course_notes_endpoint(course_name: str, request: Request):
 
     try:
         import services.notes_service as notes_service
+        tasks = get_user_tasks_cached(user_email=user_email, creds=creds)
         res = notes_service.get_course_notes(
             course_name=course_name,
             user_email=user_email,
-            creds=creds
+            creds=creds,
+            tasks=tasks
         )
         return res
     except Exception as e:

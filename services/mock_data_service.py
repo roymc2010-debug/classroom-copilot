@@ -47,7 +47,10 @@ STAGES = [
                 "classroom_status": "PENDIENTE",
                 "assigned_grade": None,
                 "max_points": 100,
-                "mission_type": "daily"
+                "mission_type": "daily",
+                "attachment_files": [
+                    {"id": "mock-pdf-calc-1", "title": "Taller_1_Funciones_Reales.pdf", "link": "https://drive.google.com/file/d/mock-pdf-calc-1/view"}
+                ]
             },
             {
                 "id": "mock-t102",
@@ -60,7 +63,10 @@ STAGES = [
                 "classroom_status": "PENDIENTE",
                 "assigned_grade": None,
                 "max_points": 100,
-                "mission_type": "secondary"
+                "mission_type": "secondary",
+                "attachment_files": [
+                    {"id": "mock-pdf-algo-1", "title": "Practica_1_Python_Basico.pdf", "link": "https://drive.google.com/file/d/mock-pdf-algo-1/view"}
+                ]
             },
             {
                 "id": "mock-t103",
@@ -73,7 +79,10 @@ STAGES = [
                 "classroom_status": "PENDIENTE",
                 "assigned_grade": None,
                 "max_points": 100,
-                "mission_type": "open"
+                "mission_type": "open",
+                "attachment_files": [
+                    {"id": "mock-pdf-fis-1", "title": "Guia_Vectores_Estatica.pdf", "link": "https://drive.google.com/file/d/mock-pdf-fis-1/view"}
+                ]
             },
             {
                 "id": "mock-t104",
@@ -86,7 +95,10 @@ STAGES = [
                 "classroom_status": "ENTREGADA",
                 "assigned_grade": None,
                 "max_points": 100,
-                "mission_type": "secondary"
+                "mission_type": "secondary",
+                "attachment_files": [
+                    {"id": "mock-pdf-red-1", "title": "Rubrica_Ensayo_Critico.pdf", "link": "https://drive.google.com/file/d/mock-pdf-red-1/view"}
+                ]
             }
         ]
     },
@@ -130,7 +142,10 @@ STAGES = [
                 "classroom_status": "PENDIENTE",
                 "assigned_grade": None,
                 "max_points": 100,
-                "mission_type": "main"
+                "mission_type": "main",
+                "attachment_files": [
+                    {"id": "mock-pdf-ed-1", "title": "Parcial_Laplace_Sistemas.pdf", "link": "https://drive.google.com/file/d/mock-pdf-ed-1/view"}
+                ]
             },
             {
                 "id": "mock-t202",
@@ -143,7 +158,10 @@ STAGES = [
                 "classroom_status": "PENDIENTE",
                 "assigned_grade": None,
                 "max_points": 100,
-                "mission_type": "secondary"
+                "mission_type": "secondary",
+                "attachment_files": [
+                    {"id": "mock-pdf-eda-1", "title": "Proyecto_Grafos_Dijkstra.pdf", "link": "https://drive.google.com/file/d/mock-pdf-eda-1/view"}
+                ]
             },
             {
                 "id": "mock-t203",
@@ -156,7 +174,10 @@ STAGES = [
                 "classroom_status": "CALIFICADA",
                 "assigned_grade": 96,
                 "max_points": 100,
-                "mission_type": "secondary"
+                "mission_type": "secondary",
+                "attachment_files": [
+                    {"id": "mock-pdf-circ-1", "title": "Guia_Lab3_Thevenin_Potencia.pdf", "link": "https://drive.google.com/file/d/mock-pdf-circ-1/view"}
+                ]
             },
             {
                 "id": "mock-t204",
@@ -169,7 +190,10 @@ STAGES = [
                 "classroom_status": "CALIFICADA",
                 "assigned_grade": 92,
                 "max_points": 100,
-                "mission_type": "daily"
+                "mission_type": "daily",
+                "attachment_files": [
+                    {"id": "mock-pdf-num-1", "title": "Taller4_Newton_Raphson.pdf", "link": "https://drive.google.com/file/d/mock-pdf-num-1/view"}
+                ]
             },
             {
                 "id": "mock-t205",
@@ -182,7 +206,10 @@ STAGES = [
                 "classroom_status": "ENTREGADA",
                 "assigned_grade": None,
                 "max_points": 100,
-                "mission_type": "secondary"
+                "mission_type": "secondary",
+                "attachment_files": [
+                    {"id": "mock-pdf-eti-1", "title": "Caso_Estudio_Responsabilidad_Etica.pdf", "link": "https://drive.google.com/file/d/mock-pdf-eti-1/view"}
+                ]
             }
         ]
     },
@@ -226,7 +253,10 @@ STAGES = [
                 "classroom_status": "PENDIENTE",
                 "assigned_grade": None,
                 "max_points": 100,
-                "mission_type": "main"
+                "mission_type": "main",
+                "attachment_files": [
+                    {"id": "mock-pdf-ctrl-1", "title": "Proyecto_Final_Control_PID.pdf", "link": "https://drive.google.com/file/d/mock-pdf-ctrl-1/view"}
+                ]
             },
             {
                 "id": "mock-t302",
@@ -239,46 +269,58 @@ STAGES = [
                 "classroom_status": "DEVUELTA",
                 "assigned_grade": None,
                 "max_points": 100,
-                "mission_type": "special"
+                "mission_type": "special",
+                "attachment_files": [
+                    {"id": "mock-pdf-arq-1", "title": "Correcciones_MIPS_Pipeline.pdf", "link": "https://drive.google.com/file/d/mock-pdf-arq-1/view"}
+                ]
             },
             {
                 "id": "mock-t303",
                 "course_id": "mock-c33",
                 "course_name": "Redes de Datos y Telecomunicaciones",
                 "title": "Misión de Rescate: Diseño de Esquema de Direccionamiento IPv4 y Subnetting VLSM",
-                "description": "Entrega rezagada de la práctica de laboratorio de cálculo de máscaras de subred de longitud variable. Entregar antes de las 18:00 hrs para evitar reprobación.",
+                "description": "--- Documento adjunto: Guia_Subnetting_VLSM.pdf ---\nEntrega rezagada de la práctica de laboratorio de cálculo de máscaras de subred de longitud variable. Entregar antes de las 18:00 hrs para evitar reprobación.",
                 "link": "#",
                 "due_date": (datetime.now() - timedelta(hours=5)).isoformat(),
                 "classroom_status": "PENDIENTE",
                 "assigned_grade": None,
                 "max_points": 100,
-                "mission_type": "rescue"
+                "mission_type": "rescue",
+                "attachment_files": [
+                    {"id": "mock-pdf-redes-1", "title": "Guia_Subnetting_VLSM.pdf", "link": "https://drive.google.com/file/d/mock-pdf-redes-1/view"}
+                ]
             },
             {
                 "id": "mock-t304",
                 "course_id": "mock-c34",
                 "course_name": "Formulación y Evaluación de Proyectos de Inversión",
                 "title": "Entrega Final: Estudio Financiero, VAN, TIR y Período de Recuperación",
-                "description": "Balance proforma, flujo de caja neto proyectado a 5 años y análisis de sensibilidad ante variaciones de tasa de descuento.",
+                "description": "--- Documento adjunto: Plantilla_Evaluacion_Financiera.pdf ---\nBalance proforma, flujo de caja neto proyectado a 5 años y análisis de sensibilidad ante variaciones de tasa de descuento.",
                 "link": "#",
                 "due_date": (datetime.now() - timedelta(days=3)).isoformat(),
                 "classroom_status": "CALIFICADA",
                 "assigned_grade": 98,
                 "max_points": 100,
-                "mission_type": "secondary"
+                "mission_type": "secondary",
+                "attachment_files": [
+                    {"id": "mock-pdf-proy-1", "title": "Plantilla_Evaluacion_Financiera.pdf", "link": "https://drive.google.com/file/d/mock-pdf-proy-1/view"}
+                ]
             },
             {
                 "id": "mock-t305",
                 "course_id": "mock-c35",
                 "course_name": "Seminario de Titulación e Investigación",
                 "title": "Reporte Final: Marco Teórico y Estado del Arte de la Tesis",
-                "description": "Revisión sistemática de literatura con al menos 25 referencias indexadas en Scopus o IEEE Xplore.",
+                "description": "--- Documento adjunto: Guia_Marco_Teorico_Tesis.pdf ---\nRevisión sistemática de literatura con al menos 25 referencias indexadas en Scopus o IEEE Xplore.",
                 "link": "#",
                 "due_date": (datetime.now() - timedelta(days=6)).isoformat(),
                 "classroom_status": "CALIFICADA",
                 "assigned_grade": 100,
                 "max_points": 100,
-                "mission_type": "secondary"
+                "mission_type": "secondary",
+                "attachment_files": [
+                    {"id": "mock-pdf-tesis-1", "title": "Guia_Marco_Teorico_Tesis.pdf", "link": "https://drive.google.com/file/d/mock-pdf-tesis-1/view"}
+                ]
             }
         ]
     }

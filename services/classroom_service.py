@@ -379,6 +379,17 @@ def get_all_tasks(creds=None, user_email=None):
                     if f_id:
                         attachment_files.append({'id': f_id, 'title': f_title, 'link': f_link})
 
+                mat_link = m.get('link', {})
+                if mat_link and mat_link.get('url'):
+                    l_url = inject_authuser(mat_link.get('url', ''), user_email)
+                    l_title = mat_link.get('title', 'Documento adjunto')
+                    m_drive = re.search(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', l_url)
+                    if m_drive:
+                        d_id = m_drive.group(1)
+                        if not any(af.get('id') == d_id for af in attachment_files):
+                            attachment_files.append({'id': d_id, 'title': l_title, 'link': l_url})
+                            attachment_links.append(f"{l_title} ({l_url})")
+
             full_desc = desc
             if attachment_links:
                 full_desc += "\n\nArchivos adjuntos:\n" + "\n".join(attachment_links)
