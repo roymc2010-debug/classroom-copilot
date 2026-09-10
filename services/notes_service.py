@@ -127,7 +127,8 @@ def get_or_create_course_folder(drive_service, course_name: str) -> Optional[str
 
         # 2. Buscar o crear subcarpeta de la materia
         clean_course = re.sub(r'[\\/:*?"<>|]', '_', course_name).strip() or "General"
-        query_course = f"name = '{clean_course}' and '{root_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+        safe_course = clean_course.replace("'", "\\'")
+        query_course = f"name = '{safe_course}' and '{root_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
         res_course = drive_service.files().list(q=query_course, spaces='drive', fields='files(id, name)').execute()
         course_files = res_course.get('files', [])
         
@@ -218,7 +219,10 @@ def process_and_upload_note(
 
     # 3. Subida / Registro en Google Drive
     file_id = f"local_{file_hash[:12]}"
-    preview_url = f"https://docs.google.com/document/d/{file_id}/preview"
+    preview_url = None
+    folder_url = None
+    drive_synced = False
+    drive_error = None
     
     drive_service = get_drive_service(creds)
     if drive_service:
@@ -234,13 +238,21 @@ def process_and_upload_note(
             created_file = drive_service.files().create(body=file_metadata, media_body=media, fields='id, webViewLink').execute()
             if created_file and 'id' in created_file:
                 file_id = created_file['id']
-                preview_url = f"https://drive.google.com/file/d/{file_id}/preview"
+                preview_url = f"https://drive.google.com/file/d/{file_id}/view"
+                folder_url = f"https://drive.google.com/drive/folders/{folder_id}" if folder_id else None
+                drive_synced = True
         except Exception as e:
-            print(f"[NotesService] Fallback local tras error en Google Drive API: {e}")
+            print(f"[NotesService] Error subiendo archivo a Google Drive API: {e}")
+            drive_error = str(e)
+            if "403" in str(e) or "insufficient" in str(e).lower():
+                drive_error = "Permisos de Drive pendientes. Cierra sesión y vuelve a iniciarla para conceder acceso a Google Drive."
 
-    if user_email:
+    if user_email and preview_url:
         sep = "&" if "?" in preview_url else "?"
         preview_url = f"{preview_url}{sep}authuser={user_email}"
+    if user_email and folder_url:
+        sep = "&" if "?" in folder_url else "?"
+        folder_url = f"{folder_url}{sep}authuser={user_email}"
 
     # 4. Actualizar almacenamiento local de la materia
     course_data = load_local_course_notes(course_name)
@@ -249,7 +261,7 @@ def process_and_upload_note(
     course_data["units"][unit_name].append({
         "filename": filename,
         "hash": file_hash,
-        "preview_url": preview_url,
+        "preview_url": preview_url or "",
         "summary": extracted_text[:400] if extracted_text else ""
     })
     
@@ -262,7 +274,7 @@ def process_and_upload_note(
         "filename": filename,
         "unit": unit_name,
         "hash": file_hash,
-        "preview_url": preview_url,
+        "preview_url": preview_url or "",
         "uploaded_at": datetime.datetime.utcnow().isoformat()
     })
     save_local_course_notes(course_name, course_data)
@@ -273,17 +285,22 @@ def process_and_upload_note(
         "filename": filename,
         "course_name": course_name,
         "unit": unit_name,
-        "preview_url": preview_url,
+        "preview_url": preview_url or "",
         "uploaded_at": datetime.datetime.utcnow().isoformat()
     }
     _save_hashes(hashes)
 
+    msg = f"Apunte sincronizado en Google Drive (Ágora - Apuntes / {course_name})." if drive_synced else f"Apunte guardado localmente en '{unit_name}'."
+
     return {
         "success": True,
         "is_duplicate": False,
-        "message": f"Apunte procesado y sincronizado con Drive en '{unit_name}'.",
+        "message": msg,
         "file_id": file_id,
         "preview_url": preview_url,
+        "folder_url": folder_url,
+        "drive_synced": drive_synced,
+        "drive_error": drive_error,
         "filename": filename,
         "unit": unit_name,
         "formulas_extracted": len(formulas)
@@ -297,8 +314,8 @@ def add_personal_note(
     creds = None
 ) -> Dict[str, Any]:
     """
-    Inserta una nota personal/corrección de clase al final de la unidad correspondiente
-    y persiste tanto en la base local como en Drive si está disponible.
+    Inserta una nota personal/corrección de clase y sincroniza el documento de notas
+    en Google Drive dentro de la carpeta 'Ágora - Apuntes / [Nombre de la Materia]'.
     """
     if not note_text.strip():
         return {"success": False, "message": "Nota vacía."}
@@ -319,39 +336,145 @@ def add_personal_note(
     except Exception:
         pass
 
+    drive_synced = False
+    drive_file_url = None
+    drive_folder_url = None
+    drive_error = None
+
+    drive_service = get_drive_service(creds)
+    if drive_service:
+        try:
+            folder_id = get_or_create_course_folder(drive_service, course_name)
+            if folder_id:
+                clean_course = re.sub(r'[\\/:*?"<>|]', '_', course_name).strip() or "General"
+                doc_title = f"Notas y Apuntes de Clase - {clean_course}"
+                safe_title = doc_title.replace("'", "\\'")
+                
+                # Consolidar notas de la materia
+                all_notes = course_data.get("personal_notes", [])
+                lines = [
+                    "=" * 60,
+                    f"ÁGORA — NOTAS Y APUNTES DE CLASE",
+                    f"Asignatura: {clean_course}",
+                    f"Total de notas registradas: {len(all_notes)}",
+                    "=" * 60,
+                    ""
+                ]
+                for idx, n in enumerate(all_notes, 1):
+                    dt_str = n.get("created_at", "")[:19].replace("T", " ")
+                    lines.append(f"[{idx}] {dt_str} — Tarea: {n.get('task_id', 'General')}")
+                    lines.append(f"{n.get('text', '')}")
+                    lines.append("-" * 40)
+
+                doc_body = "\n".join(lines)
+                media = MediaInMemoryUpload(doc_body.encode('utf-8'), mimetype="text/plain", resumable=True)
+
+                q_file = f"name = '{safe_title}.txt' and '{folder_id}' in parents and trashed = false"
+                res_f = drive_service.files().list(q=q_file, spaces='drive', fields='files(id, name, webViewLink)').execute()
+                existing_files = res_f.get('files', [])
+
+                if existing_files:
+                    f_id = existing_files[0]['id']
+                    drive_service.files().update(fileId=f_id, media_body=media).execute()
+                else:
+                    file_meta = {
+                        'name': f"{safe_title}.txt",
+                        'parents': [folder_id]
+                    }
+                    created = drive_service.files().create(body=file_meta, media_body=media, fields='id, webViewLink').execute()
+                    f_id = created.get('id')
+
+                drive_synced = True
+                drive_file_url = f"https://drive.google.com/file/d/{f_id}/view"
+                drive_folder_url = f"https://drive.google.com/drive/folders/{folder_id}"
+                if user_email:
+                    drive_file_url += f"?authuser={user_email}"
+                    drive_folder_url += f"?authuser={user_email}"
+        except Exception as e:
+            print(f"[NotesService] Error sincronizando nota personal en Google Drive: {e}")
+            drive_error = str(e)
+            if "403" in str(e) or "insufficient" in str(e).lower():
+                drive_error = "Permisos de Drive no concedidos. Cierra sesión y vuelve a iniciarla para autorizar a Ágora en Google Drive."
+
+    msg = f"Nota personal guardada en Google Drive (Ágora - Apuntes / {course_name})." if drive_synced else "Nota personal registrada con éxito en los apuntes de la materia."
+
     return {
         "success": True,
-        "message": "Nota personal registrada con éxito en los apuntes de la materia.",
+        "message": msg,
         "course_name": course_name,
-        "task_id": task_id
+        "task_id": task_id,
+        "drive_synced": drive_synced,
+        "drive_file_url": drive_file_url,
+        "drive_folder_url": drive_folder_url,
+        "drive_error": drive_error
     }
 
 def get_course_notes(course_name: str, user_email: str = "", creds = None) -> Dict[str, Any]:
     """
     Devuelve la lista modular de documentos disponibles para esa materia:
-    - Unidades temáticas individuales (Unidad 1.pdf, Unidad 2.pdf, etc.)
-    - Formulario de la materia (Formulario.pdf)
+    - Archivos y documentos existentes en la carpeta de Drive 'Ágora - Apuntes / [Materia]'
+    - Unidades temáticas individuales
+    - Formulario de la materia
     - Documento Maestro Compilado
     """
     course_data = load_local_course_notes(course_name)
     documents = []
+    folder_url = None
+    folder_id = None
+    drive_error = None
 
-    # 1. Unidades modulares
-    for unit_name, unit_files in course_data.get("units", {}).items():
-        first_file = unit_files[0] if unit_files else {}
-        preview_url = first_file.get("preview_url", "")
-        if user_email and preview_url and "?authuser" not in preview_url:
-            sep = "&" if "?" in preview_url else "?"
-            preview_url = f"{preview_url}{sep}authuser={user_email}"
-            
-        documents.append({
-            "name": f"{unit_name} - Apuntes.pdf",
-            "type": "unit",
-            "unit": unit_name,
-            "preview_url": preview_url or "#",
-            "download_url": preview_url or "#",
-            "count": len(unit_files)
-        })
+    drive_service = get_drive_service(creds)
+    if drive_service:
+        try:
+            folder_id = get_or_create_course_folder(drive_service, course_name)
+            if folder_id:
+                folder_url = f"https://drive.google.com/drive/folders/{folder_id}"
+                if user_email:
+                    folder_url += f"?authuser={user_email}"
+
+                # Consultar archivos reales en Google Drive
+                res_files = drive_service.files().list(
+                    q=f"'{folder_id}' in parents and trashed = false",
+                    spaces='drive',
+                    fields='files(id, name, mimeType, webViewLink)'
+                ).execute()
+                drive_files = res_files.get('files', [])
+                for df in drive_files:
+                    f_link = df.get('webViewLink') or f"https://drive.google.com/file/d/{df['id']}/view"
+                    if user_email and "?authuser" not in f_link:
+                        sep = "&" if "?" in f_link else "?"
+                        f_link += f"{sep}authuser={user_email}"
+                    documents.append({
+                        "name": df.get('name', 'Documento en Drive'),
+                        "type": "drive_file",
+                        "unit": "Google Drive",
+                        "preview_url": f_link,
+                        "download_url": f_link,
+                        "count": 1,
+                        "available": True
+                    })
+        except Exception as e:
+            print(f"[NotesService] Error consultando carpeta de Drive para {course_name}: {e}")
+            if "403" in str(e) or "insufficient" in str(e).lower():
+                drive_error = "Permisos de Drive pendientes. Cierra sesión y vuelve a iniciarla para autorizar a Ágora."
+
+    # Si aún no hay documentos en Drive, mostrar los accesos modulares
+    if not documents:
+        for unit_name, unit_files in course_data.get("units", {}).items():
+            first_file = unit_files[0] if unit_files else {}
+            preview_url = first_file.get("preview_url", "")
+            if user_email and preview_url and "?authuser" not in preview_url:
+                sep = "&" if "?" in preview_url else "?"
+                preview_url = f"{preview_url}{sep}authuser={user_email}"
+                
+            documents.append({
+                "name": f"{unit_name} - Apuntes.pdf",
+                "type": "unit",
+                "unit": unit_name,
+                "preview_url": preview_url or "#",
+                "download_url": preview_url or "#",
+                "count": len(unit_files)
+            })
 
     # Si no hay unidades aún, ofrecer al menos Unidad 1 lista para descarga o carga
     if not documents:
@@ -364,7 +487,7 @@ def get_course_notes(course_name: str, user_email: str = "", creds = None) -> Di
             "count": 0
         })
 
-    # 2. Formulario de la materia
+    # Formulario de la materia
     has_formulas = len(course_data.get("formulas", [])) > 0
     documents.append({
         "name": f"Formulario - {course_name}.pdf",
@@ -376,7 +499,7 @@ def get_course_notes(course_name: str, user_email: str = "", creds = None) -> Di
         "available": has_formulas
     })
 
-    # 3. Documento Maestro Compilado
+    # Documento Maestro Compilado
     total_files = len(course_data.get("files", []))
     documents.append({
         "name": f"Documento Maestro Compilado - {course_name}.pdf",
@@ -390,6 +513,9 @@ def get_course_notes(course_name: str, user_email: str = "", creds = None) -> Di
 
     return {
         "course_name": course_name,
+        "folder_url": folder_url,
+        "folder_id": folder_id,
+        "drive_error": drive_error,
         "documents": documents,
         "personal_notes_count": len(course_data.get("personal_notes", []))
     }
