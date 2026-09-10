@@ -246,7 +246,7 @@
                         <i class="fa-regular fa-bell text-sm"></i>
                         <span id="bell-badge" style="display: none;" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center">0</span>
                     </button>
-                    <div id="bell-dropdown" style="display: none;" class="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 shadow-2xl p-4 z-50 text-xs space-y-2.5">
+                    <div id="bell-dropdown" style="display: none;" class="fixed sm:absolute top-16 sm:top-auto left-2 right-2 sm:left-auto sm:right-0 mt-2 sm:mt-2 w-auto sm:w-96 max-w-[calc(100vw-1rem)] sm:max-w-none rounded-2xl bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 shadow-2xl p-4 z-50 text-xs space-y-2.5">
                         <div class="flex items-center justify-between font-bold text-cantera-900 dark:text-white border-b border-cantera-200 dark:border-slate-800 pb-2">
                             <span class="flex items-center gap-1.5"><i class="fa-solid fa-bell text-amber-500"></i> Avisos de Profesores</span>
                             <div class="flex items-center gap-2">
@@ -1566,6 +1566,7 @@
                             <span class="text-indigo-600 dark:text-indigo-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-download"></i> Descargar</span>
                         </button>
                     </div>
+                </div>
 
                     <!-- Botón de eliminación con confirmación nativa -->
                     <div class="pt-2 border-t border-cantera-200 dark:border-slate-700/60">
@@ -2798,6 +2799,8 @@
 
         function openAnnouncementDetail(a) {
             markAnnouncementAsRead(a.id || a.content);
+            const bellDd = document.getElementById('bell-dropdown');
+            if (bellDd) bellDd.style.display = 'none';
             const modal = document.getElementById('modal-announcement-detail');
             const courseEl = document.getElementById('ann-modal-course');
             const dateEl = document.getElementById('ann-modal-date');
