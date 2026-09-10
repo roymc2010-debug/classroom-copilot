@@ -953,7 +953,7 @@
     <!-- Menú Principal Drawer -->
     <div id="main-menu-drawer" style="display: none;" onclick="toggleMainMenu(false)" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs">
         <div onclick="event.stopPropagation()" class="w-80 h-full bg-cantera-50 dark:bg-night-900 border-r border-cantera-300 dark:border-slate-800 p-6 flex flex-col justify-between shadow-2xl custom-scroll overflow-y-auto cursor-default">
-            <div class="space-y-5">
+            <div class="space-y-6">
                 <!-- Encabezado -->
                 <div class="flex items-center justify-between pb-4 border-b border-cantera-200 dark:border-slate-800">
                     <div class="flex items-center gap-2.5">
@@ -963,92 +963,53 @@
                     <button onclick="toggleMainMenu(false)" class="text-cantera-600 dark:text-slate-400 hover:text-red-500 cursor-pointer p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
                 </div>
 
-                <!-- 1. 📖 MATERIAS (con la lista de clases) -->
-                <div class="space-y-1.5">
-                    <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center gap-1.5">
-                        <i class="fa-solid fa-book-bookmark text-indigo-500"></i>
-                        <span>Materias</span>
-                    </span>
-                    <div id="drawer-courses-list" class="space-y-1 text-xs max-h-48 overflow-y-auto custom-scroll">
-                        <p class="text-[11px] text-slate-400 italic">Cargando materias...</p>
-                    </div>
-                </div>
-
-                <!-- 2. 📑 FILTRO DE MISIONES (Todas, Principal, Secundarias, etc.) -->
-                <div class="space-y-1.5">
-                    <span class="text-xs font-bold uppercase tracking-wider text-cantera-800 dark:text-slate-300 flex items-center gap-1.5">
-                        <i class="fa-solid fa-list-check text-amber-500"></i>
-                        <span>Filtro de Misiones</span>
-                    </span>
-                    <div class="grid grid-cols-2 gap-1.5 text-[11px]">
-                        <button onclick="setMissionFilter('all')" class="p-2 rounded-lg bg-cantera-100 dark:bg-slate-800 text-left font-semibold flex items-center justify-between cursor-pointer">
-                            <span>Todas</span>
-                            <span id="drawer-count-all" class="text-[9px] bg-white dark:bg-slate-900 px-1 py-0.5 rounded">0</span>
-                        </button>
-                        <button onclick="setMissionFilter('main')" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1 cursor-pointer">
-                            <i class="fa-solid fa-khanda text-amber-500 text-[10px]"></i>
-                            <span>Principal</span>
-                        </button>
-                        <button onclick="setMissionFilter('secondary')" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1 cursor-pointer">
-                            <i class="fa-solid fa-shield-halved text-indigo-500 text-[10px]"></i>
-                            <span>Secundarias</span>
-                        </button>
-                        <button onclick="setMissionFilter('daily')" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1 cursor-pointer">
-                            <i class="fa-solid fa-bolt text-sky-500 text-[10px]"></i>
-                            <span>Diarias</span>
-                        </button>
-                        <button onclick="setMissionFilter('special')" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1 cursor-pointer">
-                            <i class="fa-solid fa-wand-magic-sparkles text-purple-500 text-[10px]"></i>
-                            <span>Especiales</span>
-                        </button>
-                        <button onclick="setMissionFilter('rescue')" class="p-2 rounded-lg text-left hover:bg-cantera-100 dark:hover:bg-slate-800 flex items-center gap-1 text-orange-500 cursor-pointer">
-                            <i class="fa-solid fa-life-ring text-[10px]"></i>
-                            <span>Rescate</span>
-                        </button>
-                    </div>
-                </div>
-
                 <!-- Opciones de Navegación del Menú Web -->
-                <nav class="space-y-1.5 text-xs font-medium border-t border-cantera-200 dark:border-slate-800 pt-3">
-                    <!-- 3. 📊 Calificaciones y Avance -->
-                    <button onclick="openGradesModal()" class="w-full text-left p-2.5 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-2.5 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer text-xs font-medium">
-                        <i class="fa-solid fa-chart-line text-emerald-500 w-4"></i>
-                        <span>Calificaciones y Avance</span>
+                <nav class="space-y-2 text-sm font-medium">
+                    <!-- 1. ⏳ El Reloj de Franklin (Rutina y Racha) -->
+                    <button onclick="openFranklinModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-hourglass-half text-amber-500 w-5"></i>
+                        <span>El Reloj de Franklin (Rutina y Racha)</span>
                     </button>
 
-                    <!-- 4. 👨‍🏫 Mentores de Ignis -->
-                    <button onclick="openMentorsModal()" class="w-full text-left p-2.5 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-2.5 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer text-xs font-medium">
-                        <i class="fa-solid fa-user-graduate text-indigo-500 w-4"></i>
+                    <!-- 2. 🎓 Simulador de Parciales -->
+                    <button onclick="openSocratesModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-graduation-cap text-indigo-500 w-5"></i>
+                        <span>Simulador de Parciales</span>
+                    </button>
+
+                    <!-- 3. 👨‍🏫 Mentores de Ignis -->
+                    <button onclick="openMentorsModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-user-graduate text-indigo-500 w-5"></i>
                         <span>Mentores de Ignis</span>
                     </button>
 
-                    <!-- 5. 💡 Técnicas y Consejos -->
-                    <button onclick="openTechniquesModal()" class="w-full text-left p-2.5 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-2.5 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer text-xs font-medium">
-                        <i class="fa-solid fa-lightbulb text-amber-500 w-4"></i>
+                    <!-- 4. 💡 Técnicas y Consejos -->
+                    <button onclick="openTechniquesModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-lightbulb text-amber-500 w-5"></i>
                         <span>Técnicas y Consejos</span>
                     </button>
 
-                    <!-- 6. ⚙️ Configuración de la App -->
-                    <button onclick="openSettingsModal()" class="w-full text-left p-2.5 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-2.5 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer text-xs font-medium">
-                        <i class="fa-solid fa-sliders text-sky-500 w-4"></i>
-                        <span>Configuración de la App</span>
+                    <!-- 5. 📊 Calificaciones y Avance -->
+                    <button onclick="openGradesModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-chart-line text-emerald-500 w-5"></i>
+                        <span>Calificaciones y Avance</span>
                     </button>
 
-                    <!-- 7. 🎓 Simulador de Parciales -->
-                    <button onclick="openSocratesModal()" class="w-full text-left p-2.5 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-2.5 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer text-xs font-medium">
-                        <i class="fa-solid fa-graduation-cap text-indigo-500 w-4"></i>
-                        <span>Simulador de Parciales</span>
+                    <!-- 6. ⚙️ Configuración de la App -->
+                    <button onclick="openSettingsModal()" class="w-full text-left p-3 rounded-xl hover:bg-cantera-200/60 dark:hover:bg-slate-800/60 flex items-center gap-3 text-cantera-800 dark:text-slate-200 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-sliders text-sky-500 w-5"></i>
+                        <span>Configuración de la App</span>
                     </button>
                 </nav>
             </div>
 
             <!-- Pie del Menú -->
-            <div class="pt-4 border-t border-cantera-200 dark:border-slate-800 space-y-2">
+            <div class="pt-6 border-t border-cantera-200 dark:border-slate-800 space-y-2">
                 <div class="px-2 text-[11px] text-cantera-600 dark:text-slate-400">
                     <span>Cuenta activa:</span>
                     <p id="user-email-display" class="font-mono text-xs font-semibold text-amber-500 dark:text-amber-400 truncate">{{ user_email if user_email else 'Conectando...' }}</p>
                 </div>
-                <a href="/auth/logout" class="w-full p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-2 font-bold text-xs transition-colors">
+                <a href="/auth/logout" class="w-full p-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-2 font-bold text-xs transition-colors">
                     <i class="fa-solid fa-right-from-bracket"></i>
                     <span>Cerrar Sesión</span>
                 </a>
@@ -2736,11 +2697,8 @@
 
         function renderCoursesFilter() {
             const listEl = document.getElementById('courses-filter-list');
-            const drawerListEl = document.getElementById('drawer-courses-list');
-            const drawerCount = document.getElementById('drawer-count-all');
 
             const all = [...allUpcomingTasks, ...allCompletedTasks, ...allOverdueTasks, ...allNoDateTasks];
-            if (drawerCount) drawerCount.textContent = all.length;
 
             const taskCourses = all.map(t => (t.course_name || '').replace(/_/g, ' ')).filter(Boolean);
             const enrolled = allEnrolledCourses.map(c => (c || '').replace(/_/g, ' ')).filter(Boolean);
@@ -2768,32 +2726,6 @@
 
                         btn.onclick = () => toggleCourseSelection(course);
                         listEl.appendChild(btn);
-                    });
-                }
-            }
-
-            if (drawerListEl) {
-                drawerListEl.innerHTML = '';
-                if (courses.length === 0) {
-                    drawerListEl.innerHTML = `<p class="text-cantera-600 dark:text-slate-500 italic text-[11px] py-1">Sin materias activas</p>`;
-                } else {
-                    courses.forEach(course => {
-                        const isSelected = selectedCourses.has(course);
-                        const dBtn = document.createElement('button');
-                        dBtn.type = 'button';
-                        dBtn.className = `w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between cursor-pointer ${
-                            isSelected 
-                                ? 'bg-indigo-900/30 text-indigo-700 dark:text-indigo-200 border border-indigo-500 shadow-sm' 
-                                : 'text-cantera-700 dark:text-slate-400 hover:text-cantera-900 dark:hover:text-slate-200 hover:bg-cantera-200/50 dark:hover:bg-slate-800/60'
-                        }`;
-                        dBtn.innerHTML = `
-                            <span class="truncate pr-2">${course}</span>
-                            ${isSelected ? '<i class="fa-solid fa-check text-indigo-600 dark:text-indigo-400 text-[10px]"></i>' : ''}
-                        `;
-                        dBtn.onclick = () => {
-                            toggleCourseSelection(course);
-                        };
-                        drawerListEl.appendChild(dBtn);
                     });
                 }
             }
