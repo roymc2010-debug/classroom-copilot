@@ -2,6 +2,7 @@ import os
 import re
 import json
 import uuid
+import time
 import urllib.request
 import urllib.parse
 import traceback
@@ -125,8 +126,9 @@ templates = Jinja2Templates(directory="templates")
 async def on_startup():
     import asyncio
     try:
-        from services.background_sync import run_background_sync_loop
+        from services.background_sync import run_background_sync_loop, run_timer_alarm_watcher_loop
         asyncio.create_task(run_background_sync_loop(interval_seconds=180))
+        asyncio.create_task(run_timer_alarm_watcher_loop())
     except Exception as e:
         print(f"[Startup] Error iniciando vigilante en segundo plano: {e}")
 
@@ -1028,6 +1030,56 @@ async def push_test(req: Request):
             tag="test-notification"
         )
         return {"status": "ok" if ok else "error", "message": msg}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/timer/schedule")
+async def timer_schedule(req: Request):
+    try:
+        data = await req.json()
+        ends_at = float(data.get("ends_at", 0))
+        if ends_at <= 0:
+            return JSONResponse(status_code=400, content={"error": "ends_at inválido"})
+        if ends_at < 100000000000:
+            ends_at = ends_at * 1000
+
+        phase = str(data.get("phase", "focus"))
+        label = str(data.get("label", "Foco"))
+        alarm_id = str(data.get("alarm_id") or uuid.uuid4())
+
+        session_id = req.cookies.get("session_id", "")
+        user_email = user_sessions.get(session_id, {}).get("email", "") if session_id else ""
+        if not user_email:
+            user_email = str(data.get("user_email", "")).strip()
+
+        import db.database as db
+        db.save_timer_alarm(
+            alarm_id=alarm_id,
+            user_email=user_email,
+            ends_at=ends_at,
+            phase=phase,
+            preset_label=label
+        )
+        return {"status": "ok", "alarm_id": alarm_id, "ends_at": ends_at}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.post("/api/timer/cancel")
+async def timer_cancel(req: Request):
+    try:
+        data = {}
+        try:
+            data = await req.json()
+        except Exception:
+            data = {}
+        session_id = req.cookies.get("session_id", "")
+        user_email = user_sessions.get(session_id, {}).get("email", "") if session_id else ""
+        if not user_email and data:
+            user_email = str(data.get("user_email", "")).strip()
+
+        import db.database as db
+        db.cancel_timer_alarms(user_email=user_email if user_email else None)
+        return {"status": "ok"}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 

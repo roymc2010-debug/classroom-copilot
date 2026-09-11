@@ -40,6 +40,18 @@ def init_db():
             first_seen_at TEXT
         )
     ''')
+    # Create table for scheduled timer alarms (Mobile background alarms via Web Push)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS scheduled_timer_alarms (
+            id TEXT PRIMARY KEY,
+            user_email TEXT,
+            ends_at REAL,
+            phase TEXT,
+            preset_label TEXT,
+            created_at TEXT,
+            notified INTEGER DEFAULT 0
+        )
+    ''')
     conn.commit()
     conn.close()
 
@@ -174,6 +186,53 @@ def mark_items_seen_bulk(items):
         VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(item_id) DO NOTHING
     ''', [(str(it["item_id"]), it.get("item_type", "task"), it.get("course_name", ""), it.get("title", ""), now_str) for it in items])
+    conn.commit()
+    conn.close()
+
+def save_timer_alarm(alarm_id, user_email, ends_at, phase="focus", preset_label="Pomodoro"):
+    """Guarda o actualiza la alarma programada del temporizador."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    import datetime
+    now_str = datetime.datetime.utcnow().isoformat()
+    if user_email:
+        cursor.execute("DELETE FROM scheduled_timer_alarms WHERE user_email = ? AND notified = 0", (user_email,))
+    cursor.execute('''
+        INSERT INTO scheduled_timer_alarms (id, user_email, ends_at, phase, preset_label, created_at, notified)
+        VALUES (?, ?, ?, ?, ?, ?, 0)
+    ''', (str(alarm_id), user_email or "", float(ends_at), phase, preset_label, now_str))
+    conn.commit()
+    conn.close()
+
+def cancel_timer_alarms(user_email=None):
+    """Cancela alarmas no notificadas del usuario."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    if user_email:
+        cursor.execute("DELETE FROM scheduled_timer_alarms WHERE user_email = ? AND notified = 0", (user_email,))
+    else:
+        cursor.execute("DELETE FROM scheduled_timer_alarms WHERE notified = 0")
+    conn.commit()
+    conn.close()
+
+def get_due_timer_alarms(now_ms):
+    """Retorna las alarmas vencidas que aún no han sido notificadas."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, user_email, ends_at, phase, preset_label
+        FROM scheduled_timer_alarms
+        WHERE ends_at <= ? AND notified = 0
+    ''', (float(now_ms),))
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def mark_timer_alarm_notified(alarm_id):
+    """Marca la alarma como despachada para evitar repeticiones."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE scheduled_timer_alarms SET notified = 1 WHERE id = ?", (str(alarm_id),))
     conn.commit()
     conn.close()
 

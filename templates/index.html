@@ -1452,6 +1452,43 @@
         </div>
     </div>
 
+    <!-- Modal Alarma de Temporizador (Pantalla Completa de Alerta) -->
+    <div id="modal-timer-alarm" style="display: none;" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-night-900 border-2 border-indigo-500 rounded-3xl max-w-sm w-full p-6 shadow-2xl text-center space-y-5">
+            <!-- Icono animado de campana de alarma -->
+            <div class="relative flex items-center justify-center mx-auto w-24 h-24">
+                <div class="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping"></div>
+                <div class="w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-xl shadow-indigo-500/30 text-3xl">
+                    <i class="fa-solid fa-bell animate-bounce"></i>
+                </div>
+            </div>
+
+            <div class="space-y-1.5">
+                <span id="alarm-badge" class="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300">
+                    ¡Foco Completado!
+                </span>
+                <h3 id="alarm-title" class="text-2xl font-black text-cantera-900 dark:text-white">
+                    ¡Tiempo Cumplido!
+                </h3>
+                <p id="alarm-description" class="text-xs text-cantera-600 dark:text-slate-400 max-w-xs mx-auto leading-relaxed">
+                    Has completado con éxito tu sesión de concentración. Desconecta unos minutos para recuperar energía.
+                </p>
+            </div>
+
+            <!-- Botones de Acción de la Alarma -->
+            <div class="space-y-2.5 pt-2">
+                <button type="button" onclick="stopAlarmAndAction('next')" id="alarm-action-btn" class="w-full py-3.5 px-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-bold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer">
+                    <i class="fa-solid fa-mug-hot"></i>
+                    <span id="alarm-action-text">Iniciar Descanso</span>
+                </button>
+                <button type="button" onclick="stopAlarmAndAction('stop')" class="w-full py-3 px-5 rounded-2xl bg-cantera-100 hover:bg-cantera-200 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-[0.98] text-cantera-700 dark:text-slate-200 font-semibold text-xs border border-cantera-200 dark:border-slate-700 flex items-center justify-center gap-2 transition-all cursor-pointer">
+                    <i class="fa-solid fa-bell-slash"></i>
+                    <span>Detener Alarma</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Configuración -->
     <div id="modal-settings" style="display: none;" onclick="if(event.target === this) closeSettingsModal()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs items-center justify-center p-4">
         <div class="bg-white dark:bg-night-900 border border-cantera-300 dark:border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl max-h-[85vh] overflow-y-auto custom-scroll">
@@ -1465,8 +1502,8 @@
                     
                     <div class="flex items-center justify-between">
                         <div>
-                            <span class="font-semibold text-cantera-800 dark:text-slate-200 block">Sonido de Campana</span>
-                            <span class="text-[11px] text-cantera-600 dark:text-slate-400">Emite un tono suave al terminar el foco o descanso.</span>
+                            <span class="font-semibold text-cantera-800 dark:text-slate-200 block">Alarma Sonora y Vibración</span>
+                            <span class="text-[11px] text-cantera-600 dark:text-slate-400">Alarma continua potente y vibración en el celular al terminar.</span>
                         </div>
                         <button onclick="toggleSettingChime()" id="switch-chime" class="relative w-12 h-6 rounded-full transition-colors p-0.5 bg-indigo-600">
                             <div id="thumb-chime" class="w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform translate-x-6"></div>
@@ -1800,6 +1837,11 @@
         let timerRunning = false;
         let timerPhase = 'focus';
         let timerEndTime = null;
+        let timerWorker = null;
+        let audioCtx = null;
+        let alarmAudioLoopInterval = null;
+        let alarmVibrateInterval = null;
+        let isAlarmRinging = false;
 
         const TIMER_PRESETS = {
             'pomodoro': { label: 'Pomodoro 25/5', focus: 25, break: 5 },
@@ -2229,95 +2271,327 @@
             });
         }
 
+        // --- SISTEMA DE ALARMA COMPLETO (AUDIO SINTETIZADO, VIBRACIÓN, NOTIFICACIÓN NATIVA Y SEGUNDO PLANO) ---
+        function ensureAudioContextReady() {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            } catch(e) {
+                console.warn('AudioContext initialization error:', e);
+            }
+        }
+
+        function playAlarmBurst() {
+            const chimeEnabled = localStorage.getItem('setting-chime') !== 'false';
+            if (!chimeEnabled) return;
+            try {
+                ensureAudioContextReady();
+                if (!audioCtx) return;
+                const now = audioCtx.currentTime;
+                // Ráfaga de 4 pitidos rítmicos digitales (estilo reloj despertador clásico)
+                const beeps = [
+                    { freq: 880, start: 0.00, dur: 0.08 },
+                    { freq: 880, start: 0.14, dur: 0.08 },
+                    { freq: 880, start: 0.28, dur: 0.08 },
+                    { freq: 1046.5, start: 0.42, dur: 0.22 }
+                ];
+                beeps.forEach(b => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(b.freq, now + b.start);
+                    gain.gain.setValueAtTime(0.001, now + b.start);
+                    gain.gain.linearRampToValueAtTime(0.35, now + b.start + 0.01);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + b.start + b.dur);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + b.start);
+                    osc.stop(now + b.start + b.dur);
+                });
+            } catch(e) {
+                console.warn('Error en playAlarmBurst:', e);
+            }
+        }
+
+        function startContinuousAlarm() {
+            if (isAlarmRinging) return;
+            isAlarmRinging = true;
+
+            // 1. Tono inmediato
+            playAlarmBurst();
+
+            // 2. Repetición continua de la ráfaga cada 1.3 segundos
+            clearInterval(alarmAudioLoopInterval);
+            alarmAudioLoopInterval = setInterval(() => {
+                if (!isAlarmRinging) {
+                    clearInterval(alarmAudioLoopInterval);
+                    return;
+                }
+                playAlarmBurst();
+            }, 1300);
+
+            // 3. Vibración continua rítmica en el dispositivo móvil
+            const doVibrate = () => {
+                if ('vibrate' in navigator) {
+                    try {
+                        navigator.vibrate([600, 250, 600, 250, 600, 250, 1000]);
+                    } catch(e) {}
+                }
+            };
+            doVibrate();
+            clearInterval(alarmVibrateInterval);
+            alarmVibrateInterval = setInterval(() => {
+                if (!isAlarmRinging) {
+                    clearInterval(alarmVibrateInterval);
+                    return;
+                }
+                doVibrate();
+            }, 3000);
+        }
+
+        function stopContinuousAlarm() {
+            isAlarmRinging = false;
+            clearInterval(alarmAudioLoopInterval);
+            clearInterval(alarmVibrateInterval);
+            alarmAudioLoopInterval = null;
+            alarmVibrateInterval = null;
+            if ('vibrate' in navigator) {
+                try {
+                    navigator.vibrate(0);
+                } catch(e) {}
+            }
+        }
+
+        async function showAlarmSystemNotification(title, body) {
+            if (!('Notification' in window)) return;
+            try {
+                if (Notification.permission === 'default') {
+                    await Notification.requestPermission();
+                }
+            } catch(e) {}
+
+            if (Notification.permission === 'granted') {
+                // Notificación nativa mediante Service Worker para móviles (evita crash de new Notification en Android)
+                if ('serviceWorker' in navigator) {
+                    try {
+                        const reg = await navigator.serviceWorker.ready;
+                        if (reg && reg.showNotification) {
+                            await reg.showNotification(title, {
+                                body: body,
+                                icon: '/static/icon.png',
+                                badge: '/static/icon.png',
+                                tag: 'agora-timer-alarm',
+                                renotify: true,
+                                requireInteraction: true,
+                                vibrate: [600, 250, 600, 250, 600, 250, 1000],
+                                data: { url: '/?openTimer=1', isAlarm: true },
+                                actions: [
+                                    { action: 'stop_alarm', title: '🔕 Detener Alarma' },
+                                    { action: 'open_timer', title: '📱 Abrir Ágora' }
+                                ]
+                            });
+                            return;
+                        }
+                    } catch(err) {
+                        console.warn('SW notification error, probando fallback:', err);
+                    }
+                }
+                // Fallback para navegadores de escritorio
+                try {
+                    new Notification(title, {
+                        body: body,
+                        icon: '/static/icon.png',
+                        tag: 'agora-timer-alarm',
+                        requireInteraction: true
+                    });
+                } catch(e) {}
+            }
+        }
+
+        function showAlarmModal(isFocus, preset) {
+            const modal = document.getElementById('modal-timer-alarm');
+            if (!modal) return;
+            const badge = document.getElementById('alarm-badge');
+            const title = document.getElementById('alarm-title');
+            const desc = document.getElementById('alarm-description');
+            const actionBtn = document.getElementById('alarm-action-btn');
+            const actionText = document.getElementById('alarm-action-text');
+
+            if (isFocus) {
+                if (badge) {
+                    badge.textContent = '¡Foco Completado!';
+                    badge.className = 'inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300';
+                }
+                if (title) title.textContent = '¡Tiempo de Foco Cumplido!';
+                if (desc) desc.textContent = `¡Excelente trabajo! Has completado tu bloque de ${preset.label}. Tómate ${preset.break} minutos para descansar tus ojos y mente.`;
+                if (actionText) actionText.textContent = `Iniciar Descanso (${preset.break} min)`;
+                if (actionBtn) actionBtn.className = 'w-full py-3.5 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-bold text-sm shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer';
+            } else {
+                if (badge) {
+                    badge.textContent = '¡Descanso Concluido!';
+                    badge.className = 'inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300';
+                }
+                if (title) title.textContent = '¡Descanso Finalizado!';
+                if (desc) desc.textContent = 'Tu tiempo de recarga ha terminado. ¿Listo para arrancar otro bloque de concentración?';
+                if (actionText) actionText.textContent = `Iniciar Nuevo Foco (${preset.focus} min)`;
+                if (actionBtn) actionBtn.className = 'w-full py-3.5 px-5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-bold text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer';
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function stopAlarmAndAction(action) {
+            stopContinuousAlarm();
+            const modal = document.getElementById('modal-timer-alarm');
+            if (modal) modal.style.display = 'none';
+
+            if (action === 'next') {
+                startTimer();
+            }
+        }
+
+        async function triggerFullAlarm() {
+            clearInterval(timerInterval);
+            if (timerWorker) {
+                try { timerWorker.terminate(); } catch(e) {}
+                timerWorker = null;
+            }
+            timerRunning = false;
+            timerEndTime = null;
+            timerSeconds = 0;
+            updateTimerDisplay();
+
+            const currentPhase = timerPhase;
+            const preset = TIMER_PRESETS[activePresetKey] || TIMER_PRESETS['pomodoro'];
+            const isFocus = currentPhase === 'focus';
+
+            // Cancelar alarma programada en el servidor (ya se disparó en cliente)
+            try {
+                fetch('/api/timer/cancel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_email: currentUserEmail })
+                }).catch(() => {});
+            } catch(e) {}
+
+            // 1. Iniciar timbre continuo y vibración potente
+            startContinuousAlarm();
+
+            // 2. Notificación nativa del sistema en la barra de estado
+            const notifTitle = isFocus ? "⏰ ¡Foco Completado!" : "🔔 ¡Descanso Concluido!";
+            const notifBody = isFocus
+                ? `¡Completaste tu sesión de ${preset.label}! Toca para iniciar tu descanso.`
+                : "¡Tu descanso ha concluido! ¿Listo para otro bloque de foco?";
+            showAlarmSystemNotification(notifTitle, notifBody);
+
+            // 3. Desplegar el modal de alarma a pantalla completa
+            showAlarmModal(isFocus, preset);
+
+            // 4. Configurar siguiente fase automáticamente
+            if (isFocus && preset.break > 0) {
+                timerPhase = 'break';
+                timerSeconds = preset.break * 60;
+            } else {
+                timerPhase = 'focus';
+                timerSeconds = preset.focus * 60;
+            }
+            updateTimerDisplay();
+        }
+
+        function startTimerWorker() {
+            if (window.Worker) {
+                try {
+                    if (timerWorker) timerWorker.terminate();
+                    const workerBlob = new Blob([
+                        "setInterval(function() { postMessage('tick'); }, 1000);"
+                    ], { type: 'application/javascript' });
+                    timerWorker = new Worker(URL.createObjectURL(workerBlob));
+                    timerWorker.onmessage = function() {
+                        checkTimerProgress();
+                    };
+                } catch(e) {
+                    timerWorker = null;
+                }
+            }
+        }
+
+        function checkTimerProgress() {
+            if (!timerRunning || !timerEndTime) return;
+            const remainingMs = timerEndTime - Date.now();
+            if (remainingMs <= 0) {
+                triggerFullAlarm();
+            } else {
+                timerSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+                updateTimerDisplay();
+            }
+        }
+
         function startTimer() {
             if (timerRunning) return;
 
-            // Solicitar permiso de notificaciones al presionar "Iniciar"
+            // Desbloquear AudioContext con el gesto del usuario (vital para sonido en Chrome Android / iOS)
+            ensureAudioContextReady();
+
+            // Solicitar permiso de notificaciones si no se ha pedido
             if ('Notification' in window && Notification.permission === 'default') {
-                try {
-                    Notification.requestPermission();
-                } catch(e) {}
+                try { Notification.requestPermission(); } catch(e) {}
             }
 
             timerRunning = true;
-            // Cálculo por marca de tiempo (Evitar que se congele al bloquear pantalla)
             timerEndTime = Date.now() + (timerSeconds * 1000);
+
+            // Programar alarma 24/7 en el servidor (despertará el celular con Push aunque se cierre el navegador)
+            try {
+                const preset = TIMER_PRESETS[activePresetKey] || TIMER_PRESETS['pomodoro'];
+                fetch('/api/timer/schedule', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ends_at: timerEndTime,
+                        phase: timerPhase,
+                        label: preset.label,
+                        user_email: currentUserEmail
+                    })
+                }).catch(err => console.warn('Error programando alarma en servidor:', err));
+            } catch(e) {}
 
             const btn = document.getElementById('timer-start-btn');
             if (btn) btn.textContent = 'Corriendo';
             updateTimerDisplay();
 
+            // Iniciar Web Worker en segundo plano (no se duerme como setInterval del DOM)
+            startTimerWorker();
+
             clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                if (!timerRunning || !timerEndTime) return;
-
-                const remainingMs = timerEndTime - Date.now();
-                if (remainingMs > 0) {
-                    timerSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
-                    updateTimerDisplay();
-                } else {
-                    timerSeconds = 0;
-                    updateTimerDisplay();
-                    clearInterval(timerInterval);
-                    timerRunning = false;
-                    timerEndTime = null;
-
-                    // Alertas al llegar a cero:
-                    // 1. Vibración
-                    if ('vibrate' in navigator) {
-                        try {
-                            navigator.vibrate([300, 150, 300, 150, 500]);
-                        } catch(e) {}
-                    }
-
-                    // 2. Sonido (Campana con Web Audio API sintetizador nativo)
-                    triggerAlarmChime();
-
-                    // 3. Notificación del sistema
-                    const preset = TIMER_PRESETS[activePresetKey] || TIMER_PRESETS['pomodoro'];
-                    if ('Notification' in window && Notification.permission === 'granted') {
-                        try {
-                            if (timerPhase === 'focus') {
-                                new Notification("¡Foco completado!", { 
-                                    body: `Momento de tu descanso de ${preset.break} minutos.`, 
-                                    icon: "/static/icon.png" 
-                                });
-                            } else {
-                                new Notification("¡Descanso concluido!", { 
-                                    body: "¿Listo para otro bloque de foco?", 
-                                    icon: "/static/icon.png" 
-                                });
-                            }
-                        } catch(e) {}
-                    }
-
-                    if (timerPhase === 'focus' && preset.break > 0) {
-                        timerPhase = 'break';
-                        timerSeconds = preset.break * 60;
-                        updateTimerDisplay();
-                        setTimeout(() => {
-                            alert(`¡Foco completado! Tu descanso de ${preset.break} minutos está listo. Presiona "Iniciar Descanso" cuando quieras levantarte.`);
-                        }, 50);
-                    } else {
-                        timerPhase = 'focus';
-                        timerSeconds = preset.focus * 60;
-                        updateTimerDisplay();
-                        setTimeout(() => {
-                            alert("¡Descanso concluido! ¿Listo para otro bloque de foco?");
-                        }, 50);
-                    }
-                }
-            }, 1000);
+            timerInterval = setInterval(checkTimerProgress, 1000);
         }
 
         function pauseTimer() {
             clearInterval(timerInterval);
+            if (timerWorker) {
+                try { timerWorker.terminate(); } catch(e) {}
+                timerWorker = null;
+            }
             if (timerRunning && timerEndTime) {
                 const remainingMs = timerEndTime - Date.now();
                 timerSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
             }
             timerRunning = false;
             timerEndTime = null;
+
+            // Cancelar alarma en el servidor
+            try {
+                fetch('/api/timer/cancel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_email: currentUserEmail })
+                }).catch(() => {});
+            } catch(e) {}
+
             const btn = document.getElementById('timer-start-btn');
             if (btn) btn.textContent = 'Continuar';
             updateTimerDisplay();
@@ -2325,27 +2599,71 @@
 
         function resetTimer() {
             clearInterval(timerInterval);
+            if (timerWorker) {
+                try { timerWorker.terminate(); } catch(e) {}
+                timerWorker = null;
+            }
+            stopContinuousAlarm();
+            const modal = document.getElementById('modal-timer-alarm');
+            if (modal) modal.style.display = 'none';
+
             timerRunning = false;
             timerEndTime = null;
+
+            // Cancelar alarma en el servidor
+            try {
+                fetch('/api/timer/cancel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_email: currentUserEmail })
+                }).catch(() => {});
+            } catch(e) {}
+
             const preset = TIMER_PRESETS[activePresetKey] || TIMER_PRESETS['pomodoro'];
             timerSeconds = (timerPhase === 'break' ? preset.break : preset.focus) * 60;
             updateTimerDisplay();
         }
 
-        // Actualizar reloj inmediatamente al desbloquear teléfono o cambiar visibilidad
-        document.addEventListener('visibilitychange', () => {
+        // Despertar inmediato cuando el usuario desbloquea el teléfono o la pantalla se enciende
+        function handleVisibilityOrFocus() {
             if (timerRunning && timerEndTime) {
                 const remainingMs = timerEndTime - Date.now();
-                timerSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
-                updateTimerDisplay();
+                if (remainingMs <= 0) {
+                    triggerFullAlarm();
+                } else {
+                    timerSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+                    updateTimerDisplay();
+                }
             }
-        });
-        window.addEventListener('focus', () => {
-            if (timerRunning && timerEndTime) {
-                const remainingMs = timerEndTime - Date.now();
-                timerSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
-                updateTimerDisplay();
-            }
+        }
+        document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+        window.addEventListener('focus', handleVisibilityOrFocus);
+
+        // Escuchar orden de detener alarma emitida desde la barra de notificaciones del celular
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'STOP_ALARM') {
+                    stopContinuousAlarm();
+                    const modal = document.getElementById('modal-timer-alarm');
+                    if (modal) modal.style.display = 'none';
+                }
+            });
+        }
+
+        // Si se abre la app desde una notificación de alarma (?openTimer=1)
+        window.addEventListener('DOMContentLoaded', () => {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('openTimer')) {
+                    if (typeof navMobileSwitch === 'function') {
+                        navMobileSwitch('timer');
+                    }
+                    const mTimerPage = document.getElementById('mobile-timer-page');
+                    if (mTimerPage) {
+                        mTimerPage.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
+            } catch(e) {}
         });
 
         document.addEventListener('keydown', (e) => {
@@ -2355,6 +2673,7 @@
                 else startTimer();
             }
             if (e.key === 'Escape') {
+                stopAlarmAndAction('stop');
                 closeIgnisWorkspace();
                 closeSocratesModal();
                 closeFranklinModal();
@@ -2366,48 +2685,6 @@
             }
         });
 
-        function triggerAlarmChime() {
-            const chimeEnabled = localStorage.getItem('setting-chime') !== 'false';
-            if (!chimeEnabled) return;
-
-            // Respetar horario límite nocturno configurado por el estudiante
-            const nightLimit = localStorage.getItem('agora_notif_night_limit') || '0';
-            if (nightLimit !== 'none') {
-                const curHour = new Date().getHours();
-                const limitHour = parseInt(nightLimit, 10);
-                if (limitHour === 0 && (curHour >= 0 && curHour < 7)) return;
-                if (limitHour === 23 && (curHour >= 23 || curHour < 7)) return;
-                if (limitHour === 22 && (curHour >= 22 || curHour < 7)) return;
-            }
-
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const now = audioCtx.currentTime;
-                // Campana armónica sintetizada con Web Audio API
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(587.33, now); // Re (D5)
-                osc.frequency.exponentialRampToValueAtTime(880, now + 0.3); // La (A5)
-                gain.gain.setValueAtTime(0.4, now);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start(now);
-                osc.stop(now + 1.2);
-
-                const osc2 = audioCtx.createOscillator();
-                const gain2 = audioCtx.createGain();
-                osc2.type = 'triangle';
-                osc2.frequency.setValueAtTime(880, now + 0.15);
-                gain2.gain.setValueAtTime(0.25, now + 0.15);
-                gain2.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
-                osc2.connect(gain2);
-                gain2.connect(audioCtx.destination);
-                osc2.start(now + 0.15);
-                osc2.stop(now + 1.6);
-            } catch(e) {}
-        }
 
         function toggleSettingChime() {
             const current = localStorage.getItem('setting-chime') !== 'false';

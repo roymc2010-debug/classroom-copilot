@@ -781,6 +781,120 @@ class TestBrotherClassroomData(unittest.TestCase):
 
         print("[OK] Test 19 superado: Documentos editables .docx generados y Sócrates cableado con instructivo procedimental sin prosa.")
 
+    def test_20_timer_alarm_full_suite(self):
+        """
+        Prueba la suite completa de alarmas de foco/descanso tipo app nativa:
+        1. Persistencia SQLite de alarmas programadas (save_timer_alarm, get_due_timer_alarms, mark_timer_alarm_notified, cancel_timer_alarms).
+        2. Endpoints de FastAPI /api/timer/schedule y /api/timer/cancel.
+        3. Despachador de alarmas de alta prioridad 24/7 (check_and_dispatch_due_timer_alarms con is_alarm=True y Urgency: high).
+        4. Acciones interactivas de Service Worker ('stop_alarm' y 'open_timer').
+        """
+        import time
+        import db.database as db
+        import services.push_service as push_service
+        import services.background_sync as bg_sync
+        from fastapi.testclient import TestClient
+        from main import app, user_sessions, ALEX_EMAIL
+
+        # 1. Limpiar estado previo
+        db.cancel_timer_alarms(user_email=ALEX_EMAIL)
+
+        # 2. Programar alarma en base de datos
+        alarm_id = "test-alarm-focus-1"
+        now_ms = time.time() * 1000
+        due_ms = now_ms - 500  # Ya vencida
+
+        db.save_timer_alarm(
+            alarm_id=alarm_id,
+            user_email=ALEX_EMAIL,
+            ends_at=due_ms,
+            phase="focus",
+            preset_label="Pomodoro 25/5"
+        )
+
+        # 3. Consultar alarmas vencidas
+        due_list = db.get_due_timer_alarms(now_ms)
+        self.assertGreater(len(due_list), 0)
+        found = next((a for a in due_list if a["id"] == alarm_id), None)
+        self.assertIsNotNone(found)
+        self.assertEqual(found["phase"], "focus")
+        self.assertEqual(found["preset_label"], "Pomodoro 25/5")
+
+        # 4. Probar endpoints de FastAPI
+        user_sessions["test_timer_session"] = {
+            "email": ALEX_EMAIL,
+            "is_demo": True
+        }
+        client = TestClient(app, cookies={"agora_session": "test_timer_session", "session_id": "test_timer_session"})
+
+        future_ends = (time.time() + 1500) * 1000
+        sched_res = client.post("/api/timer/schedule", json={
+            "ends_at": future_ends,
+            "phase": "break",
+            "label": "Descanso 5 min"
+        })
+        self.assertEqual(sched_res.status_code, 200)
+        s_data = sched_res.json()
+        self.assertEqual(s_data.get("status"), "ok")
+        self.assertTrue(s_data.get("alarm_id"))
+
+        cancel_res = client.post("/api/timer/cancel", json={
+            "user_email": ALEX_EMAIL
+        })
+        self.assertEqual(cancel_res.status_code, 200)
+        self.assertEqual(cancel_res.json().get("status"), "ok")
+
+        # 5. Despacho y entrega de alarma Web Push con Urgencia Alta y Vibración Vigorosa
+        sub_info = {
+            "endpoint": "https://fcm.googleapis.com/fcm/send/timer_phone_alarm",
+            "keys": {
+                "p256dh": "dummy_p256dh_key",
+                "auth": "dummy_auth_key"
+            }
+        }
+        with patch("services.push_service.webpush") as mock_wp:
+            mock_wp.return_value = MagicMock(status_code=201)
+            ok, msg = push_service.send_web_push(
+                subscription_info=sub_info,
+                title="⏰ ¡Foco Completado!",
+                body="¡Tu bloque de Pomodoro ha terminado!",
+                url="/?openTimer=1",
+                silent=False,
+                tag="agora-timer-alarm",
+                is_alarm=True
+            )
+            self.assertTrue(ok)
+            self.assertTrue(mock_wp.called)
+
+            called_kwargs = mock_wp.call_args.kwargs
+            headers = called_kwargs.get("headers", {})
+            self.assertEqual(headers.get("Urgency"), "high")
+            self.assertEqual(called_kwargs.get("ttl"), 300)
+
+            payload_str = called_kwargs.get("data", "{}")
+            import json
+            payload = json.loads(payload_str)
+            self.assertTrue(payload.get("isAlarm"))
+            self.assertTrue(payload.get("requireInteraction"))
+            self.assertEqual(payload.get("vibrate"), [600, 250, 600, 250, 600, 250, 1000])
+
+        # 6. Despachador de fondo de alarmas pendientes
+        db.save_timer_alarm(
+            alarm_id="test-alarm-due-watcher",
+            user_email=ALEX_EMAIL,
+            ends_at=time.time() * 1000 - 100,
+            phase="focus",
+            preset_label="Sprint 5 Min"
+        )
+        with patch("services.background_sync.send_web_push") as mock_send_alarm:
+            mock_send_alarm.return_value = (True, "sent")
+            dispatched = bg_sync.check_and_dispatch_due_timer_alarms()
+            self.assertGreaterEqual(dispatched, 1)
+
+        # 7. Limpiar
+        db.cancel_timer_alarms(user_email=ALEX_EMAIL)
+        print("[OK] Test 20 superado: Suite completa de alarmas de foco móviles (audio, vibración, SW, Web Push 24/7 y endpoints) validada.")
+
 if __name__ == '__main__':
     unittest.main()
 

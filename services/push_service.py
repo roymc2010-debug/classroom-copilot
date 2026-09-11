@@ -60,12 +60,15 @@ def get_public_key():
     _, pub_key = get_or_create_vapid_keys()
     return pub_key
 
-def send_web_push(subscription_info, title, body, url="/", silent=False, tag="agora-notice"):
+def send_web_push(subscription_info, title, body, url="/", silent=False, tag="agora-notice", is_alarm=False):
     """
     Despacha una notificación Push encriptada al Push Service (FCM/Apple) usando RFC 8291.
-    Si silent=True, no genera sonido ni vibración física en el teléfono móvil.
+    Si is_alarm=True, utiliza vibración continua de alarma, requireInteraction y máxima urgencia.
     """
     get_or_create_vapid_keys()
+
+    alarm_vibrate = [600, 250, 600, 250, 600, 250, 1000]
+    std_vibrate = [300, 150, 300, 150, 400]
 
     payload = {
         "title": title,
@@ -74,14 +77,22 @@ def send_web_push(subscription_info, title, body, url="/", silent=False, tag="ag
         "badge": "/static/agora_logo_light_32.png?v=4",
         "url": url,
         "silent": bool(silent),
-        "vibrate": [] if silent else [300, 150, 300, 150, 400],
-        "tag": tag,
+        "vibrate": [] if silent else (alarm_vibrate if is_alarm else std_vibrate),
+        "alarm": bool(is_alarm),
+        "isAlarm": bool(is_alarm),
+        "requireInteraction": bool(is_alarm),
         "timestamp": int(time.time() * 1000),
         "data": {
             "url": url,
-            "silent": bool(silent)
+            "silent": bool(silent),
+            "alarm": bool(is_alarm),
+            "isAlarm": bool(is_alarm)
         }
     }
+
+    headers = {}
+    if is_alarm:
+        headers["Urgency"] = "high"
 
     try:
         response = webpush(
@@ -89,7 +100,8 @@ def send_web_push(subscription_info, title, body, url="/", silent=False, tag="ag
             data=json.dumps(payload),
             vapid_private_key=VAPID_PEM_PATH,
             vapid_claims={"sub": "mailto:agora.copilot@gmail.com"},
-            ttl=86400
+            ttl=300 if is_alarm else 86400,
+            headers=headers if headers else None
         )
         return True, "sent"
     except WebPushException as ex:

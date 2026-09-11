@@ -200,3 +200,54 @@ async def run_background_sync_loop(interval_seconds=180):
             print(f"[Background Sync] Error en ciclo de sincronización: {e}")
 
         await asyncio.sleep(interval_seconds)
+
+def check_and_dispatch_due_timer_alarms():
+    """
+    Revisa si existen alarmas de foco programadas cuya hora 'ends_at' haya vencido
+    y despacha de inmediato un Web Push con prioridad ALTA, vibración vigorosa
+    y requireInteraction para despertar el celular aunque esté bloqueado.
+    """
+    now_ms = time.time() * 1000
+    due_alarms = db.get_due_timer_alarms(now_ms)
+    count = 0
+    for alarm in due_alarms:
+        alarm_id = alarm["id"]
+        user_email = (alarm.get("user_email") or "").lower().strip()
+        phase = alarm.get("phase", "focus")
+        label = alarm.get("preset_label", "Foco")
+
+        if phase == "focus":
+            title = "⏰ ¡Foco Completado!"
+            body = f"¡Tu bloque de {label} ha terminado! Entra a Ágora para iniciar tu descanso."
+        else:
+            title = "🔔 ¡Descanso Concluido!"
+            body = "Tu tiempo de descanso terminó. ¿Listo para otro bloque de foco?"
+
+        subscriptions = db.get_push_subscriptions_for_user(user_email) if user_email else []
+        if not subscriptions:
+            subscriptions = db.get_all_push_subscriptions()
+
+        for sub in subscriptions:
+            send_web_push(
+                subscription_info=sub,
+                title=title,
+                body=body,
+                url="/?openTimer=1",
+                silent=False,
+                tag="agora-timer-alarm",
+                is_alarm=True
+            )
+        db.mark_timer_alarm_notified(alarm_id)
+        count += 1
+    return count
+
+async def run_timer_alarm_watcher_loop():
+    """
+    Vigilante de alta frecuencia (cada 1s) para alarmas de foco/descanso en segundo plano.
+    """
+    while True:
+        try:
+            await asyncio.to_thread(check_and_dispatch_due_timer_alarms)
+        except Exception as e:
+            pass
+        await asyncio.sleep(1)
