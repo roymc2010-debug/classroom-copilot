@@ -1813,7 +1813,55 @@
         const ADMIN_TEST_EMAIL = 'rodrigo.munoz6509@alumnos.udg.mx';
         const ALEX_TEST_EMAIL = 'alexmunoz918@gmail.com';
         let currentUserEmail = '';
+        try {
+            currentUserEmail = localStorage.getItem('agora_user_email') || '';
+        } catch(e) {}
         let isUserAdminTest = false;
+
+        // Enrutador Determinista de Cuentas Escolares para Google (Drive, Docs, Classroom, etc.)
+        function formatGoogleUrlWithAuth(url) {
+            if (!url || typeof url !== 'string' || url === '#' || url.startsWith('javascript:')) return url;
+            let email = currentUserEmail;
+            if (!email) {
+                try { email = localStorage.getItem('agora_user_email') || ''; } catch(e) {}
+            }
+            if (!email) return url;
+
+            // Si es un endpoint local de Ágora (/api/...), no alterar
+            if (url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) return url;
+
+            // Verificar si es un enlace perteneciente a los servicios de Google
+            const isGoogle = url.includes('google.com') || url.includes('classroom.') || url.includes('drive.') || url.includes('docs.');
+            if (!isGoogle) return url;
+
+            // Limpiar prefijo rígido /u/0/ o /u/1/ que causa 403 o redirección a cuentas personales
+            let cleanUrl = url.replace(/\/u\/\d+\//g, '/');
+
+            // Si ya tiene el parámetro authuser=, no duplicar
+            if (cleanUrl.includes('authuser=')) return cleanUrl;
+
+            const sep = cleanUrl.includes('?') ? '&' : '?';
+            return `${cleanUrl}${sep}authuser=${encodeURIComponent(email)}`;
+        }
+
+        // Envoltorio global para window.open: cualquier apertura de enlace de Google hereda authuser
+        const _nativeWindowOpen = window.open;
+        window.open = function(url, target, features) {
+            if (typeof url === 'string') {
+                url = formatGoogleUrlWithAuth(url);
+            }
+            return _nativeWindowOpen.call(window, url, target, features);
+        };
+
+        // Interceptor global en fase de captura para cualquier enlace <a> de Google
+        document.addEventListener('click', (e) => {
+            const a = e.target && e.target.closest ? e.target.closest('a') : null;
+            if (!a) return;
+            const href = a.getAttribute('href');
+            if (href && (href.includes('google.com') || href.includes('classroom.') || href.includes('drive.') || href.includes('docs.'))) {
+                a.href = formatGoogleUrlWithAuth(href);
+            }
+        }, true);
 
         // Muestras de prueba para rodrigo.munoz6509@alumnos.udg.mx:
         // Permite probar días en semana 1 y todas las semanas del semestre hasta la 15
@@ -2662,6 +2710,9 @@
                 
                 // Reconocimiento de cuenta autenticada
                 currentUserEmail = (data.user_email || '').toLowerCase().trim();
+                if (currentUserEmail) {
+                    try { localStorage.setItem('agora_user_email', currentUserEmail); } catch(e) {}
+                }
                 isUserAdminTest = (currentUserEmail === ADMIN_TEST_EMAIL.toLowerCase());
 
                 // Actualizar inmediatamente la visualización de la cuenta activa
@@ -2890,14 +2941,7 @@
 
             // Extraer enlaces https?://
             const linkMatches = rawText.match(/https?:\/\/[^\s\)]+/g) || [];
-            const links = linkMatches.map(l => {
-                let trimmed = l.trim();
-                if (currentUserEmail && (trimmed.includes('google.com') || trimmed.includes('classroom.')) && !trimmed.includes('authuser=')) {
-                    const sep = trimmed.includes('?') ? '&' : '?';
-                    trimmed = `${trimmed}${sep}authuser=${encodeURIComponent(currentUserEmail)}`;
-                }
-                return trimmed;
-            });
+            const links = linkMatches.map(l => formatGoogleUrlWithAuth(l.trim()));
             const cleanText = rawText.replace(/https?:\/\/[^\s\)]+/g, '').trim();
 
             // Limpiar saludos iniciales
@@ -4123,9 +4167,9 @@
                     
                     let driveAction = '';
                     if (res.preview_url) {
-                        driveAction = `<div class="mt-2"><a href="${res.preview_url}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] transition-colors"><i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> Ver en Google Drive</a></div>`;
+                        driveAction = `<div class="mt-2"><a href="${formatGoogleUrlWithAuth(res.preview_url)}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] transition-colors"><i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i> Ver en Google Drive</a></div>`;
                     } else if (res.folder_url) {
-                        driveAction = `<div class="mt-2"><a href="${res.folder_url}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] transition-colors"><i class="fa-solid fa-folder text-[9px]"></i> Abrir carpeta en Drive</a></div>`;
+                        driveAction = `<div class="mt-2"><a href="${formatGoogleUrlWithAuth(res.folder_url)}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[11px] transition-colors"><i class="fa-solid fa-folder text-[9px]"></i> Abrir carpeta en Drive</a></div>`;
                     }
 
                     loadingBubble.innerHTML = `
@@ -4440,9 +4484,9 @@
                             `;
                             btn.onclick = () => {
                                 if (doc.preview_url && doc.preview_url !== '#') {
-                                    window.open(doc.preview_url, '_blank');
+                                    window.open(formatGoogleUrlWithAuth(doc.preview_url), '_blank');
                                 } else if (doc.download_url && doc.download_url !== '#') {
-                                    window.open(doc.download_url, '_blank');
+                                    window.open(formatGoogleUrlWithAuth(doc.download_url), '_blank');
                                 } else {
                                     alert(`El documento '${doc.name}' aún no contiene archivos subidos para '${courseName}'. Sube apuntes con el botón [📎] en Ignis o añade notas personales en las misiones.`);
                                 }
@@ -4503,8 +4547,10 @@
                         const left = document.createElement('div');
                         left.className = "flex items-center gap-2 min-w-0 flex-1";
 
+                        const driveLink = formatGoogleUrlWithAuth(f.webViewLink) || '#';
+
                         const nameLink = document.createElement('a');
-                        nameLink.href = f.webViewLink || '#';
+                        nameLink.href = driveLink;
                         nameLink.target = '_blank';
                         nameLink.className = "text-xs font-semibold text-cantera-900 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 truncate block transition-colors";
                         nameLink.title = f.name;
@@ -4518,9 +4564,9 @@
                         right.className = "flex items-center gap-1.5 shrink-0";
 
                         const openBtn = document.createElement('a');
-                        openBtn.href = f.webViewLink || '#';
+                        openBtn.href = driveLink;
                         openBtn.target = '_blank';
-                        openBtn.title = "Abrir archivo";
+                        openBtn.title = "Abrir archivo en Google Drive";
                         openBtn.className = "px-2 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-600 dark:text-indigo-400 text-xs font-semibold flex items-center gap-1 transition-colors";
                         openBtn.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i><span class="hidden sm:inline">Abrir</span>';
 
@@ -4573,10 +4619,11 @@
             const select = document.getElementById('settings-course-select');
             const courseName = select ? select.value : '';
             if (currentCourseNotesData && currentCourseNotesData.folder_url) {
-                window.open(currentCourseNotesData.folder_url, '_blank');
+                window.open(formatGoogleUrlWithAuth(currentCourseNotesData.folder_url), '_blank');
             } else {
                 const searchQ = courseName ? encodeURIComponent(`'Ágora - Apuntes' ${courseName}`) : encodeURIComponent("'Ágora - Apuntes'");
-                window.open(`https://drive.google.com/drive/u/0/search?q=${searchQ}`, '_blank');
+                const baseSearch = `https://drive.google.com/drive/search?q=${searchQ}`;
+                window.open(formatGoogleUrlWithAuth(baseSearch), '_blank');
             }
         }
 
@@ -4595,7 +4642,7 @@
 
             const doc = currentCourseNotesData.documents.find(d => d.type === type || (type === 'unit1' && d.unit === 'Unidad 1'));
             if (doc && doc.preview_url && doc.preview_url !== '#') {
-                window.open(doc.preview_url, '_blank');
+                window.open(formatGoogleUrlWithAuth(doc.preview_url), '_blank');
             } else {
                 alert(`El documento (${type}) para '${courseName}' aún no tiene archivos cargados. Sube apuntes en PDF o fotos de clase en Ignis para generarlo.`);
             }
@@ -5240,11 +5287,7 @@
             const doc = currentTaskDocs[currentDocIndex];
             document.getElementById('doc-carousel-title').textContent = doc.title;
             document.getElementById('doc-carousel-counter').textContent = `${currentDocIndex + 1}/${currentTaskDocs.length}`;
-            let extLink = doc.link || currentTaskContext.link;
-            if (extLink && currentUserEmail && (extLink.includes('google.com') || extLink.includes('classroom.')) && !extLink.includes('authuser=')) {
-                const sep = extLink.includes('?') ? '&' : '?';
-                extLink = `${extLink}${sep}authuser=${encodeURIComponent(currentUserEmail)}`;
-            }
+            let extLink = formatGoogleUrlWithAuth(doc.link || currentTaskContext.link);
             document.getElementById('doc-external-link').href = extLink;
 
             const container = document.getElementById('doc-viewer-container');
@@ -5260,16 +5303,13 @@
             }
 
             if (docViewMode === 'pdf' && fileId) {
-                let previewUrl = `https://drive.google.com/file/d/${fileId}/preview`;
-                if (currentUserEmail) {
-                    previewUrl += `?authuser=${encodeURIComponent(currentUserEmail)}`;
-                }
+                const previewUrl = formatGoogleUrlWithAuth(`https://drive.google.com/file/d/${fileId}/preview`);
                 container.innerHTML = `
                     <div class="w-full h-full flex flex-col">
                         <iframe src="${previewUrl}" class="w-full flex-1 min-h-[460px] border-0 rounded-xl bg-white shadow-inner pointer-events-none md:pointer-events-auto" allow="autoplay"></iframe>
                         <div class="pt-2 px-1 flex items-center justify-between text-[11px] text-cantera-600 dark:text-slate-400">
                             <span>¿El visor no carga tu cuenta escolar?</span>
-                            <a href="${doc.link}" target="_blank" class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center gap-1">
+                            <a href="${extLink}" target="_blank" class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center gap-1">
                                 Abrir en Drive <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
                             </a>
                         </div>

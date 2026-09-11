@@ -29,6 +29,7 @@ except ImportError:
 
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaInMemoryUpload
+from services.classroom_service import inject_authuser
 
 NOTES_CACHE_DIR = os.path.join("data", "notes_cache")
 os.makedirs(NOTES_CACHE_DIR, exist_ok=True)
@@ -217,10 +218,7 @@ def process_and_upload_note(
     # 1. Comprobación de deduplicación SHA-256
     if file_hash in hashes:
         existing = hashes[file_hash]
-        preview_url = existing.get("preview_url", "")
-        if user_email and "?authuser" not in preview_url:
-            sep = "&" if "?" in preview_url else "?"
-            preview_url = f"{preview_url}{sep}authuser={user_email}"
+        preview_url = inject_authuser(existing.get("preview_url", ""), user_email)
         return {
             "success": True,
             "is_duplicate": True,
@@ -270,12 +268,10 @@ def process_and_upload_note(
             if "403" in str(e) or "insufficient" in str(e).lower():
                 drive_error = "Permisos de Drive pendientes. Cierra sesión y vuelve a iniciarla para conceder acceso a Google Drive."
 
-    if user_email and preview_url:
-        sep = "&" if "?" in preview_url else "?"
-        preview_url = f"{preview_url}{sep}authuser={user_email}"
-    if user_email and folder_url:
-        sep = "&" if "?" in folder_url else "?"
-        folder_url = f"{folder_url}{sep}authuser={user_email}"
+    if preview_url:
+        preview_url = inject_authuser(preview_url, user_email)
+    if folder_url:
+        folder_url = inject_authuser(folder_url, user_email)
 
     # 4. Actualizar almacenamiento local de la materia
     course_data = load_local_course_notes(course_name)
@@ -408,11 +404,8 @@ def add_personal_note(
                     f_id = created.get('id')
 
                 drive_synced = True
-                drive_file_url = f"https://drive.google.com/file/d/{f_id}/view"
-                drive_folder_url = f"https://drive.google.com/drive/folders/{folder_id}"
-                if user_email:
-                    drive_file_url += f"?authuser={user_email}"
-                    drive_folder_url += f"?authuser={user_email}"
+                drive_file_url = inject_authuser(f"https://drive.google.com/file/d/{f_id}/view", user_email)
+                drive_folder_url = inject_authuser(f"https://drive.google.com/drive/folders/{folder_id}", user_email)
         except Exception as e:
             print(f"[NotesService] Error sincronizando nota personal en Google Drive: {e}")
             drive_error = str(e)
@@ -1712,10 +1705,7 @@ def sync_course_docx_documents_to_drive(
                 f_id = cr.get('id') if isinstance(cr, dict) else None
 
             if f_id:
-                link = f"https://docs.google.com/document/d/{f_id}/edit"
-                if user_email:
-                    link += f"?authuser={user_email}"
-                links[d_key] = link
+                links[d_key] = inject_authuser(f"https://docs.google.com/document/d/{f_id}/edit", user_email)
     except Exception as e:
         print(f"[NotesService] Error sincronizando documentos .docx a Drive: {e}")
 
@@ -1764,11 +1754,7 @@ def sync_course_thematic_summary_to_drive(
         if not file_id:
             return None
 
-        link = f"https://drive.google.com/file/d/{file_id}/view"
-        if user_email and "?authuser" not in link:
-            sep = "&" if "?" in link else "?"
-            link += f"{sep}authuser={user_email}"
-        return link
+        return inject_authuser(f"https://drive.google.com/file/d/{file_id}/view", user_email)
     except Exception as e:
         print(f"[NotesService] Error sincronizando resumen temático en Drive: {e}")
         return None
@@ -1845,9 +1831,7 @@ def get_course_notes(
         try:
             folder_id = get_or_create_course_folder(drive_service, course_name)
             if folder_id:
-                folder_url = f"https://drive.google.com/drive/folders/{folder_id}"
-                if user_email:
-                    folder_url += f"?authuser={user_email}"
+                folder_url = inject_authuser(f"https://drive.google.com/drive/folders/{folder_id}", user_email)
 
                 # Sincronizar el Resumen de Estudio por Temas en Google Drive
                 drive_summary_url = sync_course_thematic_summary_to_drive(
@@ -1871,9 +1855,7 @@ def get_course_notes(
                     if not isinstance(df, dict) or 'id' not in df:
                         continue
                     f_link = df.get('webViewLink') or f"https://drive.google.com/file/d/{df['id']}/view"
-                    if user_email and "?authuser" not in f_link:
-                        sep = "&" if "?" in f_link else "?"
-                        f_link += f"{sep}authuser={user_email}"
+                    f_link = inject_authuser(f_link, user_email)
                     documents.append({
                         "name": df.get('name', 'Documento en Drive'),
                         "type": "drive_file",
@@ -1896,9 +1878,7 @@ def get_course_notes(
         if display_name in existing_doc_names or t_title in existing_doc_names:
             continue
         t_link = tf.get('link') or f"https://drive.google.com/file/d/{tf.get('id', '')}/view"
-        if user_email and "?authuser" not in t_link and ("google.com" in t_link or "drive.google" in t_link):
-            sep = "&" if "?" in t_link else "?"
-            t_link += f"{sep}authuser={user_email}"
+        t_link = inject_authuser(t_link, user_email)
         documents.append({
             "name": display_name,
             "type": "teacher_material",
@@ -1913,10 +1893,7 @@ def get_course_notes(
     # Mostrar apuntes por unidad cargados por el usuario
     for unit_name, unit_files in course_data.get("units", {}).items():
         first_file = unit_files[0] if unit_files else {}
-        preview_url = first_file.get("preview_url", "")
-        if user_email and preview_url and "?authuser" not in preview_url:
-            sep = "&" if "?" in preview_url else "?"
-            preview_url = f"{preview_url}{sep}authuser={user_email}"
+        preview_url = inject_authuser(first_file.get("preview_url", ""), user_email)
             
         display_unit_name = f"{unit_name} - Apuntes.pdf"
         if display_unit_name not in existing_doc_names:
@@ -2121,10 +2098,7 @@ def list_course_drive_files(course_name: str, creds = None, user_email: str = ""
                     for rf in raw_files:
                         if not isinstance(rf, dict) or 'id' not in rf:
                             continue
-                        link = rf.get('webViewLink') or f"https://drive.google.com/file/d/{rf['id']}/view"
-                        if user_email and "?authuser" not in link:
-                            sep = "&" if "?" in link else "?"
-                            link += f"{sep}authuser={user_email}"
+                        link = inject_authuser(rf.get('webViewLink') or f"https://drive.google.com/file/d/{rf['id']}/view", user_email)
                         files_list.append({
                             "id": rf["id"],
                             "name": rf.get("name", "Documento"),
@@ -2179,10 +2153,7 @@ def list_course_drive_files(course_name: str, creds = None, user_email: str = ""
             if af_id and af_id not in seen_ids:
                 seen_ids.add(af_id)
                 f_title = (af.get('title') or 'Documento adjunto').strip()
-                link = af.get('link') or f"https://drive.google.com/file/d/{af_id}/view"
-                if user_email and "?authuser" not in link:
-                    sep = "&" if "?" in link else "?"
-                    link += f"{sep}authuser={user_email}"
+                link = inject_authuser(af.get('link') or f"https://drive.google.com/file/d/{af_id}/view", user_email)
                 files_list.append({
                     "id": af_id,
                     "name": f_title if '.' in f_title else f"{f_title}.pdf",
@@ -2195,10 +2166,7 @@ def list_course_drive_files(course_name: str, creds = None, user_email: str = ""
         fid = f.get("drive_file_id") or f.get("id") or f"file_{compute_sha256(f.get('filename', '').encode())[:8]}"
         if fid not in seen_ids:
             seen_ids.add(fid)
-            link = f.get("drive_url") or f"https://drive.google.com/file/d/{fid}/view"
-            if user_email and "?authuser" not in link:
-                sep = "&" if "?" in link else "?"
-                link += f"{sep}authuser={user_email}"
+            link = inject_authuser(f.get("drive_url") or f"https://drive.google.com/file/d/{fid}/view", user_email)
             files_list.append({
                 "id": fid,
                 "name": f.get("filename", "Apunte.pdf"),

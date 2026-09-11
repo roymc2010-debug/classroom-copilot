@@ -133,9 +133,13 @@ def inject_authuser(url: str, user_email: str = None) -> str:
         return url or ""
     if "authuser=" in url:
         return url
-    if "google.com" in url or "classroom." in url or "drive." in url:
-        sep = "&" if "?" in url else "?"
-        return f"{url}{sep}authuser={user_email}"
+    if "google.com" in url or "classroom." in url or "drive." in url or "docs." in url:
+        # Si contiene /u/0/ o /u/1/ en URLs de Google, limpiarlo para evitar forzar la cuenta incorrecta
+        clean_url = re.sub(r'/u/\d+/', '/', url)
+        if "authuser=" in clean_url:
+            return clean_url
+        sep = "&" if "?" in clean_url else "?"
+        return f"{clean_url}{sep}authuser={user_email}"
     return url
 
 def get_credentials():

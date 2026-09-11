@@ -149,6 +149,21 @@ class TestBrotherClassroomData(unittest.TestCase):
         url4 = "https://wikipedia.org/wiki/Calculus"
         res4 = inject_authuser(url4, email)
         self.assertEqual(res4, url4)
+
+        # URL de Drive con prefijo /u/0/ que debe ser despojado para evitar forzar cuenta personal
+        url5 = "https://drive.google.com/drive/u/0/folders/folder_agora_123"
+        res5 = inject_authuser(url5, email)
+        self.assertEqual(res5, f"https://drive.google.com/drive/folders/folder_agora_123?authuser={email}")
+
+        # URL de Google Docs editable
+        url6 = "https://docs.google.com/document/d/doc_789_xyz/edit"
+        res6 = inject_authuser(url6, email)
+        self.assertEqual(res6, f"{url6}?authuser={email}")
+
+        # URL de búsqueda en Drive con /u/0/
+        url7 = "https://drive.google.com/drive/u/0/search?q=test"
+        res7 = inject_authuser(url7, email)
+        self.assertEqual(res7, f"https://drive.google.com/drive/search?q=test&authuser={email}")
         
         print("[OK] Test 5 superado: Enlaces externos de Google integran ?authuser deterministamente.")
 
