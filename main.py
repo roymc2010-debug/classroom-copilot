@@ -7,7 +7,7 @@ import urllib.parse
 import traceback
 from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, Request, UploadFile, File, Form
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from google.oauth2.credentials import Credentials
@@ -673,6 +673,37 @@ async def get_course_study_summary_endpoint(course_name: str, request: Request):
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+@app.get("/api/notes/{course_name}/docx/{doc_type}")
+async def get_course_docx_endpoint(course_name: str, doc_type: str, request: Request):
+    """
+    Sirve los documentos didácticos editables de Word (.docx) generados para la materia:
+    - guia_docente: 01_Guia_Docente_Rubricas_y_Bibliografia.docx
+    - socrates_guia: 02_Resumen_Semestral_y_Catalogo_de_Ejercicios.docx
+    - apuntes_tema_1: 03_Apuntes_Tema_1_[...].docx
+    """
+    session_id = request.cookies.get("agora_session")
+    creds_json = user_sessions.get(session_id)
+    creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
+    user_email = get_session_email(session_id, creds=creds)
+
+    try:
+        import services.notes_service as notes_service
+        tasks = get_user_tasks_cached(user_email=user_email, creds=creds)
+        docx_bytes, filename = notes_service.get_course_docx_bytes(course_name, doc_type, tasks=tasks)
+        if not docx_bytes:
+            return JSONResponse(status_code=404, content={"error": "Documento no encontrado o formato no disponible."})
+
+        import unicodedata
+        safe_fn = ''.join(c for c in unicodedata.normalize('NFD', filename) if unicodedata.category(c) != 'Mn')
+        return Response(
+            content=docx_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{safe_fn}"'}
+        )
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
 @app.delete("/api/notes/{course_name}")
 async def delete_course_notes_endpoint(course_name: str, request: Request):
     """
@@ -905,9 +936,20 @@ async def socrates_exam(request: Request):
         "description": f"Simulación de evaluación oral bajo modalidad {mode}. Evalúa al estudiante con rigor sobre los temas de {course_name}."
     }
 
-    if course_name and "student_notes" not in task_context:
+    session_id = request.cookies.get("agora_session")
+    creds_json = user_sessions.get(session_id)
+    creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
+    user_email = get_session_email(session_id, creds=creds)
+    tasks = get_user_tasks_cached(user_email=user_email, creds=creds)
+
+    if course_name:
         try:
             import services.notes_service as notes_service
+            # Inyectar el instructivo procedimental paso a paso y catálogo de problemas para Sócrates
+            procedural_guide = notes_service.get_socrates_procedural_guide_text(course_name, tasks=tasks)
+            if procedural_guide:
+                task_context["procedural_guide"] = procedural_guide
+
             notes_text = notes_service.get_course_notes_text(course_name)
             if notes_text:
                 task_context["student_notes"] = notes_text

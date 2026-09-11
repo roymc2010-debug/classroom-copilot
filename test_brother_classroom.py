@@ -653,7 +653,121 @@ class TestBrotherClassroomData(unittest.TestCase):
         db.delete_push_subscription(test_endpoint)
         print("[OK] Test 18 superado: Arquitectura Web Push 24/7, VAPID y modo silencioso nocturno validados.")
 
+    def test_19_docx_generation_and_socrates_procedural_guide(self):
+        """
+        Prueba la generación de los 3 documentos didácticos en formato Word (.docx):
+        1. 01_Guia_Docente_Rubricas_y_Bibliografia.docx (Criterios, rúbricas ponderadas, libros citados).
+        2. 02_Resumen_Semestral_y_Catalogo_de_Ejercicios.docx (Instructivo procedimental paso a paso SIN PROSA para Sócrates).
+        3. 03_Apuntes_Tema_1_[...].docx (Apuntes explicativos en prosa didáctica por unidad temática).
+        4. Endpoint /api/notes/{course}/docx/{doc_type} sirviendo bytes .docx válidos.
+        5. Inyección obligatoria de la pauta procedimental de Sócrates en /api/socrates/exam.
+        """
+        import io
+        import docx
+        import services.notes_service as notes_service
+        from fastapi.testclient import TestClient
+        from main import app, user_sessions, ALEX_EMAIL
+
+        course = "Teoría de Sistemas y Control Automático"
+        sample_tasks = [
+            {
+                "id": "cw_ctrl_1",
+                "course_name": course,
+                "title": "Práctica 3: Sistemas LTI y Respuesta al Escalón",
+                "description": "Determinar función de transferencia y parámetros temporales. Libro base: Ogata Cap 3.",
+                "attachment_files": [{"id": "f_1", "title": "Guia_LTI.pdf", "link": "#"}]
+            },
+            {
+                "id": "cw_ctrl_2",
+                "course_name": course,
+                "title": "Proyecto Final: Control de Posición Motor DC con PID",
+                "description": "Sintonización PID y estabilidad Routh-Hurwitz. Formato PDF obligatorio.",
+                "attachment_files": [{"id": "f_2", "title": "Guia_PID.pdf", "link": "#"}]
+            }
+        ]
+
+        # 1. Generación y estructura de Doc 1 (Guía Docente y Bibliografía)
+        doc1_bytes = notes_service.build_docx_teacher_criteria(course, tasks=sample_tasks)
+        self.assertGreater(len(doc1_bytes), 1000)
+        self.assertTrue(doc1_bytes.startswith(b"PK\x03\x04"))
+        d1 = docx.Document(io.BytesIO(doc1_bytes))
+        d1_text = " ".join([p.text for p in d1.paragraphs])
+        self.assertIn("GUÍA DOCENTE, RÚBRICAS Y BIBLIOGRAFÍA", d1_text)
+        self.assertIn("Normas de Entrega", d1_text)
+        self.assertGreater(len(d1.tables), 1)  # Tablas de rúbrica y bibliografía
+
+        # 2. Generación y estructura de Doc 2 (Instructivo Sócrates SIN PROSA)
+        doc2_bytes = notes_service.build_docx_socrates_procedural_guide(course, tasks=sample_tasks)
+        self.assertGreater(len(doc2_bytes), 1000)
+        self.assertTrue(doc2_bytes.startswith(b"PK\x03\x04"))
+        d2 = docx.Document(io.BytesIO(doc2_bytes))
+        d2_text = " ".join([p.text for p in d2.paragraphs])
+        self.assertIn("INSTRUCTIVO DE EXAMEN Y CATÁLOGO DE EJERCICIOS", d2_text)
+        self.assertIn("SIN PROSA", d2_text)
+        self.assertIn("CÓMO PROCEDER ANTE LA PRUEBA", d2_text)
+        self.assertIn("PASO 1", d2_text)
+        self.assertIn("PASO 2", d2_text)
+        self.assertIn("PASO 3", d2_text)
+        self.assertIn("PASO 4", d2_text)
+        self.assertIn("PAUTA DE AUDITORÍA E INTERROGACIÓN PARA SÓCRATES (SINODAL)", d2_text)
+
+        # Validar función de texto para Sócrates
+        socrates_text = notes_service.get_socrates_procedural_guide_text(course, tasks=sample_tasks)
+        self.assertIn("PAUTA SÓCRATES", socrates_text)
+        self.assertIn("PASO 1 (VARIABLES Y CONDICIONES INICIALES)", socrates_text)
+        self.assertIn("PASO 4 (CHECKPOINTS DE VERIFICACIÓN DEL RESULTADO)", socrates_text)
+
+        # 3. Generación y estructura de Doc 3 (Apuntes didácticos en prosa explicativa)
+        doc3_bytes = notes_service.build_docx_thematic_notes(course, topic_index=1, tasks=sample_tasks)
+        self.assertGreater(len(doc3_bytes), 1000)
+        self.assertTrue(doc3_bytes.startswith(b"PK\x03\x04"))
+        d3 = docx.Document(io.BytesIO(doc3_bytes))
+        d3_text = " ".join([p.text for p in d3.paragraphs])
+        self.assertIn("APUNTES DIDÁCTICOS DE CLASE", d3_text)
+        self.assertIn("Introducción Conceptual y Objetivos de Aprendizaje", d3_text)
+
+        # 4. get_course_notes incorpora los 3 documentos .docx como primarios
+        notes_res = notes_service.get_course_notes(course, user_email=ALEX_EMAIL, creds=None, tasks=sample_tasks)
+        docs = notes_res.get("documents", [])
+        doc_types = [d.get("type") for d in docs]
+        self.assertIn("docx_guide", doc_types)
+        self.assertIn("docx_socrates", doc_types)
+        self.assertIn("docx_thematic", doc_types)
+
+        # 5. Endpoint GET /api/notes/{course}/docx/{doc_type}
+        user_sessions["demo_alex_session"] = {
+            "email": ALEX_EMAIL,
+            "is_demo": True
+        }
+        client = TestClient(app, cookies={"agora_session": "demo_alex_session"})
+
+        for dt in ["guia_docente", "socrates_guia", "apuntes_tema_1"]:
+            resp = client.get(f"/api/notes/{course}/docx/{dt}")
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.headers.get("content-type"), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+            self.assertTrue(resp.content.startswith(b"PK\x03\x04"))
+
+        # 6. Endpoint POST /api/socrates/exam inyecta la pauta procedimental
+        with patch("main.ask_copilot") as mock_copilot:
+            mock_copilot.return_value = "Pregunta del sinodal basada en el instructivo procedimental."
+            exam_resp = client.post("/api/socrates/exam", json={
+                "course_name": course,
+                "mode": "hibrido",
+                "messages": [{"role": "user", "content": "Listo para el examen."}]
+            })
+            self.assertEqual(exam_resp.status_code, 200)
+            self.assertTrue(mock_copilot.called)
+            called_kwargs = mock_copilot.call_args.kwargs
+            task_ctx = called_kwargs.get("task_context", {})
+            self.assertIn("procedural_guide", task_ctx)
+            self.assertIn("PAUTA SÓCRATES", task_ctx["procedural_guide"])
+            self.assertIn("PASO 1", task_ctx["procedural_guide"])
+            self.assertEqual(called_kwargs.get("mentor"), "socrates")
+
+        print("[OK] Test 19 superado: Documentos editables .docx generados y Sócrates cableado con instructivo procedimental sin prosa.")
+
 if __name__ == '__main__':
     unittest.main()
+
 
 

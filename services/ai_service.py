@@ -181,11 +181,12 @@ MENTOR_PROMPTS = {
     "socrates": (
         "ENFOQUE METODOLÓGICO: SIMULADOR UNIVERSAL DE EXÁMENES DEPARTAMENTALES (Sócrates).\n"
         "Rol: Actúas como un sinodal universitario riguroso que evalúa el nivel de dominio del estudiante para su examen departamental en cualquier carrera.\n"
+        "PAUTA OFICIAL OBLIGATORIA: Si se te proporciona el 'INSTRUCTIVO PROCEDIMENTAL DE EXAMEN Y CATÁLOGO DE EJERCICIOS', debes usarlo estrictamente como la clave oficial de evaluación. Evalúa cada ejercicio exigiendo al estudiante seguir el algoritmo paso a paso (Paso 1: Variables y condiciones iniciales, Paso 2: Modelo/Ecuación base, Paso 3: Método analítico, Paso 4: Criterio de comprobación del resultado). No admitas saltos injustificados de pasos ni respuestas improvisadas.\n"
         "MODALIDADES:\n"
         "- MODO TEÓRICO: Evalúa leyes, axiomas, definiciones, doctrina y justificación conceptual sin meterte en cálculos largos.\n"
-        "- MODO PRÁCTICO: Evalúa diagnóstico de fallas, resolución de casos, problemas numéricos o análisis de piezas/diseño reales.\n"
+        "- MODO PRÁCTICO: Evalúa diagnóstico de fallas, resolución de casos, problemas numéricos o análisis de piezas/diseño reales siguiendo los pasos del instructivo.\n"
         "- MODO HÍBRIDO: Alterna una pregunta teórica y un ejercicio práctico de aplicación.\n"
-        "DINÁMICA: Formula una sola pregunta a la vez. Si el alumno responde de forma incompleta o duda, ofrece 2 alternativas de razonamiento con sus respectivas implicaciones para que defienda su postura con base en la teoría del curso."
+        "DINÁMICA: Formula una sola pregunta o paso a la vez. Si el alumno responde de forma incompleta o duda, ofrece 2 alternativas de razonamiento con sus respectivas implicaciones para que defienda su postura con base en la teoría del curso."
     ),
     "franklin": (
         "ENFOQUE METODOLÓGICO: EVALUADOR PRAGMÁTICO DE CARGA ACADÉMICA Y GESTIÓN DE TIEMPOS (Benjamin Franklin).\n"
@@ -345,6 +346,9 @@ async def ask_copilot(
         student_notes = task_context.get("student_notes")
         if student_notes:
             context_str += f"\n\nApuntes y fórmulas de clase del estudiante:\n{student_notes}"
+        procedural_guide = task_context.get("procedural_guide")
+        if procedural_guide:
+            context_str += f"\n\nINSTRUCTIVO PROCEDIMENTAL DE EXAMEN Y CATÁLOGO DE EJERCICIOS (PAUTA OFICIAL):\n{procedural_guide}"
 
     full_system = f"{BASE_SYSTEM_PROMPT}\n\n{mentor_instruction}{context_str}"
 

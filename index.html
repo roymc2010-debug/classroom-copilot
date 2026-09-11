@@ -1544,28 +1544,37 @@
                     <div class="space-y-1.5 pt-1">
                         <span class="text-[10px] font-bold text-cantera-500 dark:text-slate-400 uppercase tracking-wider block">Documentos y Guías de Estudio:</span>
                         <div id="settings-notes-docs-list" class="space-y-1.5 pt-1">
-                        <button type="button" onclick="downloadModularNote('unit1')" class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-indigo-400 flex items-center justify-between text-left transition-colors">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <i class="fa-regular fa-file-pdf text-rose-500"></i>
-                                <span class="font-medium truncate">Apuntes Teóricos (Unidad 1)</span>
-                            </div>
-                            <span class="text-indigo-600 dark:text-indigo-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-download"></i> Descargar</span>
-                        </button>
-                        <button type="button" onclick="downloadModularNote('formula_sheet')" class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-indigo-400 flex items-center justify-between text-left transition-colors">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <i class="fa-solid fa-square-root-variable text-sky-500"></i>
-                                <span class="font-medium truncate">Formulario Resumido</span>
-                            </div>
-                            <span class="text-indigo-600 dark:text-indigo-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-download"></i> Descargar</span>
-                        </button>
-                        <button type="button" onclick="downloadModularNote('master_document')" class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-indigo-400 flex items-center justify-between text-left transition-colors">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <i class="fa-solid fa-book-atlas text-amber-500"></i>
-                                <span class="font-medium truncate">Documento Maestro Compilado</span>
-                            </div>
-                            <span class="text-indigo-600 dark:text-indigo-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-download"></i> Descargar</span>
-                        </button>
-                    </div>
+                            <button type="button" onclick="downloadModularDocx('guia_docente')" class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-blue-400 flex items-center justify-between text-left transition-colors cursor-pointer">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <i class="fa-solid fa-file-word text-blue-600 dark:text-blue-400 text-sm"></i>
+                                    <div class="min-w-0">
+                                        <span class="font-medium truncate block text-xs text-cantera-900 dark:text-slate-100">01_Guia_Docente_Rubricas_y_Bibliografia.docx</span>
+                                        <span class="text-[10px] text-cantera-500 dark:text-slate-400 block truncate">Rúbricas ponderadas y bibliografía recomendada</span>
+                                    </div>
+                                </div>
+                                <span class="text-blue-600 dark:text-blue-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-file-pen text-[10px]"></i> Abrir Docs</span>
+                            </button>
+                            <button type="button" onclick="downloadModularDocx('socrates_guia')" class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-indigo-400 flex items-center justify-between text-left transition-colors cursor-pointer">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <i class="fa-solid fa-clipboard-check text-indigo-600 dark:text-indigo-400 text-sm"></i>
+                                    <div class="min-w-0">
+                                        <span class="font-medium truncate block text-xs text-cantera-900 dark:text-slate-100">02_Resumen_Semestral_y_Catalogo_de_Ejercicios.docx</span>
+                                        <span class="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold block truncate">Pauta oficial Sócrates (instructivo sin prosa)</span>
+                                    </div>
+                                </div>
+                                <span class="text-indigo-600 dark:text-indigo-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-brain text-[10px]"></i> Sócrates</span>
+                            </button>
+                            <button type="button" onclick="downloadModularDocx('apuntes_tema_1')" class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-emerald-400 flex items-center justify-between text-left transition-colors cursor-pointer">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <i class="fa-regular fa-file-lines text-emerald-600 dark:text-emerald-400 text-sm"></i>
+                                    <div class="min-w-0">
+                                        <span class="font-medium truncate block text-xs text-cantera-900 dark:text-slate-100">03_Apuntes_Tema_1_Didactica.docx</span>
+                                        <span class="text-[10px] text-cantera-500 dark:text-slate-400 block truncate">Apuntes explicativos en prosa didáctica continua</span>
+                                    </div>
+                                </div>
+                                <span class="text-emerald-600 dark:text-emerald-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-download text-[10px]"></i> Word</span>
+                            </button>
+                        </div>
                 </div>
 
                     <!-- Botón de eliminación con confirmación nativa -->
@@ -4354,6 +4363,16 @@
         // --- Gestión de Apuntes en Configuración ---
         let currentCourseNotesData = null;
 
+        function downloadModularDocx(docType) {
+            const sel = document.getElementById('settings-course-select');
+            const course = sel ? sel.value : '';
+            if (!course) {
+                alert('Por favor selecciona primero una asignatura en la lista superior.');
+                return;
+            }
+            window.open(`/api/notes/${encodeURIComponent(course)}/docx/${docType}`, '_blank');
+        }
+
         async function onSettingsCourseChanged(courseName) {
             const label = document.getElementById('settings-drive-course-label');
             if (label) label.textContent = courseName || 'Todas';
@@ -4389,7 +4408,10 @@
                             btn.className = "w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-indigo-400 flex items-center justify-between text-left transition-colors cursor-pointer";
                             
                             let icon = '<i class="fa-regular fa-file-pdf text-rose-500"></i>';
-                            if (doc.type === 'thematic_summary') icon = '<i class="fa-solid fa-graduation-cap text-purple-500"></i>';
+                            if (doc.type === 'docx_guide') icon = '<i class="fa-solid fa-file-word text-blue-600 dark:text-blue-400"></i>';
+                            else if (doc.type === 'docx_socrates') icon = '<i class="fa-solid fa-clipboard-check text-indigo-600 dark:text-indigo-400"></i>';
+                            else if (doc.type === 'docx_thematic') icon = '<i class="fa-regular fa-file-lines text-emerald-600 dark:text-emerald-400"></i>';
+                            else if (doc.type === 'thematic_summary') icon = '<i class="fa-solid fa-graduation-cap text-purple-500"></i>';
                             else if (doc.type === 'formula_sheet') icon = '<i class="fa-solid fa-square-root-variable text-sky-500"></i>';
                             else if (doc.type === 'master_document') icon = '<i class="fa-solid fa-book-atlas text-amber-500"></i>';
                             else if (doc.type === 'drive_file') icon = '<i class="fa-brands fa-google-drive text-emerald-500"></i>';
@@ -4402,18 +4424,25 @@
 
                             if (isAvailable && doc.type === 'thematic_summary') {
                                 actionLabel = '<span class="text-purple-600 dark:text-purple-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-book-open-reader text-[10px]"></i> Guía de Estudio</span>';
+                            } else if (isAvailable && doc.type && doc.type.startsWith('docx_')) {
+                                actionLabel = '<span class="text-blue-600 dark:text-blue-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-file-pen text-[10px]"></i> Abrir Docs</span>';
                             }
 
                             btn.innerHTML = `
                                 <div class="flex items-center gap-2 min-w-0">
                                     ${icon}
-                                    <span class="font-medium truncate text-xs text-cantera-900 dark:text-slate-200">${doc.name}</span>
+                                    <div class="min-w-0">
+                                        <span class="font-medium truncate text-xs text-cantera-900 dark:text-slate-100 block">${doc.name}</span>
+                                        ${doc.description ? `<span class="text-[10px] text-cantera-500 dark:text-slate-400 block truncate">${doc.description}</span>` : ''}
+                                    </div>
                                 </div>
                                 ${actionLabel}
                             `;
                             btn.onclick = () => {
                                 if (doc.preview_url && doc.preview_url !== '#') {
                                     window.open(doc.preview_url, '_blank');
+                                } else if (doc.download_url && doc.download_url !== '#') {
+                                    window.open(doc.download_url, '_blank');
                                 } else {
                                     alert(`El documento '${doc.name}' aún no contiene archivos subidos para '${courseName}'. Sube apuntes con el botón [📎] en Ignis o añade notas personales en las misiones.`);
                                 }

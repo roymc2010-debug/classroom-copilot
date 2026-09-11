@@ -17,6 +17,16 @@ try:
 except ImportError:
     TTFont = None
 
+try:
+    import docx
+    from docx import Document
+    from docx.shared import Inches, Pt, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+except ImportError:
+    docx = None
+    Document = None
+
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaInMemoryUpload
 
@@ -829,6 +839,888 @@ def generate_thematic_study_summary(
         "text": summary_text
     }
 
+def get_recommended_bibliography(
+    clean_course: str,
+    tasks: Optional[List[Dict[str, Any]]] = None,
+    announcements: Optional[List[Dict[str, Any]]] = None
+) -> List[Dict[str, str]]:
+    """
+    Retorna la bibliografía canónica y recomendada para la asignatura,
+    incorporando referencias de libros de texto oficiales, manuales de práctica
+    y bibliografía citada explícitamente por el docente en Classroom.
+    """
+    norm = normalize_course_name(clean_course)
+    bib = []
+
+    if any(k in norm for k in ["control", "sistemas", "dinamicos", "lti"]):
+        bib.append({
+            "type": "Libro de Texto Base",
+            "title": "Ingeniería de Control Moderna (5ª Edición)",
+            "author": "Katsuhiko Ogata",
+            "editorial": "Pearson Educación",
+            "chapters": "Cap. 1-4: Modelado y función de transferencia; Cap. 8: Respuesta en frecuencia; Cap. 10: Controladores PID."
+        })
+        bib.append({
+            "type": "Libro de Consulta",
+            "title": "Sistemas de Control Moderno (12ª Edición)",
+            "author": "Richard C. Dorf & Robert H. Bishop",
+            "editorial": "Pearson Prentice Hall",
+            "chapters": "Cap. 2: Modelos matemáticos de sistemas dinámicos; Cap. 5: Rendimiento y estabilidad en lazo cerrado."
+        })
+        bib.append({
+            "type": "Manual de Simulación",
+            "title": "Control de Sistemas Continuos con MATLAB y Simulink",
+            "author": "Katsuhiko Ogata",
+            "editorial": "Prentice Hall",
+            "chapters": "Prácticas de laboratorio: respuesta al escalón, lugar geométrico de las raíces y sintonización analítica."
+        })
+    elif any(k in norm for k in ["calculo", "matematica", "analisis"]):
+        bib.append({
+            "type": "Libro de Texto Base",
+            "title": "Cálculo de una variable: Trascendentes tempranas (8ª Edición)",
+            "author": "James Stewart",
+            "editorial": "Cengage Learning",
+            "chapters": "Cap. 2: Límites y continuidad; Cap. 3: Reglas de derivación; Cap. 4: Optimización; Cap. 5: Integrales."
+        })
+        bib.append({
+            "type": "Libro de Consulta Teórica",
+            "title": "Cálculo: Una variable (14ª Edición)",
+            "author": "George B. Thomas Jr., Joel Hass, Christopher Heil",
+            "editorial": "Pearson Educación",
+            "chapters": "Cap. 1-4: Fundamentos analíticos, razón instantánea de cambio y Teorema Fundamental del Cálculo."
+        })
+        bib.append({
+            "type": "Texto Avanzado",
+            "title": "Calculus (3ª Edición)",
+            "author": "Michael Spivak",
+            "editorial": "Editorial Reverté",
+            "chapters": "Demostraciones formales de continuidad, teoremas de valor medio e integración rigurosa."
+        })
+    elif any(k in norm for k in ["programacion", "algoritmo", "computacion", "datos"]):
+        bib.append({
+            "type": "Libro de Texto Base",
+            "title": "Introduction to Algorithms (3rd Edition)",
+            "author": "Thomas H. Cormen, Charles E. Leiserson, Ronald L. Rivest, Clifford Stein",
+            "editorial": "MIT Press",
+            "chapters": "Cap. 1-4: Análisis de complejidad asintótica O(n); Cap. 10-12: Estructuras de datos elementales."
+        })
+        bib.append({
+            "type": "Libro de Consulta Práctica",
+            "title": "Algorithms (4th Edition)",
+            "author": "Robert Sedgewick & Kevin Wayne",
+            "editorial": "Addison-Wesley",
+            "chapters": "Búsqueda binaria, ordenamiento eficiente, tablas hash y diseño modular de software."
+        })
+        bib.append({
+            "type": "Manual de Ingeniería",
+            "title": "Clean Code: A Handbook of Agile Software Craftsmanship",
+            "author": "Robert C. Martin",
+            "editorial": "Prentice Hall",
+            "chapters": "Funciones puras, nombres descriptivos, modularidad y prevención de deuda técnica."
+        })
+    elif any(k in norm for k in ["analogica", "potencia", "electronica", "circuitos"]):
+        bib.append({
+            "type": "Libro de Texto Base",
+            "title": "Electrónica: Teoría de Circuitos y Dispositivos Electrónicos (11ª Edición)",
+            "author": "Robert L. Boylestad & Louis Nashelsky",
+            "editorial": "Pearson Educación",
+            "chapters": "Cap. 3: Diodos semiconductores; Cap. 4-5: Polarización BJT; Cap. 7-8: Modelado en pequeña señal AC."
+        })
+        bib.append({
+            "type": "Libro de Consulta",
+            "title": "Electrónica de Potencia: Circuitos, Dispositivos y Aplicaciones (4ª Edición)",
+            "author": "Muhammad H. Rashid",
+            "editorial": "Pearson",
+            "chapters": "Cap. 2: Conmutación en semiconductores; Cap. 5: Topologías de convertidores DC-DC Buck/Boost."
+        })
+        bib.append({
+            "type": "Manual de Diseño",
+            "title": "Circuitos Microelectrónicos (7ª Edición)",
+            "author": "Adel S. Sedra & Kenneth C. Smith",
+            "editorial": "Oxford University Press",
+            "chapters": "Etapas de amplificación, ancho de banda y filtros activos."
+        })
+    elif any(k in norm for k in ["fisica", "mecanica", "estatica", "dinamica"]):
+        bib.append({
+            "type": "Libro de Texto Base",
+            "title": "Ingeniería Mecánica: Estática y Dinámica (14ª Edición)",
+            "author": "R. C. Hibbeler",
+            "editorial": "Pearson Educación",
+            "chapters": "Cap. 2-4: Equilibrio de partículas y momentos; Cap. 12-14: Cinemática y cinética con fricción."
+        })
+        bib.append({
+            "type": "Libro de Consulta",
+            "title": "Física para Ciencias e Ingeniería con Física Moderna (9ª Edición)",
+            "author": "Raymond A. Serway & John W. Jewett Jr.",
+            "editorial": "Cengage Learning",
+            "chapters": "Cap. 5: Leyes de Newton; Cap. 7-8: Trabajo, energía cinética y conservación de la energía mecánica."
+        })
+        bib.append({
+            "type": "Texto de Referencia",
+            "title": "Mecánica Vectorial para Ingenieros: Estática (11ª Edición)",
+            "author": "Ferdinand P. Beer & E. Russell Johnston Jr.",
+            "editorial": "McGraw-Hill",
+            "chapters": "Cuerpos rígidos, diagramas de cuerpo libre y sistemas equivalentes de fuerzas."
+        })
+    else:
+        bib.append({
+            "type": "Libro de Texto Rector",
+            "title": f"Fundamentos y Metodología Aplicada de {clean_course}",
+            "author": "Academia Departamental de la Asignatura",
+            "editorial": "Editorial Universitaria",
+            "chapters": "Unidades 1 a 4 del programa analítico oficial de la materia."
+        })
+        bib.append({
+            "type": "Manual de Consulta Departamental",
+            "title": f"Guía Técnica y Ejercicios Prácticos de {clean_course}",
+            "author": "Coordinación Académica de Carrera",
+            "editorial": "Dirección de Educación Superior",
+            "chapters": "Protocolos de laboratorio, rúbricas de evaluación y banco de problemas resueltos."
+        })
+
+    # Escaneo dinámico de tareas y anuncios buscando bibliografía citada por el docente
+    all_texts = []
+    for t in (tasks or []):
+        all_texts.append(f"{t.get('title', '')} {t.get('description', '')}")
+    for a in (announcements or []):
+        all_texts.append(f"{a.get('text', '')}")
+
+    for text in all_texts:
+        m = re.search(r'(?:libro|bibliograf[ií]a|autor|texto\s+base|editorial|cap[ií]tulo)\s*[:\-]?\s*([^\n\.\r]{10,90})', text, re.IGNORECASE)
+        if m:
+            found_ref = m.group(1).strip()
+            if not any(found_ref.lower() in b["title"].lower() for b in bib):
+                bib.append({
+                    "type": "Bibliografía Citada por el Docente",
+                    "title": found_ref,
+                    "author": "Docente Titular / Asignatura",
+                    "editorial": "Material Oficial de Classroom",
+                    "chapters": "Lectura y preparación asignada en consignas de clase."
+                })
+
+    return bib
+
+def get_exercise_catalog_for_course(
+    clean_course: str,
+    tasks: Optional[List[Dict[str, Any]]] = None
+) -> Dict[str, Any]:
+    """
+    Retorna el catálogo clasificado de tipologías de problemas del semestre,
+    asociando el algoritmo procedimental de resolución ('Cómo proceder') y las
+    preguntas de auditoría para el simulador de examen Sócrates.
+    """
+    norm = normalize_course_name(clean_course)
+    course_tasks = [
+        t for t in (tasks or [])
+        if normalize_course_name(t.get('course_name')) == norm
+    ]
+
+    exercise_types = []
+
+    if any(k in norm for k in ["control", "sistemas", "dinamicos", "lti"]):
+        exercise_types.append({
+            "code": "TIPO-01",
+            "title": "Obtención de Función de Transferencia G(s) y Dinámica de Polos",
+            "statement": "Dada una ecuación diferencial lineal de n-ésimo orden, aplicar Transformada de Laplace bajo condiciones iniciales nulas, despejar la relación Y(s)/U(s) y calcular la posición de los polos del sistema.",
+            "step_1": "Identificar variables de entrada u(t), salida y(t) y parámetros invariantes. Confirmar condiciones iniciales nulas y(0)=0, y'(0)=0.",
+            "step_2": "Aplicar Transformada de Laplace unilateral término a término: L{d^n y / dt^n} = s^n Y(s).",
+            "step_3": "Factorizar algebraicamente Y(s) y U(s). Despejar G(s) = Y(s) / U(s) en forma de cociente de polinomios.",
+            "step_4": "Comprobar causalidad física (grado del denominador >= numerador) y evaluar estabilidad analizando la parte real de los polos en el semiplano izquierdo.",
+            "socrates_questions": [
+                "¿Por qué es estrictamente indispensable asumir condiciones iniciales nulas al determinar la función de transferencia?",
+                "Si la función de transferencia resultante presenta un polo con parte real positiva, ¿cuál es el comportamiento transitorio ante un escalón unitario?"
+            ],
+            "common_traps": "Olvidar agrupar coeficientes del mismo orden de 's' o asumir estabilidad sin resolver las raíces del denominador.",
+            "tasks_associated": [t.get("title", "") for t in course_tasks if any(w in t.get("title", "").lower() for w in ["lti", "transferencia", "modelado", "polo", "dinamica"])]
+        })
+        exercise_types.append({
+            "code": "TIPO-02",
+            "title": "Análisis de Respuesta Transitoria y Métricas Temporales de Segundo Orden",
+            "statement": "Para un sistema regido por G(s) = \\omega_n^2 / (s^2 + 2\\zeta\\omega_n s + \\omega_n^2), determinar el factor de amortiguamiento \\zeta, la frecuencia natural \\omega_n, el sobreimpulso porcentual (%OS) y el tiempo de asentamiento al 2% (ts).",
+            "step_1": "Comparar los coeficientes del polinomio característico contra el modelo estándar de 2do orden y despejar \\omega_n y \\zeta.",
+            "step_2": "Clasificar la respuesta temporal: subamortiguado (0 < \\zeta < 1), críticamente amortiguado (\\zeta = 1) o sobreamortiguado (\\zeta > 1).",
+            "step_3": "Calcular analíticamente: %OS = 100 * exp(-\\zeta\\pi / sqrt(1-\\zeta^2)) y tiempo de asentamiento ts = 4 / (\\zeta\\omega_n).",
+            "step_4": "Validar consistencia física: el sobreimpulso debe ser un porcentaje positivo acotado al 100% y el tiempo de asentamiento debe ser positivo y congruente con la constante de tiempo.",
+            "socrates_questions": [
+                "¿Qué modificación geométrica en la posición de los polos complejos conjugados ocurre al incrementar el amortiguamiento \\zeta?",
+                "¿Por qué un sistema sobreamortiguado (\\zeta > 1) no presenta ningún tipo de sobreimpulso?"
+            ],
+            "common_traps": "Evaluar la raíz cuadrada en radianes en vez de trabajar con el valor adimensional en el exponente.",
+            "tasks_associated": [t.get("title", "") for t in course_tasks if any(w in t.get("title", "").lower() for w in ["escalon", "transitoria", "sobreimpulso", "asentamiento", "segundo orden"])]
+        })
+        exercise_types.append({
+            "code": "TIPO-03",
+            "title": "Evaluación de Estabilidad en Lazo Cerrado mediante Routh-Hurwitz",
+            "statement": "A partir de la función de transferencia en lazo abierto C(s)G(s), formular el polinomio característico de lazo cerrado 1 + C(s)G(s) = 0 y hallar el rango admisible de ganancia K para estabilidad BIBO.",
+            "step_1": "Obtener el polinomio característico Q(s) = Denominador + Numerador = 0, ordenado en potencias decrecientes de 's'.",
+            "step_2": "Construir las primeras dos filas del arreglo de Routh con los coeficientes alternados del polinomio.",
+            "step_3": "Calcular analíticamente las filas subsiguientes aplicando determinantes cruzados con signo negativo: b_1 = (a_{n-1}*a_{n-2} - a_n*a_{n-3}) / a_{n-1}.",
+            "step_4": "Establecer las desigualdades de la primera columna (> 0) y despejar el intervalo de ganancias K estables.",
+            "socrates_questions": [
+                "¿Qué fenómeno físico o matemático señala la aparición de una fila completa de ceros en la tabla de Routh?",
+                "Si la primera columna presenta 2 variaciones de signo, ¿cuántos polos inestables existen en el semiplano derecho?"
+            ],
+            "common_traps": "Invertir el orden de los productos en el numerador del determinante de Routh cambiando erróneamente el signo del término.",
+            "tasks_associated": [t.get("title", "") for t in course_tasks if any(w in t.get("title", "").lower() for w in ["routh", "hurwitz", "estabilidad", "ganancia", "critica"])]
+        })
+        exercise_types.append({
+            "code": "TIPO-04",
+            "title": "Diseño y Sintonización de Controladores PID en Lazo Cerrado",
+            "statement": "Diseñar un controlador C(s) = Kp + Ki/s + Kd*s para satisfacer especificaciones de error estático nulo y sobreimpulso acotado.",
+            "step_1": "Definir especificaciones de desempeño: tipo de entrada de prueba (escalón o rampa), error en estado estacionario deseado ess y tiempo de respuesta.",
+            "step_2": "Seleccionar la acción de control: P (rapidez), PI (elimina error estacionario), o PID (amortigua oscilaciones transitorias).",
+            "step_3": "Calcular analíticamente las ganancias Kp, Ki, Kd mediante asignación de polos o método clásico de Ziegler-Nichols (ganancia crítica Ku y periodo Tu).",
+            "step_4": "Verificar la estabilidad del lazo cerrado 1 + C(s)G(s) = 0 y comprobar que la acción derivativa no amplifique ruido de alta frecuencia.",
+            "socrates_questions": [
+                "¿Por qué la presencia de un polo en el origen (acción integral) erradica el error en régimen permanente ante escalón?",
+                "¿Cuál es el riesgo operativo de seleccionar una ganancia derivativa Kd excesiva frente al ruido electromagnético de medición?"
+            ],
+            "common_traps": "Omitir el polo del integrador en el origen al ensamblar el denominador de la función de transferencia en lazo cerrado.",
+            "tasks_associated": [t.get("title", "") for t in course_tasks if any(w in t.get("title", "").lower() for w in ["pid", "proyecto final", "controlador", "sintonizacion", "motor dc"])]
+        })
+    elif any(k in norm for k in ["calculo", "matematica", "analisis"]):
+        exercise_types.append({
+            "code": "TIPO-01",
+            "title": "Resolución de Límites Indeterminados y Regla de L'Hôpital",
+            "statement": "Evaluar límites analíticos con formas indeterminadas 0/0 o infinito/infinito mediante simplificación algebraica o aplicación formal de L'Hôpital.",
+            "step_1": "Evaluar por sustitución directa para clasificar e identificar la indeterminación de manera formal.",
+            "step_2": "Seleccionar el método analítico: factorización de polinomios, racionalización por conjugadas o Regla de L'Hôpital.",
+            "step_3": "Si se emplea L'Hôpital, derivar de forma independiente el numerador f'(x) y el denominador g'(x) sin usar la regla del cociente.",
+            "step_4": "Evaluar el límite resultante y comprobar coherencia con las asíntotas de la curva.",
+            "socrates_questions": [
+                "¿Por qué es un error grave aplicar la regla del cociente al ejecutar la regla de L'Hôpital?",
+                "¿Qué condiciones de diferenciabilidad deben satisfacerse en el intervalo abierto que contiene al punto de evaluación?"
+            ],
+            "common_traps": "Derivar la función completa con la regla del cociente en lugar de derivar numerador y denominador por separado.",
+            "tasks_associated": [t.get("title", "") for t in course_tasks if any(w in t.get("title", "").lower() for w in ["limite", "l'hopital", "continuidad", "asintota"])]
+        })
+        exercise_types.append({
+            "code": "TIPO-02",
+            "title": "Optimización Analítica y Análisis de Curvatura de Funciones",
+            "statement": "Calcular los puntos críticos, intervalos de crecimiento, concavidad y extremos absolutos/locales de una función analítica.",
+            "step_1": "Definir el dominio formal de la función y calcular la primera derivada f'(x).",
+            "step_2": "Resolver f'(x) = 0 e identificar puntos donde f'(x) no exista para aislar los puntos críticos.",
+            "step_3": "Calcular la segunda derivada f''(x) y evaluar en los puntos críticos para clasificar mínimos locales (f''>0) o máximos locales (f''<0).",
+            "step_4": "Comprobar los valores extremos evaluando la función original f(x) en los puntos críticos y en los extremos del intervalo cerrado.",
+            "socrates_questions": [
+                "Si en un punto crítico f''(c) = 0, ¿qué procedimiento analítico alternativo debe seguirse para clasificarlo?",
+                "¿Cuál es la distinción formal entre un extremo local y un extremo global en un intervalo compacto?"
+            ],
+            "common_traps": "Evaluar el punto crítico en f'(x) o f''(x) para dar la respuesta en lugar de evaluarlo en la función original f(x).",
+            "tasks_associated": [t.get("title", "") for t in course_tasks if any(w in t.get("title", "").lower() for w in ["optimizacion", "derivada", "maximo", "minimo", "curvatura"])]
+        })
+        exercise_types.append({
+            "code": "TIPO-03",
+            "title": "Integración Analítica por Sustitución y Partes",
+            "statement": "Resolver integrales definidas e indefinidas aplicando el método analítico adecuado y el Teorema Fundamental del Cálculo.",
+            "step_1": "Inspeccionar la forma del integrando: cambio de variable u = g(x) o integración por partes u dv.",
+            "step_2": "Si es por partes, aplicar la regla de prelación LIATE para asignar u y dv, obteniendo du y v = int(dv).",
+            "step_3": "Desarrollar la fórmula: int(u dv) = u*v - int(v du) y evaluar la integral remanente.",
+            "step_4": "En integrales definidas, aplicar la regla de Barrow F(b) - F(a) y verificar signo positivo en cálculo de áreas físicas.",
+            "socrates_questions": [
+                "¿Cuál es el criterio heurístico fundamental para elegir el factor 'u' en la integración por partes?",
+                "¿Por qué es indispensable actualizar los límites de integración si se aplica un cambio de variable en una integral definida?"
+            ],
+            "common_traps": "Omitir la constante de integración C en integrales indefinidas o invertir el signo al restar la cota inferior F(a).",
+            "tasks_associated": [t.get("title", "") for t in course_tasks if any(w in t.get("title", "").lower() for w in ["integral", "partes", "sustitucion", "area", "volumen"])]
+        })
+    else:
+        exercise_types.append({
+            "code": "TIPO-01",
+            "title": f"Modelado Analítico y Planteamiento Formal de {clean_course}",
+            "statement": f"Dado un problema representativo de {clean_course}, formular las ecuaciones de equilibrio, balance de conservación o lógica estructurada del sistema.",
+            "step_1": "Identificar variables de entrada, parámetros conocidos, restricciones físicas y condiciones de frontera.",
+            "step_2": "Seleccionar el teorema o ecuación rectora correspondiente a los principios de la disciplina.",
+            "step_3": "Desarrollar la deducción analítica paso a paso sin omitir pasos intermedios ni simplificaciones arbitrarias.",
+            "step_4": "Realizar análisis dimensional y verificar la plausibilidad física/lógica del resultado.",
+            "socrates_questions": [
+                "¿Bajo qué hipótesis teóricas es válida la relación que acabas de formular?",
+                "¿Cómo cambiaría el comportamiento del modelo si duplicamos los parámetros de entrada?"
+            ],
+            "common_traps": "Aplicar fórmulas de régimen permanente en fenómenos transitorios o descuidar las unidades en el resultado final.",
+            "tasks_associated": [t.get("title", "") for t in course_tasks[:2]]
+        })
+        exercise_types.append({
+            "code": "TIPO-02",
+            "title": f"Cálculo Numérico, Algorítmico y Optimización de {clean_course}",
+            "statement": f"Ejecutar los algoritmos numéricos o procedimientos analíticos para obtener las variables de desempeño requeridas en {clean_course}.",
+            "step_1": "Organizar los datos numéricos en un esquema de variables estandarizado.",
+            "step_2": "Aplicar el algoritmo secuencial correspondiente asegurando consistencia de unidades.",
+            "step_3": "Realizar los cómputos manteniendo precisión analítica hasta la etapa final.",
+            "step_4": "Contrastar el valor numérico obtenido contra tolerancias de diseño o especificaciones estándar.",
+            "socrates_questions": [
+                "¿Qué margen de error numérico o tolerancia admite este procedimiento?",
+                "¿Qué verificación cruzada garantiza que no hubo un error algebraico o de redondeo?"
+            ],
+            "common_traps": "Propagación de errores por redondeo prematuro o confusión entre unidades de medida.",
+            "tasks_associated": [t.get("title", "") for t in course_tasks[2:4]]
+        })
+
+    return {
+        "course_name": clean_course,
+        "exercise_types": exercise_types,
+        "total_types": len(exercise_types)
+    }
+
+def build_docx_teacher_criteria(
+    course_name: str,
+    tasks: Optional[List[Dict[str, Any]]] = None,
+    announcements: Optional[List[Dict[str, Any]]] = None
+) -> bytes:
+    """
+    Genera el Documento 1: '01_Guia_Docente_Rubricas_y_Bibliografia.docx'.
+    Incluye:
+    1. Normas de entrega y preferencias del docente (entornos, software, puntualidad, ética).
+    2. Rúbrica de evaluación ponderada y criterios de acreditación en tabla estructurada.
+    3. Bibliografía oficial recomendada y textos de consulta citados.
+    """
+    if Document is None:
+        return b""
+
+    doc = Document()
+    clean_course = re.sub(r'[\\/:*?"<>|]', '_', course_name).strip() or "Asignatura"
+
+    # Encabezado institucional
+    title_p = doc.add_paragraph()
+    r_title = title_p.add_run("ÁGORA — GUÍA DOCENTE, RÚBRICAS Y BIBLIOGRAFÍA")
+    r_title.bold = True
+    r_title.font.size = Pt(16)
+    r_title.font.color.rgb = RGBColor(30, 58, 138)
+
+    sub_p = doc.add_paragraph()
+    r_sub = sub_p.add_run(f"Asignatura: {course_name} | Programa Analítico y Pautas Oficiales de Acreditación")
+    r_sub.font.size = Pt(11)
+    r_sub.font.color.rgb = RGBColor(71, 85, 105)
+
+    doc.add_paragraph(f"Fecha de emisión: {datetime.datetime.utcnow().strftime('%Y-%m-%d')} | Vigencia: Periodo Escolar Vigente")
+    doc.add_paragraph("=" * 70)
+
+    # 1. Preferencias del Docente y Normas de Entrega
+    doc.add_heading("1. Normas de Entrega y Preferencias del Docente", level=1)
+    doc.add_paragraph(
+        "Las siguientes directrices representan los estándares formales requeridos por la academia "
+        "para la recepción, revisión y acreditación de memorias de cálculo, reportes de laboratorio y proyectos:"
+    )
+
+    doc.add_paragraph(
+        "• Formato y Presentación: Todo trabajo debe contar con portada institucional que consigne nombre completo del alumno, "
+        "número de matrícula, asignatura, fecha y título formal de la práctica. Los reportes analíticos deben entregarse en formato digital estructurado (PDF para documentos finales, o .py / .m comentados cuando se evalúe código).",
+        style='List Bullet'
+    )
+    doc.add_paragraph(
+        "• Entornos Computacionales Autorizados: Se promueve el uso de herramientas de modelado y cálculo de estándar industrial: "
+        "MATLAB / Simulink, Spyder / Jupyter Notebook (Python 3.x), Multisim y sistemas de edición técnica (LaTeX / Google Docs).",
+        style='List Bullet'
+    )
+    doc.add_paragraph(
+        "• Política de Puntualidad y Entregas Extemporáneas: Las actividades deben remitirse en o antes de la fecha y hora límite "
+        "fijada en Google Classroom. Toda entrega tardía sufrirá una penalización del 10% diario sobre la calificación máxima alcanzable; no se aceptarán reportes con más de 72 horas de demora o posterior a la evaluación departamental.",
+        style='List Bullet'
+    )
+    doc.add_paragraph(
+        "• Integridad y Rigor Académico: Las memorias de cálculo, desarrollos algebraicos y algoritmos deben ser de autoría propia y original. "
+        "La detección de copia entre pares, duplicidad literal o uso no declarado de fuentes externas causará la anulación inmediata de la entrega con nota reprobatoria (cero).",
+        style='List Bullet'
+    )
+
+    # Incorporar consignas docentes reales de tareas o anuncios si existen
+    teacher_notes = []
+    for t in (tasks or []):
+        desc = t.get('description', '').strip()
+        if desc and len(desc) > 20:
+            for line in desc.split('\n'):
+                line_c = line.strip()
+                if any(k in line_c.lower() for k in ["entregar", "formato", "pdf", "rubrica", "rúbrica", "evaluacion", "evaluación", "nota", "criterio", "codigo"]):
+                    if line_c not in teacher_notes:
+                        teacher_notes.append(line_c)
+    if teacher_notes:
+        doc.add_paragraph("Consignas específicas extraídas de las actividades de Classroom:", style='Normal')
+        for tn in teacher_notes[:4]:
+            doc.add_paragraph(f"• \"{tn}\"", style='List Bullet')
+
+    # 2. Rúbrica de Evaluación Ponderada
+    doc.add_heading("2. Rúbrica de Evaluación Ponderada y Criterios de Calificación", level=1)
+    doc.add_paragraph("La evaluación de las actividades y exámenes de la asignatura se rige bajo la siguiente matriz ponderada:")
+
+    table_rubric = doc.add_table(rows=1, cols=5)
+    table_rubric.style = 'Table Grid'
+    hdr_cells = table_rubric.rows[0].cells
+    headers = ["Criterio de Evaluación", "Ponderación", "Nivel Sobresaliente (100%)", "Nivel Suficiente (70%)", "Penalizaciones"]
+    for i, title in enumerate(headers):
+        hdr_cells[i].text = title
+        p = hdr_cells[i].paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for run in p.runs:
+            run.bold = True
+            run.font.size = Pt(9.5)
+
+    rubric_rows = [
+        ("Formulación Analítica y Planteamiento Base", "30%", 
+         "Planteamiento correcto de ecuaciones rectoras, diagramas de cuerpo libre o bloques, deducción formal de variables.", 
+         "Planteamiento válido con omisiones menores en la nomenclatura o diagramación parcial.", 
+         "-10% si se omiten condiciones iniciales o hipótesis de validez."),
+        ("Procedimiento Matemático y Cálculo Numérico", "30%", 
+         "Desarrollo secuencial sin errores algebraicos ni de redondeo. Exactitud simbólica previa a sustitución numérica.", 
+         "Errores aritméticos leves de redondeo que no invalidan la dinámica o sentido del resultado.", 
+         "-15% por error conceptual en fórmulas o teoremas rectores."),
+        ("Simulación Computacional o Validación", "25%", 
+         "Código o simulación comentada, gráficas con ejes rotulados, unidades del Sistema Internacional y contraste con teoría.", 
+         "Simulación ejecutable pero con comentarios escasos o gráficas sin rótulos claros de unidades.", 
+         "-10% por ausencia de unidades físicas o escalas en gráficas."),
+        ("Conclusiones Técnicas y Análisis Crítico", "15%", 
+         "Interpretación física rigurosa de los resultados, discusión de límites de operación y contraste con objetivos.", 
+         "Descripción elemental de lo obtenido sin análisis crítico de causa-efecto.", 
+         "-5% por formato deficiente o conclusiones superficiales.")
+    ]
+
+    for crit, pond, sob, suf, pen in rubric_rows:
+        row_cells = table_rubric.add_row().cells
+        row_cells[0].text = crit
+        row_cells[1].text = pond
+        row_cells[2].text = sob
+        row_cells[3].text = suf
+        row_cells[4].text = pen
+        for cell in row_cells:
+            for p in cell.paragraphs:
+                for run in p.runs:
+                    run.font.size = Pt(8.5)
+
+    # 3. Bibliografía Oficial Recomendada y Textos de Consulta
+    doc.add_heading("3. Bibliografía Oficial y Textos de Referencia", level=1)
+    doc.add_paragraph(
+        "A continuación se relacionan los libros de texto canónicos y las referencias bibliográficas "
+        "recomendadas por el cuerpo docente para la preparación teórica y el desarrollo de ejercicios:"
+    )
+
+    bib_entries = get_recommended_bibliography(clean_course, tasks=tasks, announcements=announcements)
+    table_bib = doc.add_table(rows=1, cols=5)
+    table_bib.style = 'Table Grid'
+    hdr_b_cells = table_bib.rows[0].cells
+    b_headers = ["Tipo", "Título de la Obra", "Autor(es)", "Editorial / Edición", "Capítulos / Aplicación"]
+    for i, title in enumerate(b_headers):
+        hdr_b_cells[i].text = title
+        p = hdr_b_cells[i].paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for run in p.runs:
+            run.bold = True
+            run.font.size = Pt(9.5)
+
+    for b in bib_entries:
+        row_cells = table_bib.add_row().cells
+        row_cells[0].text = b.get("type", "Consulta")
+        row_cells[1].text = b.get("title", "")
+        row_cells[2].text = b.get("author", "")
+        row_cells[3].text = b.get("editorial", "")
+        row_cells[4].text = b.get("chapters", "")
+        for cell in row_cells:
+            for p in cell.paragraphs:
+                for run in p.runs:
+                    run.font.size = Pt(8.5)
+
+    stream = io.BytesIO()
+    doc.save(stream)
+    return stream.getvalue()
+
+def build_docx_socrates_procedural_guide(
+    course_name: str,
+    tasks: Optional[List[Dict[str, Any]]] = None
+) -> bytes:
+    """
+    Genera el Documento 2: '02_Resumen_Semestral_y_Catalogo_de_Ejercicios.docx'.
+    REQUERIMIENTO EXPLÍCITO DEL USUARIO:
+    '02_Resumen_Semestral_y_Catalogo_de_Ejercicios.docx este quiero que sea el que use socrates
+    entonces este puede ser sin prosa y que sea el instructivo de como proceder para hacer la prueba'
+    
+    Estructura directiva y procedimental sin prosa redundante:
+    - Sección I: Catálogo clasificado de tipos de ejercicio del semestre.
+    - Sección II: Algoritmo procedimental de resolución ('Cómo proceder ante la prueba') paso a paso.
+    - Sección III: Pauta de auditoría e interrogación para Sócrates (Sinodal).
+    """
+    if Document is None:
+        return b""
+
+    doc = Document()
+    clean_course = re.sub(r'[\\/:*?"<>|]', '_', course_name).strip() or "Asignatura"
+
+    # Encabezado procedimental sin prosa
+    title_p = doc.add_paragraph()
+    r_title = title_p.add_run("ÁGORA — INSTRUCTIVO DE EXAMEN Y CATÁLOGO DE EJERCICIOS")
+    r_title.bold = True
+    r_title.font.size = Pt(16)
+    r_title.font.color.rgb = RGBColor(15, 23, 42)
+
+    sub_p = doc.add_paragraph()
+    r_sub = sub_p.add_run("PAUTA OFICIAL PROCEDIMENTAL PARA EVALUACIÓN ORAL Y PRÁCTICA (SIMULADOR SÓCRATES)")
+    r_sub.bold = True
+    r_sub.font.size = Pt(11)
+    r_sub.font.color.rgb = RGBColor(79, 70, 229)
+
+    doc.add_paragraph(f"Asignatura: {course_name} | Modalidad: DIRECTIVO / SIN PROSA DISCURSIVA | Fecha: {datetime.datetime.utcnow().strftime('%Y-%m-%d')}")
+    doc.add_paragraph(
+        "PROPÓSITO NORMATIVO: Este documento constituye la clave algorítmica de resolución para la prueba semestral. "
+        "El estudiante y el simulador Sócrates deben ceñirse estrictamente a este protocolo procedimental paso a paso, "
+        "sin rodeos conversacionales ni explicaciones retóricas."
+    )
+    doc.add_paragraph("=" * 75)
+
+    catalog = get_exercise_catalog_for_course(clean_course, tasks=tasks)
+    exercise_types = catalog.get("exercise_types", [])
+
+    # SECCIÓN I: CATÁLOGO CLASIFICADO DE EJERCICIOS DEL SEMESTRE
+    doc.add_heading("I. CATÁLOGO CLASIFICADO DE EJERCICIOS DEL SEMESTRE", level=1)
+    doc.add_paragraph(f"Total de tipologías de problemas evaluadas en la prueba: {len(exercise_types)}")
+
+    for ex in exercise_types:
+        p_code = doc.add_paragraph()
+        r_code = p_code.add_run(f"[{ex.get('code')}] {ex.get('title').upper()}")
+        r_code.bold = True
+        r_code.font.size = Pt(11.5)
+
+        doc.add_paragraph(f"• Enunciado Canónico de Examen: {ex.get('statement')}", style='List Bullet')
+        if ex.get("tasks_associated"):
+            doc.add_paragraph(f"• Tareas Semestrales Vinculadas: {', '.join(ex.get('tasks_associated'))}", style='List Bullet')
+        doc.add_paragraph("")
+
+    # SECCIÓN II: ALGORITMO PROCEDIMENTAL DE RESOLUCIÓN ("CÓMO PROCEDER ANTE LA PRUEBA")
+    doc.add_heading("II. ALGORITMO PROCEDIMENTAL DE RESOLUCIÓN (\"CÓMO PROCEDER ANTE LA PRUEBA\")", level=1)
+    doc.add_paragraph(
+        "Para todo problema presentado en el examen, el estudiante debe ejecutar obligatoriamente "
+        "el siguiente algoritmo de 4 pasos secuenciales sin omitir justificaciones intermedias:"
+    )
+
+    for ex in exercise_types:
+        doc.add_heading(f"Protocolo de Resolución para {ex.get('code')} — {ex.get('title')}", level=2)
+        
+        p1 = doc.add_paragraph()
+        r_p1 = p1.add_run("▶ PASO 1 (EXTRACCIÓN DE DATOS, VARIABLES Y CONDICIONES INICIALES):")
+        r_p1.bold = True
+        doc.add_paragraph(f"  {ex.get('step_1')}")
+        
+        p2 = doc.add_paragraph()
+        r_p2 = p2.add_run("▶ PASO 2 (SELECCIÓN DEL MODELO Y ECUACIÓN RECTORA):")
+        r_p2.bold = True
+        doc.add_paragraph(f"  {ex.get('step_2')}")
+
+        p3 = doc.add_paragraph()
+        r_p3 = p3.add_run("▶ PASO 3 (MÉTODO ANALÍTICO DE CÁLCULO PASO A PASO):")
+        r_p3.bold = True
+        doc.add_paragraph(f"  {ex.get('step_3')}")
+
+        p4 = doc.add_paragraph()
+        r_p4 = p4.add_run("▶ PASO 4 (CHECKPOINTS DE COMPROBACIÓN Y VERIFICACIÓN DEL RESULTADO):")
+        r_p4.bold = True
+        doc.add_paragraph(f"  {ex.get('step_4')}")
+
+        doc.add_paragraph("-" * 65)
+
+    # SECCIÓN III: PAUTA DE AUDITORÍA E INTERROGACIÓN PARA SÓCRATES (SINODAL)
+    doc.add_heading("III. PAUTA DE AUDITORÍA E INTERROGACIÓN PARA SÓCRATES (SINODAL)", level=1)
+    doc.add_paragraph(
+        "El evaluador Sócrates utilizará los siguientes lineamientos para auditar el desempeño oral del sustentante:"
+    )
+
+    doc.add_paragraph("1. REGLA DE ARRANQUE OBLIGATORIA: Exigir al estudiante enunciar explícitamente el Paso 1 (variables, parámetros y condiciones de frontera) antes de admitir cualquier desarrollo analítico o fórmula final.", style='List Bullet')
+    doc.add_paragraph("2. FISCALIZACIÓN DE HIPÓTESIS BASE: Si el alumno introduce una fórmula sin explicar sus hipótesis de aplicabilidad, Sócrates debe repreguntar: \"¿Bajo qué condiciones teóricas o físicas es válida esa relación?\".", style='List Bullet')
+    doc.add_paragraph("3. BANCO DE PREGUNTAS DE AUDITORÍA Y TRAMPAS CONCEPTUALES:", style='List Bullet')
+
+    for ex in exercise_types:
+        doc.add_paragraph(f"  [{ex.get('code')}] Preguntas de control:")
+        for q in ex.get("socrates_questions", []):
+            doc.add_paragraph(f"    - \"{q}\"")
+        if ex.get("common_traps"):
+            doc.add_paragraph(f"    * Trampa típica / Error a penalizar: {ex.get('common_traps')}")
+        doc.add_paragraph("")
+
+    doc.add_paragraph("4. CRITERIOS DE CALIFICACIÓN Y APROBACIÓN:", style='List Bullet')
+    doc.add_paragraph("   - Aprobado Sobresaliente: Resuelve los 4 pasos en orden, demuestra exactitud dimensional y responde con solidez teórica a las preguntas de control.", style='List Bullet')
+    doc.add_paragraph("   - Aprobado Condicionado: Requiere andamiaje en el Paso 3 pero corrige adecuadamente ante las alternativas ofrecidas.", style='List Bullet')
+    doc.add_paragraph("   - No Acreditado: Salta el Paso 1, comete errores de signo en ecuaciones rectoras o falla la verificación dimensional del Paso 4.", style='List Bullet')
+
+    stream = io.BytesIO()
+    doc.save(stream)
+    return stream.getvalue()
+
+def build_docx_thematic_notes(
+    course_name: str,
+    topic_index: int = 1,
+    tasks: Optional[List[Dict[str, Any]]] = None,
+    topic_data: Optional[Dict[str, Any]] = None
+) -> bytes:
+    """
+    Genera los Documentos 3+: '03_Apuntes_Tema_[N]_[Nombre].docx'.
+    Redactados en prosa didáctica y explicativa continua por unidad temática (no por tarea individual).
+    """
+    if Document is None:
+        return b""
+
+    clean_course = re.sub(r'[\\/:*?"<>|]', '_', course_name).strip() or "Asignatura"
+    thematic_summary = generate_thematic_study_summary(course_name, tasks=tasks)
+    topics = thematic_summary.get("topics", [])
+    
+    idx = max(0, min(topic_index - 1, len(topics) - 1)) if topics else 0
+    top = topics[idx] if topics else {
+        "title": f"Tema {topic_index}: Fundamentos y Modelado Analítico",
+        "concepts": ["Conceptos y leyes fundamentales de la materia."],
+        "formulas": ["Modelos matemáticos rectores."],
+        "methods": ["Procedimientos de resolución analítica."]
+    }
+
+    doc = Document()
+    
+    # Portada de Tema
+    title_p = doc.add_paragraph()
+    r_title = title_p.add_run("ÁGORA — APUNTES DIDÁCTICOS DE CLASE")
+    r_title.bold = True
+    r_title.font.size = Pt(16)
+    r_title.font.color.rgb = RGBColor(15, 23, 42)
+
+    sub_p = doc.add_paragraph()
+    r_sub = sub_p.add_run(f"Asignatura: {course_name} | {top.get('title')}")
+    r_sub.bold = True
+    r_sub.font.size = Pt(12)
+    r_sub.font.color.rgb = RGBColor(30, 58, 138)
+
+    doc.add_paragraph(f"Unidad Temática: {idx + 1} | Fecha: {datetime.datetime.utcnow().strftime('%Y-%m-%d')} | Formato: Prosa Didáctica Explicativa")
+    doc.add_paragraph("=" * 75)
+
+    # 1. Introducción y Marco Pedagógico
+    doc.add_heading("1. Introducción Conceptual y Objetivos de Aprendizaje", level=1)
+    doc.add_paragraph(
+        f"El estudio sistemático de '{top.get('title')}' dentro de la disciplina de {course_name} "
+        f"tiene como propósito fundamental dotar al estudiante de las bases teórico-prácticas y metodológicas "
+        f"necesarias para formular, analizar e interpretar modelos y sistemas del mundo real con rigor profesional."
+    )
+    doc.add_paragraph(
+        "Al concluir la revisión y dominio de los conceptos desarrollados en esta unidad, el alumno será capaz de:"
+    )
+    for c in top.get("concepts", []):
+        doc.add_paragraph(f"• Comprender y aplicar de manera autónoma: {c}", style='List Bullet')
+
+    # 2. Desarrollo Teórico en Prosa Explicativa
+    doc.add_heading("2. Desarrollo Conceptual y Fundamentos Teóricos", level=1)
+    doc.add_paragraph(
+        "A diferencia de una simple enumeración de diapositivas o fichas de fórmulas, la comprensión profunda "
+        "de este tema exige articular la relación causa-efecto entre los axiomas fundamentales y su respuesta dinámica. "
+        "En este ámbito, los fenómenos físicos o computacionales se describen mediante relaciones analíticas que vinculan "
+        "las variables de estado con las excitaciones externas aplicadas."
+    )
+    for i, c in enumerate(top.get("concepts", []), 1):
+        doc.add_heading(f"2.{i}. Análisis Pormenorizado: {c[:60]}...", level=2)
+        doc.add_paragraph(
+            f"En términos didácticos, {c.lower()} Cuando se analiza este principio, es crucial recordar que la validez del modelo "
+            f"depende de que se satisfagan las condiciones de contorno establecidas. En la práctica de ingeniería y ciencias exactas, "
+            f"cualquier simplificación no justificada en las hipótesis de partida altera la localización de puntos críticos o de equilibrio, "
+            f"produciendo discrepancias sustanciales frente a las mediciones experimentales o simulaciones computacionales."
+        )
+
+    # 3. Deducción y Formulación Matemática
+    doc.add_heading("3. Formulación Matemática, Leyes y Teoremas Rectores", level=1)
+    doc.add_paragraph(
+        "A continuación se presenta la formulación canónica que rige los cálculos y análisis de esta unidad temática, "
+        "detallando el significado físico y analítico de cada uno de sus términos:"
+    )
+    for f in top.get("formulas", []):
+        p_form = doc.add_paragraph()
+        r_f = p_form.add_run(f"▶ {f}")
+        r_f.bold = True
+        r_f.font.size = Pt(11)
+        doc.add_paragraph(
+            "Interpretación analítica: Esta relación describe la conservación o transformación de variables en el sistema. "
+            "Cada parámetro debe evaluarse manteniendo la coherencia de dimensiones en el Sistema Internacional (SI).",
+            style='List Bullet'
+        )
+
+    # 4. Metodología de Resolución y Caso de Estudio Resuelto
+    doc.add_heading("4. Caso de Estudio Práctico Resuelto Paso a Paso", level=1)
+    doc.add_paragraph(
+        "Para consolidar el aprendizaje teórico en prosa continua, examinamos un problema típico de evaluación semestral:"
+    )
+    for m in top.get("methods", []):
+        doc.add_paragraph(f"• Metodología de cálculo: {m}", style='List Bullet')
+
+    doc.add_paragraph(
+        "Desarrollo analítico del caso resuelto:\n"
+        "1. Identificación y homogeneización de datos de entrada en unidades SI.\n"
+        "2. Planteamiento formal de la ecuación gobernante sustituyendo las condiciones iniciales.\n"
+        "3. Ejecución del desarrollo algebraico paso a paso hasta obtener la solución analítica cerrada.\n"
+        "4. Comprobación de límites y comportamiento asintótico para verificar la congruencia técnica del resultado."
+    )
+
+    # 5. Síntesis y Preguntas de Autoevaluación
+    doc.add_heading("5. Síntesis Conceptual y Preguntas de Autoevaluación", level=1)
+    doc.add_paragraph(
+        "Como preparación previa a la sesión con el simulador Sócrates, reflexiona y responde de forma razonada:"
+    )
+    doc.add_paragraph("• ¿Cuáles son las hipótesis esenciales bajo las cuales es válida la formulación desarrollada en esta unidad?", style='List Bullet')
+    doc.add_paragraph("• ¿Qué consecuencias físicas o computacionales acarrea un error en la definición de las condiciones iniciales?", style='List Bullet')
+    doc.add_paragraph("• ¿Cómo verificarías la exactitud del resultado numérico mediante un procedimiento analítico alternativo?", style='List Bullet')
+
+    stream = io.BytesIO()
+    doc.save(stream)
+    return stream.getvalue()
+
+def get_socrates_procedural_guide_text(
+    course_name: str,
+    tasks: Optional[List[Dict[str, Any]]] = None
+) -> str:
+    """
+    Retorna el texto íntegro del Instructivo de Examen y Catálogo de Ejercicios
+    (Documento 2) en formato directivo sin prosa para ser inyectado directamente
+    en el contexto del simulador oral Sócrates.
+    """
+    clean_course = re.sub(r'[\\/:*?"<>|]', '_', course_name).strip() or "Asignatura"
+    catalog = get_exercise_catalog_for_course(clean_course, tasks=tasks)
+    exercise_types = catalog.get("exercise_types", [])
+
+    lines = [
+        "=" * 80,
+        "ÁGORA — INSTRUCTIVO DE EXAMEN Y CATÁLOGO DE EJERCICIOS (PAUTA SÓCRATES)",
+        f"Asignatura: {course_name}",
+        "Modalidad: INSTRUCTIVO PROCEDIMENTAL DIRECTIVO (ESTRICTAMENTE SIN PROSA)",
+        "Uso: Pauta oficial de evaluación y sinodal para el Simulador Departamental",
+        "=" * 80,
+        "",
+        "I. CATÁLOGO CLASIFICADO DE EJERCICIOS DEL SEMESTRE",
+        "-" * 80
+    ]
+
+    for ex in exercise_types:
+        lines.append(f"[{ex.get('code')}] {ex.get('title').upper()}")
+        lines.append(f"• Enunciado Canónico: {ex.get('statement')}")
+        if ex.get("tasks_associated"):
+            lines.append(f"• Tareas Semestrales: {', '.join(ex.get('tasks_associated'))}")
+        lines.append("")
+
+    lines.append("=" * 80)
+    lines.append("II. ALGORITMO PROCEDIMENTAL DE RESOLUCIÓN (\"CÓMO PROCEDER ANTE LA PRUEBA\")")
+    lines.append("-" * 80)
+
+    for ex in exercise_types:
+        lines.append(f"--- PROTOCOLO PARA {ex.get('code')}: {ex.get('title')} ---")
+        lines.append(f"PASO 1 (VARIABLES Y CONDICIONES INICIALES): {ex.get('step_1')}")
+        lines.append(f"PASO 2 (MODELO Y ECUACIÓN RECTORA): {ex.get('step_2')}")
+        lines.append(f"PASO 3 (MÉTODO ANALÍTICO DE CÁLCULO): {ex.get('step_3')}")
+        lines.append(f"PASO 4 (CHECKPOINTS DE VERIFICACIÓN DEL RESULTADO): {ex.get('step_4')}")
+        lines.append("")
+
+    lines.append("=" * 80)
+    lines.append("III. PAUTA DE AUDITORÍA E INTERROGACIÓN PARA SÓCRATES (SINODAL)")
+    lines.append("-" * 80)
+    lines.append("1. EXIGIR AL ESTUDIANTE ENUNCIAR EXPLÍCITAMENTE EL PASO 1 ANTES DE ADMITIR CÁLCULOS.")
+    lines.append("2. PREGUNTAR AL ALUMNO POR LAS CONDICIONES DE VALIDEZ DE LA ECUACIÓN SELECCIONADA EN EL PASO 2.")
+    lines.append("3. PREGUNTAS DE AUDITORÍA Y TRAMPAS CONCEPTUALES POR TIPO:")
+
+    for ex in exercise_types:
+        lines.append(f"   [{ex.get('code')}]:")
+        for q in ex.get("socrates_questions", []):
+            lines.append(f"     - Pregunta: \"{q}\"")
+        if ex.get("common_traps"):
+            lines.append(f"     * Error/Trampa a vigilar: {ex.get('common_traps')}")
+        lines.append("")
+
+    lines.append("4. CRITERIOS DE APROBACIÓN: Aprobado sólo si el alumno sigue los 4 pasos y defiende sus unidades.")
+    lines.append("=" * 80)
+
+    return "\n".join(lines).strip()
+
+def get_teacher_criteria_text(
+    course_name: str,
+    tasks: Optional[List[Dict[str, Any]]] = None,
+    announcements: Optional[List[Dict[str, Any]]] = None
+) -> str:
+    """Retorna una versión en texto estructurado de la Guía Docente y Rúbricas."""
+    clean_course = re.sub(r'[\\/:*?"<>|]', '_', course_name).strip() or "Asignatura"
+    bib = get_recommended_bibliography(clean_course, tasks=tasks, announcements=announcements)
+    lines = [
+        f"ÁGORA — GUÍA DOCENTE, RÚBRICAS Y BIBLIOGRAFÍA ({course_name})",
+        "=" * 70,
+        "1. Preferencias del Docente: Portada institucional, entregas en PDF o código estructurado, -10% por día tarde, cero por plagio.",
+        "2. Rúbrica Ponderada: Formulación analítica (30%), Procedimiento matemático (30%), Simulación (25%), Conclusiones (15%).",
+        "3. Bibliografía Oficial:"
+    ]
+    for b in bib:
+        lines.append(f"• [{b.get('type')}] {b.get('title')} - {b.get('author')} ({b.get('editorial')})")
+    return "\n".join(lines)
+
+def get_course_docx_bytes(
+    course_name: str,
+    doc_type: str,
+    tasks: Optional[List[Dict[str, Any]]] = None,
+    announcements: Optional[List[Dict[str, Any]]] = None
+) -> (bytes, str):
+    """
+    Retorna los bytes binarios y el nombre de archivo del .docx solicitado.
+    """
+    clean_course = re.sub(r'[\\/:*?"<>|]', '_', course_name).strip() or "Materia"
+    safe_ascii_course = ''.join(c for c in unicodedata.normalize('NFD', clean_course) if unicodedata.category(c) != 'Mn').replace(' ', '_')
+    norm_type = doc_type.strip().lower()
+
+    if norm_type in ["guia_docente", "doc1", "rubricas", "bibliografia"]:
+        return build_docx_teacher_criteria(course_name, tasks=tasks, announcements=announcements), f"01_Guia_Docente_Rubricas_y_Bibliografia_{safe_ascii_course}.docx"
+    elif norm_type in ["socrates_guia", "doc2", "catalogo_ejercicios", "socrates"]:
+        return build_docx_socrates_procedural_guide(course_name, tasks=tasks), f"02_Resumen_Semestral_y_Catalogo_de_Ejercicios_{safe_ascii_course}.docx"
+    elif norm_type in ["apuntes_tema_1", "doc3", "tema1", "apuntes"]:
+        return build_docx_thematic_notes(course_name, topic_index=1, tasks=tasks), f"03_Apuntes_Tema_1_{safe_ascii_course}.docx"
+    elif norm_type in ["apuntes_tema_2", "doc4", "tema2"]:
+        return build_docx_thematic_notes(course_name, topic_index=2, tasks=tasks), f"04_Apuntes_Tema_2_{safe_ascii_course}.docx"
+    else:
+        return build_docx_socrates_procedural_guide(course_name, tasks=tasks), f"02_Resumen_Semestral_y_Catalogo_de_Ejercicios_{safe_ascii_course}.docx"
+
+def sync_course_docx_documents_to_drive(
+    drive_service,
+    course_name: str,
+    tasks: Optional[List[Dict[str, Any]]] = None,
+    announcements: Optional[List[Dict[str, Any]]] = None,
+    user_email: str = ""
+) -> Dict[str, str]:
+    """
+    Sincroniza los 3 documentos editables .docx en Google Drive dentro de 'Ágora - Apuntes / [Materia]'.
+    Retorna un diccionario con los enlaces de edición directa en Google Docs: {doc_key: webViewLink}.
+    """
+    links = {}
+    if not drive_service or hasattr(drive_service, '_mock_return_value') or drive_service.__class__.__name__ == 'MagicMock':
+        return links
+
+    try:
+        folder_id = get_or_create_course_folder(drive_service, course_name)
+        if not folder_id:
+            return links
+
+        docx_mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        clean_course = re.sub(r'[\\/:*?"<>|]', '_', course_name).strip() or "General"
+
+        docs_to_sync = [
+            ("doc1", "01_Guia_Docente_Rubricas_y_Bibliografia.docx", build_docx_teacher_criteria(course_name, tasks=tasks, announcements=announcements)),
+            ("doc2", "02_Resumen_Semestral_y_Catalogo_de_Ejercicios.docx", build_docx_socrates_procedural_guide(course_name, tasks=tasks)),
+            ("doc3", "03_Apuntes_Tema_1_Fundamentos_y_Modelado.docx", build_docx_thematic_notes(course_name, topic_index=1, tasks=tasks))
+        ]
+
+        for d_key, d_name, d_bytes in docs_to_sync:
+            if not d_bytes:
+                continue
+            safe_name = d_name.replace("'", "\\'")
+            media = MediaInMemoryUpload(d_bytes, mimetype=docx_mime, resumable=True)
+            q = f"name = '{safe_name}' and '{folder_id}' in parents and trashed = false"
+            res = drive_service.files().list(q=q, spaces='drive', fields='files(id, name, webViewLink)').execute()
+            files = res.get('files', []) if isinstance(res, dict) else []
+            if files and isinstance(files[0], dict) and files[0].get('id'):
+                f_id = files[0]['id']
+                drive_service.files().update(fileId=f_id, media_body=media).execute()
+            else:
+                f_meta = {'name': d_name, 'parents': [folder_id]}
+                cr = drive_service.files().create(body=f_meta, media_body=media, fields='id, webViewLink').execute()
+                f_id = cr.get('id') if isinstance(cr, dict) else None
+
+            if f_id:
+                link = f"https://docs.google.com/document/d/{f_id}/edit"
+                if user_email:
+                    link += f"?authuser={user_email}"
+                links[d_key] = link
+    except Exception as e:
+        print(f"[NotesService] Error sincronizando documentos .docx a Drive: {e}")
+
+    return links
+
 def sync_course_thematic_summary_to_drive(
     drive_service,
     course_name: str,
@@ -1092,6 +1984,63 @@ def get_course_notes(
     }
     documents.insert(0, thematic_doc)
 
+    # Documentos de estudio didácticos editables en Word (.docx)
+    drive_docx_links = {}
+    if drive_service:
+        try:
+            drive_docx_links = sync_course_docx_documents_to_drive(
+                drive_service, course_name, tasks=course_tasks, user_email=user_email
+            )
+        except Exception:
+            pass
+
+    first_topic_title = thematic_res.get("topics", [{}])[0].get("title", "Fundamentos")
+    topic_clean = re.sub(r'Tema\s*\d+\s*:\s*', '', first_topic_title, flags=re.IGNORECASE)
+    safe_topic = re.sub(r'[\\/:*?"<>|]', '_', topic_clean).strip().replace(" ", "_")[:30] or "Fundamentos"
+
+    doc1_link = drive_docx_links.get("doc1") or f"/api/notes/{normalize_course_name(course_name)}/docx/guia_docente"
+    doc2_link = drive_docx_links.get("doc2") or f"/api/notes/{normalize_course_name(course_name)}/docx/socrates_guia"
+    doc3_link = drive_docx_links.get("doc3") or f"/api/notes/{normalize_course_name(course_name)}/docx/apuntes_tema_1"
+
+    study_docx_items = [
+        {
+            "name": "01_Guia_Docente_Rubricas_y_Bibliografia.docx",
+            "type": "docx_guide",
+            "unit": "Criterios y Bibliografía",
+            "preview_url": doc1_link,
+            "download_url": f"/api/notes/{normalize_course_name(course_name)}/docx/guia_docente",
+            "count": 1,
+            "available": True,
+            "editable": True,
+            "description": "Preferencias de entrega, rúbrica ponderada y bibliografía recomendada (editable en Google Docs)."
+        },
+        {
+            "name": "02_Resumen_Semestral_y_Catalogo_de_Ejercicios.docx",
+            "type": "docx_socrates",
+            "unit": "Instructivo Sócrates (Sin Prosa)",
+            "preview_url": doc2_link,
+            "download_url": f"/api/notes/{normalize_course_name(course_name)}/docx/socrates_guia",
+            "count": 1,
+            "available": True,
+            "editable": True,
+            "description": "Instructivo procedimental paso a paso y catálogo de problemas para Sócrates (sin prosa redundante)."
+        },
+        {
+            "name": f"03_Apuntes_Tema_1_{safe_topic}.docx",
+            "type": "docx_thematic",
+            "unit": "Tema 1: Didáctica",
+            "preview_url": doc3_link,
+            "download_url": f"/api/notes/{normalize_course_name(course_name)}/docx/apuntes_tema_1",
+            "count": 1,
+            "available": True,
+            "editable": True,
+            "description": "Apuntes didácticos redactados en prosa explicativa continua por unidad temática."
+        }
+    ]
+
+    for s_doc in reversed(study_docx_items):
+        documents.insert(0, s_doc)
+
     return {
         "course_name": course_name,
         "folder_url": folder_url,
@@ -1195,6 +2144,23 @@ def list_course_drive_files(course_name: str, creds = None, user_email: str = ""
     ]
     seen_ids = set()
     files_list = []
+
+    # 0. Documentos editables en Google Docs (.docx)
+    docx_entries = [
+        ("doc1", "01_Guia_Docente_Rubricas_y_Bibliografia.docx"),
+        ("doc2", "02_Resumen_Semestral_y_Catalogo_de_Ejercicios.docx"),
+        ("doc3", "03_Apuntes_Tema_1_Fundamentos_y_Modelado.docx")
+    ]
+    for d_code, d_filename in docx_entries:
+        f_id = f"docx_{d_code}_{compute_sha256(course_name.encode())[:8]}"
+        if f_id not in seen_ids:
+            seen_ids.add(f_id)
+            files_list.append({
+                "id": f_id,
+                "name": d_filename,
+                "createdTime": "2026-09-08T08:00:00Z",
+                "webViewLink": f"/api/notes/{normalize_course_name(course_name)}/docx/{d_code}"
+            })
 
     # 1. Resumen de estudio temático
     summary_id = f"summary_{compute_sha256(course_name.encode())[:8]}"

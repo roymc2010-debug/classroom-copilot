@@ -11,3 +11,4 @@ itsdangerous
 fonttools
 python-multipart
 pywebpush
+python-docx
