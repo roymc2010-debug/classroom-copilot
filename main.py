@@ -983,14 +983,17 @@ async def push_subscribe(req: Request):
         keys = data.get("keys", {})
         p256dh = keys.get("p256dh", "")
         auth = keys.get("auth", "")
-        session_id = req.cookies.get("session_id", "")
+        session_id = req.cookies.get("agora_session") or req.cookies.get("session_id") or ""
         user_email = user_sessions.get(session_id, {}).get("email", "") if session_id else ""
+        if not user_email:
+            user_email = str(data.get("user_email", "")).strip().lower()
 
         if not endpoint or not p256dh or not auth:
             return JSONResponse(status_code=400, content={"error": "Suscripción Push incompleta"})
 
         import db.database as db
         db.save_push_subscription(endpoint, p256dh, auth, user_email=user_email)
+        print(f"[Push Subscribe] Suscripción guardada exitosamente para '{user_email}': {endpoint[:45]}")
         return {"status": "ok", "message": "Suscripción guardada exitosamente"}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -1047,19 +1050,31 @@ async def timer_schedule(req: Request):
         label = str(data.get("label", "Foco"))
         alarm_id = str(data.get("alarm_id") or uuid.uuid4())
 
-        session_id = req.cookies.get("session_id", "")
+        session_id = req.cookies.get("agora_session") or req.cookies.get("session_id") or ""
         user_email = user_sessions.get(session_id, {}).get("email", "") if session_id else ""
         if not user_email:
-            user_email = str(data.get("user_email", "")).strip()
+            user_email = str(data.get("user_email", "")).strip().lower()
 
         import db.database as db
+
+        endpoint = ""
+        sub = data.get("subscription")
+        if sub and isinstance(sub, dict):
+            endpoint = str(sub.get("endpoint", "")).strip()
+            keys = sub.get("keys", {})
+            if endpoint and keys.get("p256dh") and keys.get("auth"):
+                db.save_push_subscription(endpoint, keys["p256dh"], keys["auth"], user_email=user_email)
+                print(f"[Timer Schedule] Suscripción Push vinculada a la alarma de '{user_email}': {endpoint[:45]}")
+
         db.save_timer_alarm(
             alarm_id=alarm_id,
             user_email=user_email,
             ends_at=ends_at,
             phase=phase,
-            preset_label=label
+            preset_label=label,
+            endpoint=endpoint
         )
+        print(f"[Timer Schedule] Alarma #{alarm_id} ({phase} - {label}) guardada para '{user_email or 'dispositivo'}'")
         return {"status": "ok", "alarm_id": alarm_id, "ends_at": ends_at}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
@@ -1072,10 +1087,10 @@ async def timer_cancel(req: Request):
             data = await req.json()
         except Exception:
             data = {}
-        session_id = req.cookies.get("session_id", "")
+        session_id = req.cookies.get("agora_session") or req.cookies.get("session_id") or ""
         user_email = user_sessions.get(session_id, {}).get("email", "") if session_id else ""
         if not user_email and data:
-            user_email = str(data.get("user_email", "")).strip()
+            user_email = str(data.get("user_email", "")).strip().lower()
 
         import db.database as db
         db.cancel_timer_alarms(user_email=user_email if user_email else None)

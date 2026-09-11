@@ -48,10 +48,15 @@ def init_db():
             ends_at REAL,
             phase TEXT,
             preset_label TEXT,
+            endpoint TEXT,
             created_at TEXT,
             notified INTEGER DEFAULT 0
         )
     ''')
+    try:
+        cursor.execute("ALTER TABLE scheduled_timer_alarms ADD COLUMN endpoint TEXT")
+    except Exception:
+        pass
     conn.commit()
     conn.close()
 
@@ -189,7 +194,27 @@ def mark_items_seen_bulk(items):
     conn.commit()
     conn.close()
 
-def save_timer_alarm(alarm_id, user_email, ends_at, phase="focus", preset_label="Pomodoro"):
+def get_push_subscription_by_endpoint(endpoint):
+    """Busca una suscripción Web Push específica por su URL de endpoint."""
+    if not endpoint:
+        return None
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT endpoint, p256dh, auth, user_email FROM push_subscriptions WHERE endpoint = ?", (endpoint,))
+    r = cursor.fetchone()
+    conn.close()
+    if r:
+        return {
+            "endpoint": r["endpoint"],
+            "keys": {
+                "p256dh": r["p256dh"],
+                "auth": r["auth"]
+            },
+            "user_email": r["user_email"]
+        }
+    return None
+
+def save_timer_alarm(alarm_id, user_email, ends_at, phase="focus", preset_label="Pomodoro", endpoint=""):
     """Guarda o actualiza la alarma programada del temporizador."""
     conn = get_connection()
     cursor = conn.cursor()
@@ -197,10 +222,12 @@ def save_timer_alarm(alarm_id, user_email, ends_at, phase="focus", preset_label=
     now_str = datetime.datetime.utcnow().isoformat()
     if user_email:
         cursor.execute("DELETE FROM scheduled_timer_alarms WHERE user_email = ? AND notified = 0", (user_email,))
+    elif endpoint:
+        cursor.execute("DELETE FROM scheduled_timer_alarms WHERE endpoint = ? AND notified = 0", (endpoint,))
     cursor.execute('''
-        INSERT INTO scheduled_timer_alarms (id, user_email, ends_at, phase, preset_label, created_at, notified)
-        VALUES (?, ?, ?, ?, ?, ?, 0)
-    ''', (str(alarm_id), user_email or "", float(ends_at), phase, preset_label, now_str))
+        INSERT OR REPLACE INTO scheduled_timer_alarms (id, user_email, ends_at, phase, preset_label, endpoint, created_at, notified)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+    ''', (str(alarm_id), user_email or "", float(ends_at), phase, preset_label, endpoint or "", now_str))
     conn.commit()
     conn.close()
 
@@ -220,7 +247,7 @@ def get_due_timer_alarms(now_ms):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT id, user_email, ends_at, phase, preset_label
+        SELECT id, user_email, ends_at, phase, preset_label, endpoint
         FROM scheduled_timer_alarms
         WHERE ends_at <= ? AND notified = 0
     ''', (float(now_ms),))

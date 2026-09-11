@@ -831,12 +831,21 @@ class TestBrotherClassroomData(unittest.TestCase):
         sched_res = client.post("/api/timer/schedule", json={
             "ends_at": future_ends,
             "phase": "break",
-            "label": "Descanso 5 min"
+            "label": "Descanso 5 min",
+            "subscription": {
+                "endpoint": "https://fcm.googleapis.com/fcm/send/direct_device_phone",
+                "keys": {"p256dh": "key_p256dh", "auth": "key_auth"}
+            }
         })
         self.assertEqual(sched_res.status_code, 200)
         s_data = sched_res.json()
         self.assertEqual(s_data.get("status"), "ok")
         self.assertTrue(s_data.get("alarm_id"))
+
+        # Verificar que la suscripción adjunta fue persistida en BD
+        saved_sub = db.get_push_subscription_by_endpoint("https://fcm.googleapis.com/fcm/send/direct_device_phone")
+        self.assertIsNotNone(saved_sub)
+        self.assertEqual(saved_sub["keys"]["p256dh"], "key_p256dh")
 
         cancel_res = client.post("/api/timer/cancel", json={
             "user_email": ALEX_EMAIL

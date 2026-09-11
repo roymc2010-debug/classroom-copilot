@@ -215,6 +215,7 @@ def check_and_dispatch_due_timer_alarms():
         user_email = (alarm.get("user_email") or "").lower().strip()
         phase = alarm.get("phase", "focus")
         label = alarm.get("preset_label", "Foco")
+        target_endpoint = alarm.get("endpoint", "")
 
         if phase == "focus":
             title = "⏰ ¡Foco Completado!"
@@ -223,12 +224,21 @@ def check_and_dispatch_due_timer_alarms():
             title = "🔔 ¡Descanso Concluido!"
             body = "Tu tiempo de descanso terminó. ¿Listo para otro bloque de foco?"
 
-        subscriptions = db.get_push_subscriptions_for_user(user_email) if user_email else []
+        subscriptions = []
+        if target_endpoint:
+            direct_sub = db.get_push_subscription_by_endpoint(target_endpoint)
+            if direct_sub:
+                subscriptions.append(direct_sub)
+
+        if not subscriptions and user_email:
+            subscriptions = db.get_push_subscriptions_for_user(user_email)
+
         if not subscriptions:
             subscriptions = db.get_all_push_subscriptions()
 
+        print(f"[Timer Alarm] Despachando alarma #{alarm_id} ({phase} - {label}) para {user_email or 'dispositivo'}. Dispositivos encontrados: {len(subscriptions)}")
         for sub in subscriptions:
-            send_web_push(
+            ok, msg = send_web_push(
                 subscription_info=sub,
                 title=title,
                 body=body,
@@ -237,6 +247,10 @@ def check_and_dispatch_due_timer_alarms():
                 tag="agora-timer-alarm",
                 is_alarm=True
             )
+            print(f"[Timer Alarm] Push enviado a {sub.get('endpoint', '')[:45]}... Ok: {ok}, Msg: {msg}")
+            if not ok and msg == "expired":
+                db.delete_push_subscription(sub.get("endpoint"))
+
         db.mark_timer_alarm_notified(alarm_id)
         count += 1
     return count
