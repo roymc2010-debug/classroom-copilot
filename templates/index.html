@@ -81,6 +81,7 @@
             #mobile-calendar-page { display: none !important; }
             #mobile-timer-page { display: none !important; }
             #mobile-settings-page { display: none !important; }
+            #mobile-bottom-nav { display: none !important; }
         }
     </style>
 </head>
@@ -5379,7 +5380,7 @@
             const backdrop = document.getElementById('ignis-workspace-backdrop');
             if (backdrop) backdrop.style.display = 'none';
             const bNav = document.getElementById('mobile-bottom-nav');
-            if (bNav) bNav.style.display = 'flex';
+            if (bNav) bNav.style.display = '';
             currentTaskContext = null;
             if (ignisHistoryPushed && !fromPopState) {
                 ignisHistoryPushed = false;
@@ -6359,7 +6360,7 @@
         }
     </script>
     <!-- Barra Inferior de Navegación Móvil (4 Pestañas Limpias) -->
-    <nav id="mobile-bottom-nav" class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-night-900/95 backdrop-blur-md border-t border-cantera-300 dark:border-slate-800 py-2 px-1 grid grid-cols-4 items-center shadow-2xl">
+    <nav id="mobile-bottom-nav" class="md:hidden md:!hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-night-900/95 backdrop-blur-md border-t border-cantera-300 dark:border-slate-800 py-2 px-1 grid grid-cols-4 items-center shadow-2xl">
         <!-- 1. Misiones -->
         <button onclick="navMobileSwitch('missions')" id="m-nav-missions" class="flex flex-col items-center justify-center gap-1 text-indigo-600 dark:text-indigo-400 font-bold transition-all py-1 cursor-pointer">
             <i class="fa-solid fa-list-check text-base"></i>
