@@ -8,14 +8,14 @@ import urllib.parse
 import traceback
 from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, Request, UploadFile, File, Form
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse, PlainTextResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, FileResponse, PlainTextResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request as GoogleRequest
 
 from services.classroom_service import fetch_tasks, fetch_courses, get_announcements_and_alerts
-from services.ai_service import ask_copilot
+from services.ai_service import ask_copilot, stream_copilot
 
 # Persistencia de sesiones en disco para mantener logins entre reinicios de Render
 SESSIONS_FILE = "sessions.json"
@@ -151,7 +151,9 @@ def get_favicon():
 
 
 
-ALEX_EMAIL = "alexmunoz918@gmail.com"
+DEMO_EMAIL = "estudiante.demo@agora.edu.mx"
+ALEX_EMAIL = DEMO_EMAIL  # Alias de compatibilidad
+DEMO_SESSION_ID = "agora_demo_session"
 
 def get_session_user_email(creds) -> str:
     if not creds:
@@ -256,17 +258,16 @@ async def read_root(request: Request):
 
 @app.get("/auth/demo")
 async def auth_demo():
-    """Inicia sesión instantánea en Modo de Prueba (Alex Muñoz) con datos completos."""
-    demo_session_id = "demo_alex_session"
-    user_sessions[demo_session_id] = {
-        "email": ALEX_EMAIL,
+    """Inicia sesión instantánea en Modo Demo Universitario con datos completos."""
+    user_sessions[DEMO_SESSION_ID] = {
+        "email": DEMO_EMAIL,
         "is_demo": True
     }
     save_sessions()
     resp = RedirectResponse(url="/", status_code=302)
     resp.set_cookie(
         key="agora_session",
-        value=demo_session_id,
+        value=DEMO_SESSION_ID,
         httponly=True,
         max_age=60 * 60 * 24 * 30,
         samesite="lax"
@@ -695,6 +696,17 @@ async def get_course_docx_endpoint(course_name: str, doc_type: str, request: Req
         if not docx_bytes:
             return JSONResponse(status_code=404, content={"error": "Documento no encontrado o formato no disponible."})
 
+        # Mantener sincronizado con la carpeta de Drive de la materia
+        if creds:
+            try:
+                drive_svc = notes_service.get_drive_service(creds)
+                if drive_svc:
+                    notes_service.sync_course_docx_documents_to_drive(
+                        drive_svc, course_name, tasks=tasks, user_email=user_email
+                    )
+            except Exception as e_drive:
+                print(f"[DocxEndpoint] Info: Drive sync omitido o no disponible: {e_drive}")
+
         import unicodedata
         safe_fn = ''.join(c for c in unicodedata.normalize('NFD', filename) if unicodedata.category(c) != 'Mn')
         return Response(
@@ -807,13 +819,14 @@ async def api_announcements(request: Request):
         print(f"Error obteniendo avisos: {e}")
         return {"announcements": []}
 
+@app.post("/api/demo/stage/cycle")
 @app.post("/api/alex/stage/cycle")
-async def cycle_alex_semester_stage(request: Request):
+async def cycle_demo_semester_stage(request: Request):
     """
-    Permite rotar o cambiar la etapa del semestre de prueba para Alex.
+    Permite rotar o cambiar la etapa del semestre de prueba del Modo Demo.
     """
-    from services.mock_data_service import cycle_alex_stage
-    new_stage = cycle_alex_stage()
+    from services.mock_data_service import cycle_demo_stage
+    new_stage = cycle_demo_stage()
     return {"ok": True, "stage": new_stage}
 
 @app.get("/api/tasks/{task_id}/attachment_summary")
@@ -822,11 +835,13 @@ async def get_attachment_summary(
     request: Request,
     file_id: str = None,
     course_name: str = "",
-    title: str = ""
+    title: str = "",
+    refresh: bool = False
 ):
     """
     Extrae y devuelve de forma asíncrona las consignas y ejercicios reales del documento adjunto de la tarea.
-    Utiliza caché en disco para respuesta inmediata (<1ms) en cargas posteriores.
+    Utiliza caché en disco para respuesta inmediata (<1ms) en cargas posteriores,
+    con auto-invalidación de oraciones cortadas y soporte para forzar refresco con refresh=true.
     """
     session_id = request.cookies.get("agora_session")
     creds_json = user_sessions.get(session_id)
@@ -870,7 +885,13 @@ async def get_attachment_summary(
     try:
         from services.classroom_service import get_drive_service, get_task_attachment_summary
         drive_service = get_drive_service(creds=creds)
-        res = get_task_attachment_summary(drive_service, file_id, course_name=course_name, task_title=title)
+        res = get_task_attachment_summary(
+            drive_service,
+            file_id,
+            course_name=course_name,
+            task_title=title,
+            force_refresh=refresh
+        )
         return {"actions": res.get("actions", [])}
     except Exception as e:
         print(f"Error obteniendo resumen de adjunto {file_id}: {e}")
@@ -880,28 +901,80 @@ async def get_attachment_summary(
 async def ask_ai(request: Request):
     """
     Copiloto Ignis: Asesoría académica sobria con andamiaje y selección de mentor.
+    Soporta Server-Sent Events (SSE) streaming en tiempo real y extracción documental verídica.
     """
     data = await request.json()
     provider = data.get("provider", "openrouter")
     mentor = data.get("mentor", "auto")
     task_context = data.get("task_context", {})
     messages = data.get("messages", [])
+    stream_requested = data.get("stream", True)
 
-    # Enriquecer el contexto de Ignis con el contenido real del documento si está en caché
-    file_id = data.get("file_id") or task_context.get("file_id")
+    session_id = request.cookies.get("agora_session")
+    creds = None
+    user_email = ""
+    sess = user_sessions.get(session_id) if session_id else None
+    if sess:
+        if isinstance(sess, dict) and sess.get("is_demo"):
+            creds = None
+            user_email = sess.get("email", ALEX_EMAIL)
+        else:
+            creds = restore_and_refresh_credentials(sess, session_id=session_id)
+            user_email = get_session_email(session_id, creds=creds)
+
+    # 1. Enriquecer con documento adjunto subido en tiempo real por el estudiante
+    attached_doc = data.get("attached_document") or task_context.get("attached_document")
+    attached_name = data.get("attached_filename") or task_context.get("attached_filename")
+    if attached_doc:
+        header = f"[Contenido del documento subido por el estudiante ({attached_name or 'Archivo'}):\n{attached_doc}]"
+        curr_desc = task_context.get("description", "")
+        if "Contenido del documento subido por el estudiante" not in curr_desc:
+            task_context["description"] = f"{curr_desc}\n\n{header}".strip()
+        if not task_context.get("pdf_text") and not task_context.get("document_info"):
+            task_context["document_info"] = f"Documento adjunto ({attached_name or 'Archivo'}):\n{attached_doc}"
+
+    # 2. Extraer o recuperar contenido real del archivo de la tarea desde Google Drive / Caché
+    is_demo_session = bool((isinstance(sess, dict) and sess.get("is_demo")) or user_email == ALEX_EMAIL)
+    file_id = None if is_demo_session else (data.get("file_id") or task_context.get("file_id"))
+    doc_title = data.get("document_title") or task_context.get("document_title") or ""
+    task_id = data.get("task_id") or task_context.get("task_id")
+
+    # Si no hay file_id directo pero hay task_id, buscar en las tareas del usuario (solo para usuarios autenticados)
+    if not file_id and task_id and not is_demo_session:
+        user_email = get_session_email(session_id, creds=creds)
+        user_tasks = get_user_tasks_cached(user_email, creds=creds)
+        for ut in user_tasks:
+            if str(ut.get("id")) == str(task_id):
+                att_files = ut.get("attachment_files", [])
+                if att_files and isinstance(att_files[0], dict) and att_files[0].get("id"):
+                    file_id = att_files[0]["id"]
+                    if not doc_title:
+                        doc_title = att_files[0].get("title", "")
+                break
+
+    doc_text = ""
     if file_id:
         try:
-            from services.classroom_service import get_cached_attachment_data
+            from services.classroom_service import get_cached_attachment_data, get_drive_service, extract_pdf_text_from_drive
             cached_doc = get_cached_attachment_data(file_id)
             if cached_doc and cached_doc.get("text"):
-                doc_text = cached_doc["text"][:2500]
-                curr_desc = task_context.get("description", "")
-                if "Contenido del documento adjunto:" not in curr_desc:
-                    task_context["description"] = f"{curr_desc}\n\n[Contenido del documento adjunto:\n{doc_text}]".strip()
-        except Exception:
-            pass
+                doc_text = cached_doc["text"]
+            elif creds:
+                drive_svc = get_drive_service(creds=creds)
+                doc_text = extract_pdf_text_from_drive(drive_svc, file_id)
 
-    # Enriquecer con apuntes de clase de la materia si están disponibles
+            if doc_text:
+                clean_snippet = doc_text[:3500]
+                curr_desc = task_context.get("description", "")
+                label = f"Contenido verídico del documento oficial ({doc_title or 'Archivo'}):"
+                if label not in curr_desc:
+                    task_context["description"] = f"{curr_desc}\n\n[{label}\n{clean_snippet}]".strip()
+                task_context["pdf_text"] = clean_snippet
+                task_context["document_info"] = f"{label}\n{clean_snippet}"
+        except Exception as e:
+            print(f"[Copilot Ask] Aviso extrayendo texto de archivo {file_id}: {e}")
+
+    # 3. Enriquecer con apuntes de clase de la materia si están disponibles
     c_name = task_context.get("course_name")
     if c_name and "student_notes" not in task_context:
         try:
@@ -912,6 +985,35 @@ async def ask_ai(request: Request):
         except Exception:
             pass
 
+    # 4. Despachar Streaming SSE o Respuesta Sincrónica
+    if stream_requested:
+        async def event_generator():
+            try:
+                async for chunk in stream_copilot(
+                    provider=provider,
+                    mentor=mentor,
+                    task_context=task_context,
+                    messages=messages
+                ):
+                    payload = json.dumps({"text": chunk}, ensure_ascii=False)
+                    yield f"data: {payload}\n\n"
+                yield "data: [DONE]\n\n"
+            except Exception as e:
+                err_payload = json.dumps({"error": str(e)}, ensure_ascii=False)
+                yield f"data: {err_payload}\n\n"
+                yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"
+            }
+        )
+
+    # Fallback tradicional sincrónico (si stream=False)
     response_text = await ask_copilot(
         provider=provider,
         mentor=mentor,
@@ -937,6 +1039,14 @@ async def socrates_exam(request: Request):
         "title": f"Examen Departamental ({mode.upper()})",
         "description": f"Simulación de evaluación oral bajo modalidad {mode}. Evalúa al estudiante con rigor sobre los temas de {course_name}."
     }
+
+    # Enriquecer con documento adjunto si fue provisto
+    attached_doc = data.get("attached_document")
+    attached_name = data.get("attached_filename")
+    if attached_doc:
+        header = f"[Contenido del documento/guía subido por el estudiante ({attached_name or 'Archivo'}):\n{attached_doc}]"
+        task_context["description"] = f"{task_context['description']}\n\n{header}".strip()
+        task_context["document_info"] = f"Documento adjunto: {attached_name or 'Archivo'}\n{attached_doc}"
 
     session_id = request.cookies.get("agora_session")
     creds_json = user_sessions.get(session_id)

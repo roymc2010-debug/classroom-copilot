@@ -261,8 +261,8 @@
                     </div>
                 </div>
 
-                <!-- Selector de Etapa Semestral para Alex Muñoz -->
-                <div id="alex-stage-container" style="display: none;" class="items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-semibold cursor-pointer hover:bg-amber-500/20 transition-all select-none shadow-sm" onclick="cycleAlexSemesterStage()" title="Cambiar etapa del semestre (Prueba Alex)">
+                <!-- Selector de Etapa Semestral para Modo Demo Universitario -->
+                <div id="alex-stage-container" style="display: none;" class="items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-semibold cursor-pointer hover:bg-amber-500/20 transition-all select-none shadow-sm" onclick="cycleAlexSemesterStage()" title="Cambiar etapa del semestre (Modo Demo Universitario)">
                     <i class="fa-solid fa-graduation-cap text-amber-500"></i>
                     <span id="alex-stage-name">Semestre: Inicio</span>
                     <i class="fa-solid fa-arrows-rotate text-[10px] opacity-70 ml-1"></i>
@@ -498,8 +498,33 @@
                 <!-- Timeline de Misiones Activas Pendientes -->
                 <div id="timeline" class="space-y-4"></div>
 
-                <!-- Sección Trabajos Entregados y Calificados -->
-                <details id="completed-section" class="group bg-white dark:bg-night-800/80 rounded-xl overflow-hidden border border-emerald-300 dark:border-emerald-900/40 shadow-sm" open>
+                <!-- Sección Misiones de Rescate (Prioridad Visual y Abierta por Defecto si count > 0) -->
+                <details id="overdue-section" style="display: none;" class="group bg-white dark:bg-night-800/80 rounded-xl overflow-hidden border-2 border-orange-400 dark:border-orange-800/70 shadow-sm" open>
+                    <summary class="cursor-pointer p-4 text-sm font-semibold text-orange-700 dark:text-orange-300 flex justify-between items-center select-none hover:bg-orange-50/60 dark:hover:bg-slate-800/40 bg-orange-50/30 dark:bg-orange-950/20">
+                        <span class="flex items-center gap-2">
+                            <i class="fa-solid fa-life-ring text-orange-500 animate-pulse"></i>
+                            <span>Misiones de Rescate (Entregas Tardías)</span>
+                            <span class="text-orange-700 dark:text-orange-400 font-bold bg-orange-100 dark:bg-orange-900/60 px-2 py-0.5 rounded-full text-xs">(<span id="overdue-count">0</span>)</span>
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-xs text-orange-600 dark:text-orange-400 transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <div id="overdue-tasks" class="p-4 space-y-3 border-t border-orange-200/80 dark:border-orange-900/40 bg-orange-50/20 dark:bg-slate-900/30"></div>
+                </details>
+
+                <!-- Sección Sin fecha límite -->
+                <details id="no-date-section" class="group bg-white dark:bg-night-800/80 rounded-xl overflow-hidden border border-cantera-300 dark:border-slate-700 shadow-sm">
+                    <summary class="cursor-pointer p-4 text-sm font-medium text-cantera-800 dark:text-slate-300 flex justify-between items-center select-none hover:bg-cantera-50/50 dark:hover:bg-slate-800/40">
+                        <span class="flex items-center gap-2">
+                            <i class="fa-regular fa-calendar-check text-teal-500"></i>
+                            <span>Sin fecha límite (<span id="no-date-count">0</span>)</span>
+                        </span>
+                        <i class="fa-solid fa-chevron-down text-xs text-cantera-600 dark:text-slate-500 transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <div id="no-date-tasks" class="p-4 space-y-3 border-t border-cantera-200 dark:border-slate-700"></div>
+                </details>
+
+                <!-- Sección Trabajos Entregados y Calificados (Al final y colapsada por defecto) -->
+                <details id="completed-section" class="group bg-white dark:bg-night-800/80 rounded-xl overflow-hidden border border-emerald-300/60 dark:border-emerald-900/40 shadow-sm">
                     <summary class="cursor-pointer p-4 text-sm font-medium text-emerald-700 dark:text-emerald-300 flex justify-between items-center select-none hover:bg-emerald-50/50 dark:hover:bg-slate-800/40">
                         <span class="flex items-center gap-2">
                             <i class="fa-solid fa-circle-check text-emerald-500"></i>
@@ -509,28 +534,6 @@
                         <i class="fa-solid fa-chevron-down text-xs text-cantera-600 dark:text-slate-500 transition-transform group-open:rotate-180"></i>
                     </summary>
                     <div id="completed-tasks" class="p-4 space-y-3 border-t border-cantera-200 dark:border-slate-700/60 bg-cantera-50/50 dark:bg-slate-900/30"></div>
-                </details>
-
-                <!-- Sección Misiones de Rescate -->
-                <details id="overdue-section" style="display: none;" class="group bg-white dark:bg-night-800/80 rounded-xl overflow-hidden border border-orange-300 dark:border-orange-900/40 shadow-sm">
-                    <summary class="cursor-pointer p-4 text-sm font-medium text-orange-700 dark:text-orange-300 flex justify-between items-center select-none hover:bg-orange-50/50 dark:hover:bg-slate-800/40">
-                        <span class="flex items-center gap-2">
-                            <i class="fa-solid fa-life-ring text-orange-500"></i>
-                            <span>Misiones de Rescate (Entregas Tardías)</span>
-                            <span class="text-cantera-600 dark:text-slate-500 font-normal">(<span id="overdue-count">0</span>)</span>
-                        </span>
-                        <i class="fa-solid fa-chevron-down text-xs text-cantera-600 dark:text-slate-500 transition-transform group-open:rotate-180"></i>
-                    </summary>
-                    <div id="overdue-tasks" class="p-4 space-y-3 border-t border-cantera-200 dark:border-slate-700/60 bg-cantera-50/50 dark:bg-slate-900/30"></div>
-                </details>
-
-                <!-- Sección Sin fecha -->
-                <details class="group bg-white dark:bg-night-800/80 rounded-xl overflow-hidden border border-cantera-300 dark:border-slate-700 shadow-sm">
-                    <summary class="cursor-pointer p-4 text-sm font-medium text-cantera-800 dark:text-slate-300 flex justify-between items-center select-none hover:bg-cantera-50/50 dark:hover:bg-slate-800/40">
-                        <span>Sin fecha límite (<span id="no-date-count">0</span>)</span>
-                        <i class="fa-solid fa-chevron-down text-xs text-cantera-600 dark:text-slate-500 transition-transform group-open:rotate-180"></i>
-                    </summary>
-                    <div id="no-date-tasks" class="p-4 space-y-3 border-t border-cantera-200 dark:border-slate-700"></div>
                 </details>
             </div>
         </main>
@@ -1005,19 +1008,38 @@
                     <div id="ignis-panes-slider" class="flex-1 flex flex-row w-full transition-transform duration-300 ease-out">
                         <!-- Panel 1: Documento / PDF (100% en móvil, 50% en desktop) -->
                         <div id="ignis-doc-pane" class="w-full min-w-full md:w-1/2 md:min-w-0 h-full flex flex-col bg-cantera-50/70 dark:bg-slate-900/50 shrink-0 md:shrink border-r-0 md:border-r md:border-cantera-300 md:dark:border-slate-700">
-                            <div id="doc-viewer-container" class="flex-1 p-0 md:p-4 overflow-y-auto custom-scroll text-xs leading-relaxed"></div>
+                            <div id="doc-viewer-container" class="flex-1 p-0 md:p-4 overflow-y-auto custom-scroll text-xs leading-relaxed" style="touch-action: pan-y pinch-zoom; -webkit-overflow-scrolling: touch;"></div>
                         </div>
 
                         <!-- Panel 2: Chat Ignis (100% en móvil, 50% en desktop) -->
                         <div id="ignis-chat-pane" class="w-full min-w-full md:w-1/2 md:min-w-0 h-full flex flex-col bg-white dark:bg-slate-900 shrink-0 md:shrink">
                             <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
-                            <div class="p-3 border-t border-cantera-300 dark:border-slate-700 bg-cantera-50 dark:bg-slate-800">
+                            <!-- Barra visual de archivo adjunto (Móvil y Escritorio) -->
+                            <div id="chat-attached-file-bar" class="hidden px-3 py-2 bg-cantera-100/80 dark:bg-slate-800/90 border-t border-cantera-300 dark:border-slate-700 items-center justify-between gap-2 transition-all shrink-0">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                    <span id="chat-attached-file-icon" class="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 text-xs shadow-2xs">
+                                        <i class="fa-solid fa-file-lines"></i>
+                                    </span>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <p id="chat-attached-file-name" class="text-xs font-semibold text-cantera-900 dark:text-slate-100 truncate"></p>
+                                            <span id="chat-attached-file-badge" class="px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0"></span>
+                                        </div>
+                                        <p id="chat-attached-file-meta" class="text-[10px] text-cantera-500 dark:text-slate-400 truncate"></p>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="clearAttachedFile()" class="w-6 h-6 flex items-center justify-center text-cantera-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer shrink-0" title="Quitar archivo adjunto">
+                                    <i class="fa-solid fa-xmark text-xs"></i>
+                                </button>
+                            </div>
+
+                            <div class="p-3 border-t border-cantera-300 dark:border-slate-700 bg-cantera-50 dark:bg-slate-800 shrink-0">
                                 <form id="chat-form" onsubmit="handleChatSubmit(event)" class="flex gap-2 items-center">
-                                    <button type="button" onclick="triggerNotesUpload()" class="w-9 h-9 rounded-xl bg-cantera-200 dark:bg-slate-700 text-cantera-700 dark:text-slate-300 hover:bg-cantera-300 dark:hover:bg-slate-600 transition-colors cursor-pointer flex items-center justify-center shrink-0 shadow-2xs" title="Adjuntar apunte o foto a Drive">
+                                    <button type="button" onclick="triggerNotesUpload()" class="w-9 h-9 rounded-xl bg-cantera-200 dark:bg-slate-700 text-cantera-700 dark:text-slate-300 hover:bg-cantera-300 dark:hover:bg-slate-600 transition-colors cursor-pointer flex items-center justify-center shrink-0 shadow-2xs" title="Adjuntar documento o imagen">
                                         <i class="fa-solid fa-paperclip text-sm"></i>
                                     </button>
-                                    <input type="file" id="notes-file-input" class="hidden" accept=".pdf,image/*" onchange="handleNotesFileUpload(event)">
-                                    <input type="text" id="chat-input" placeholder="Pregunta a Ignis sobre el documento..." autocomplete="off" class="flex-1 bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-600 rounded-xl px-3.5 py-2 text-sm text-cantera-900 dark:text-white focus:outline-none focus:border-indigo-500">
+                                    <input type="file" id="notes-file-input" class="hidden" accept=".pdf,.docx,.doc,.txt,image/*" onchange="handleNotesFileUpload(event)">
+                                    <input type="text" id="chat-input" placeholder="Pregunta a tu mentor sobre la tarea o documento..." autocomplete="off" class="flex-1 bg-white dark:bg-slate-900 border border-cantera-300 dark:border-slate-600 rounded-xl px-3.5 py-2 text-sm text-cantera-900 dark:text-white focus:outline-none focus:border-indigo-500">
                                     <button type="submit" id="chat-submit-btn" class="w-9 h-9 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold flex items-center justify-center shrink-0 cursor-pointer shadow-2xs"><i class="fa-solid fa-paper-plane text-sm"></i></button>
                                 </form>
                             </div>
@@ -1104,10 +1126,6 @@
                         <span>Cuenta activa:</span>
                         <p id="user-email-display" class="font-mono text-xs font-semibold text-amber-500 dark:text-amber-400 truncate">{{ user_email if user_email else 'Conectando...' }}</p>
                     </div>
-                    <a href="/auth/logout" class="w-full p-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-2 font-bold text-xs transition-colors">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                        <span>Cerrar Sesión</span>
-                    </a>
                 </div>
             </div>
 
@@ -1195,10 +1213,6 @@
                         <span>Cuenta:</span>
                         <p id="user-email-display-mobile" class="font-mono text-xs font-semibold text-amber-500 dark:text-amber-400 truncate">{{ user_email if user_email else 'Conectando...' }}</p>
                     </div>
-                    <a href="/auth/logout" class="w-full p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-2 font-bold text-xs transition-colors">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                        <span>Cerrar Sesión</span>
-                    </a>
                 </div>
             </div>
         </div>
@@ -1583,49 +1597,12 @@
                             </span>
                             <span id="settings-drive-files-count" class="text-[10px] font-mono text-cantera-500 dark:text-slate-400 font-semibold">0 archivos</span>
                         </div>
-                        <div id="settings-drive-files-container" class="space-y-1.5 max-h-48 overflow-y-auto pr-0.5">
+                        <div id="settings-drive-files-container" class="space-y-1.5 max-h-64 overflow-y-auto pr-0.5">
                             <div class="text-[11px] text-cantera-500 dark:text-slate-400 italic text-center py-2">
                                 Selecciona una asignatura para listar sus archivos en Drive.
                             </div>
                         </div>
                     </div>
-
-                    <!-- Lista de Documentos Modulares para Descargar -->
-                    <div class="space-y-1.5 pt-1">
-                        <span class="text-[10px] font-bold text-cantera-500 dark:text-slate-400 uppercase tracking-wider block">Documentos y Guías de Estudio:</span>
-                        <div id="settings-notes-docs-list" class="space-y-1.5 pt-1">
-                            <button type="button" onclick="downloadModularDocx('guia_docente')" class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-blue-400 flex items-center justify-between text-left transition-colors cursor-pointer">
-                                <div class="flex items-center gap-2 min-w-0">
-                                    <i class="fa-solid fa-file-word text-blue-600 dark:text-blue-400 text-sm"></i>
-                                    <div class="min-w-0">
-                                        <span class="font-medium truncate block text-xs text-cantera-900 dark:text-slate-100">01_Guia_Docente_Rubricas_y_Bibliografia.docx</span>
-                                        <span class="text-[10px] text-cantera-500 dark:text-slate-400 block truncate">Rúbricas ponderadas y bibliografía recomendada</span>
-                                    </div>
-                                </div>
-                                <span class="text-blue-600 dark:text-blue-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-file-pen text-[10px]"></i> Abrir Docs</span>
-                            </button>
-                            <button type="button" onclick="downloadModularDocx('socrates_guia')" class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-indigo-400 flex items-center justify-between text-left transition-colors cursor-pointer">
-                                <div class="flex items-center gap-2 min-w-0">
-                                    <i class="fa-solid fa-clipboard-check text-indigo-600 dark:text-indigo-400 text-sm"></i>
-                                    <div class="min-w-0">
-                                        <span class="font-medium truncate block text-xs text-cantera-900 dark:text-slate-100">02_Resumen_Semestral_y_Catalogo_de_Ejercicios.docx</span>
-                                        <span class="text-[10px] text-indigo-500 dark:text-indigo-400 font-semibold block truncate">Pauta oficial Sócrates (instructivo sin prosa)</span>
-                                    </div>
-                                </div>
-                                <span class="text-indigo-600 dark:text-indigo-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-brain text-[10px]"></i> Sócrates</span>
-                            </button>
-                            <button type="button" onclick="downloadModularDocx('apuntes_tema_1')" class="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-emerald-400 flex items-center justify-between text-left transition-colors cursor-pointer">
-                                <div class="flex items-center gap-2 min-w-0">
-                                    <i class="fa-regular fa-file-lines text-emerald-600 dark:text-emerald-400 text-sm"></i>
-                                    <div class="min-w-0">
-                                        <span class="font-medium truncate block text-xs text-cantera-900 dark:text-slate-100">03_Apuntes_Tema_1_Didactica.docx</span>
-                                        <span class="text-[10px] text-cantera-500 dark:text-slate-400 block truncate">Apuntes explicativos en prosa didáctica continua</span>
-                                    </div>
-                                </div>
-                                <span class="text-emerald-600 dark:text-emerald-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-download text-[10px]"></i> Word</span>
-                            </button>
-                        </div>
-                </div>
 
                     <!-- Botón de eliminación con confirmación nativa -->
                     <div class="pt-2 border-t border-cantera-200 dark:border-slate-700/60">
@@ -1725,6 +1702,18 @@
                     <button onclick="saveApiKeys()" class="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors mt-2">
                         Guardar Configuración
                     </button>
+
+                    <!-- Cuenta Activa y Cerrar Sesión -->
+                    <div class="pt-4 mt-3 border-t border-cantera-200 dark:border-slate-800 space-y-2">
+                        <div class="text-[11px] text-cantera-600 dark:text-slate-400">
+                            <span class="font-medium">Cuenta Google conectada:</span>
+                            <p class="font-mono text-xs font-semibold text-amber-500 dark:text-amber-400 truncate mt-0.5">{{ user_email if user_email else 'Conectando...' }}</p>
+                        </div>
+                        <a href="/auth/logout" class="w-full p-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center gap-2 font-bold text-xs transition-colors">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span>Cerrar Sesión</span>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1767,6 +1756,9 @@
 
                 <button type="button" onclick="startSocratesExam()" class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
                     <i class="fa-solid fa-play text-[10px]"></i> Iniciar
+                </button>
+                <button type="button" onclick="downloadSocratesGuide()" id="btn-soc-download-guide" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer" title="Descargar Guía Procedimental en Word (.docx)">
+                    <i class="fa-solid fa-file-word text-[11px]"></i> <span>Descargar Guía (.docx)</span>
                 </button>
             </div>
 
@@ -1866,7 +1858,8 @@
 
         // Los 8 Niveles Físicos de la Llama (Semanas 1 a 15 y primer semana por días)
         const ADMIN_TEST_EMAIL = 'rodrigo.munoz6509@alumnos.udg.mx';
-        const ALEX_TEST_EMAIL = 'alexmunoz918@gmail.com';
+        const DEMO_USER_EMAIL = 'estudiante.demo@agora.edu.mx';
+        const ALEX_TEST_EMAIL = DEMO_USER_EMAIL;
         let currentUserEmail = '';
         try {
             currentUserEmail = localStorage.getItem('agora_user_email') || '';
@@ -2071,13 +2064,13 @@
 
         async function cycleAlexSemesterStage() {
             try {
-                const res = await fetch('/api/alex/stage/cycle', { method: 'POST' });
+                const res = await fetch('/api/demo/stage/cycle', { method: 'POST' });
                 if (res.ok) {
                     await loadTasks();
                     await loadAnnouncements();
                 }
             } catch (e) {
-                console.error("Error al rotar etapa de Alex:", e);
+                console.error("Error al rotar etapa de Demo:", e);
             }
         }
 
@@ -3110,7 +3103,7 @@
                     userEmailSettings.textContent = currentUserEmail;
                 }
 
-                if (currentUserEmail === ALEX_TEST_EMAIL.toLowerCase()) {
+                if (currentUserEmail === DEMO_USER_EMAIL.toLowerCase() || currentUserEmail === 'demo_user@agora.edu.mx') {
                     const alexContainer = document.getElementById('alex-stage-container');
                     const alexStageName = document.getElementById('alex-stage-name');
                     if (alexContainer) alexContainer.style.display = 'flex';
@@ -3161,7 +3154,7 @@
                     if (isDone) {
                         allCompletedTasks.push(task);
                     } else {
-                        task.mission_type = 'open';
+                        if (!task.mission_type) task.mission_type = 'open';
                         allNoDateTasks.push(task);
                     }
                 });
@@ -3180,7 +3173,13 @@
 
                 const overdueSection = document.getElementById('overdue-section');
                 if (overdueSection) {
-                    overdueSection.style.display = allOverdueTasks.length === 0 ? 'none' : 'block';
+                    const hasOverdue = allOverdueTasks.length > 0;
+                    overdueSection.style.display = hasOverdue ? 'block' : 'none';
+                    if (hasOverdue) {
+                        overdueSection.setAttribute('open', '');
+                    } else {
+                        overdueSection.removeAttribute('open');
+                    }
                 }
 
                 const noDateCount = document.getElementById('no-date-count');
@@ -3214,12 +3213,6 @@
                 return;
             }
 
-            if (!dueDate) {
-                task.mission_type = 'open';
-                task.estimated_hours = 1.0;
-                return;
-            }
-
             if (titleLower.includes('trámite') || titleLower.includes('comprobante') || titleLower.includes('imss') || descLower.includes('subir el comprobante')) {
                 task.mission_type = 'daily';
                 task.estimated_hours = 0.2;
@@ -3229,6 +3222,17 @@
             if (titleLower.includes('proyecto') || titleLower.includes('final') || titleLower.includes('act apre s 1 b') || titleLower.includes('act apre s 1 c') || titleLower.includes('act apre s 4 a')) {
                 task.mission_type = 'main';
                 task.estimated_hours = 4.0;
+                return;
+            }
+
+            if (task.mission_type && task.mission_type !== 'open') {
+                task.estimated_hours = task.estimated_hours || 1.5;
+                return;
+            }
+
+            if (!dueDate) {
+                task.mission_type = 'open';
+                task.estimated_hours = 1.0;
                 return;
             }
 
@@ -3562,10 +3566,21 @@
         function applyAllFilters() {
             let filtered = [...allUpcomingTasks];
 
-            if (currentMissionFilter === 'open') {
-                filtered = [...allNoDateTasks];
-            } else if (currentMissionFilter === 'rescue') {
-                filtered = [...allOverdueTasks];
+            if (selectedCourses.size > 0) {
+                // Al filtrar por materia(s), incluir siempre las tareas sin fecha límite para que no se oculte ninguna actividad pendiente
+                if (currentMissionFilter === 'open') {
+                    filtered = [...allNoDateTasks];
+                } else if (currentMissionFilter === 'rescue') {
+                    filtered = [...allOverdueTasks];
+                } else {
+                    filtered = [...allUpcomingTasks, ...allNoDateTasks];
+                }
+            } else {
+                if (currentMissionFilter === 'open') {
+                    filtered = [...allNoDateTasks];
+                } else if (currentMissionFilter === 'rescue') {
+                    filtered = [...allOverdueTasks];
+                }
             }
 
             const titleEl = document.getElementById('current-view-title');
@@ -3582,13 +3597,24 @@
             } else {
                 if (clearBtn) clearBtn.style.display = 'none';
                 if (titleEl) {
-                    if (currentMissionFilter === 'main') titleEl.textContent = "Misión Principal (Bloques)";
-                    else if (currentMissionFilter === 'secondary') titleEl.textContent = "Misiones Secundarias";
-                    else if (currentMissionFilter === 'daily') titleEl.textContent = "Misiones Diarias (Rápidas)";
-                    else if (currentMissionFilter === 'special') titleEl.textContent = "Misiones Especiales (Mejora)";
-                    else if (currentMissionFilter === 'rescue') titleEl.textContent = "Misiones de Rescate (Tardías)";
-                    else if (currentMissionFilter === 'open') titleEl.textContent = "Misiones Abiertas (A tu ritmo)";
-                    else titleEl.textContent = "Próximas entregas";
+                    if (selectedCourses.size === 1) {
+                        const courseName = Array.from(selectedCourses)[0];
+                        if (currentMissionFilter === 'main') titleEl.textContent = `${courseName} — Misión Principal`;
+                        else if (currentMissionFilter === 'secondary') titleEl.textContent = `${courseName} — Misiones Secundarias`;
+                        else if (currentMissionFilter === 'daily') titleEl.textContent = `${courseName} — Misiones Diarias`;
+                        else if (currentMissionFilter === 'special') titleEl.textContent = `${courseName} — Misiones Especiales`;
+                        else if (currentMissionFilter === 'rescue') titleEl.textContent = `${courseName} — Misiones de Rescate`;
+                        else if (currentMissionFilter === 'open') titleEl.textContent = `${courseName} — Sin fecha límite`;
+                        else titleEl.textContent = `${courseName} — Todas las actividades`;
+                    } else {
+                        if (currentMissionFilter === 'main') titleEl.textContent = "Misión Principal (Bloques)";
+                        else if (currentMissionFilter === 'secondary') titleEl.textContent = "Misiones Secundarias";
+                        else if (currentMissionFilter === 'daily') titleEl.textContent = "Misiones Diarias (Rápidas)";
+                        else if (currentMissionFilter === 'special') titleEl.textContent = "Misiones Especiales (Mejora)";
+                        else if (currentMissionFilter === 'rescue') titleEl.textContent = "Misiones de Rescate (Tardías)";
+                        else if (currentMissionFilter === 'open') titleEl.textContent = "Misiones Abiertas (A tu ritmo)";
+                        else titleEl.textContent = "Próximas entregas";
+                    }
                 }
             }
 
@@ -3600,25 +3626,81 @@
                 filtered = filtered.filter(t => t.mission_type === currentMissionFilter);
             }
 
+            const priority = { 'main': 1, 'daily': 2, 'secondary': 3, 'special': 4, 'rescue': 5, 'open': 6 };
+
             if (currentSortMode === 'urgency') {
                 filtered.sort((a, b) => {
-                    if (!a.due_date) return 1;
-                    if (!b.due_date) return -1;
-                    const da = parseDueDate(a.due_date);
-                    const db = parseDueDate(b.due_date);
-                    return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+                    const hasA = Boolean(a.due_date);
+                    const hasB = Boolean(b.due_date);
+                    if (hasA && hasB) {
+                        const da = parseDueDate(a.due_date);
+                        const db = parseDueDate(b.due_date);
+                        const diff = (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+                        if (diff !== 0) return diff;
+                    }
+                    if (hasA && !hasB) return -1;
+                    if (!hasA && hasB) return 1;
+                    // Ambos sin fecha o misma fecha: ordenar por nivel de misión
+                    return (priority[a.mission_type] || 3) - (priority[b.mission_type] || 3);
                 });
             } else if (currentSortMode === 'importance') {
-                const priority = { 'main': 1, 'daily': 2, 'secondary': 3, 'special': 4, 'rescue': 5, 'open': 6 };
-                filtered.sort((a, b) => (priority[a.mission_type] || 3) - (priority[b.mission_type] || 3));
+                filtered.sort((a, b) => {
+                    const diff = (priority[a.mission_type] || 3) - (priority[b.mission_type] || 3);
+                    if (diff !== 0) return diff;
+                    if (!a.due_date && b.due_date) return 1;
+                    if (a.due_date && !b.due_date) return -1;
+                    if (a.due_date && b.due_date) {
+                        const da = parseDueDate(a.due_date);
+                        const db = parseDueDate(b.due_date);
+                        return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+                    }
+                    return 0;
+                });
             } else if (currentSortMode === 'course') {
-                filtered.sort((a, b) => (a.course_name || '').replace(/_/g, ' ').localeCompare((b.course_name || '').replace(/_/g, ' ')));
+                filtered.sort((a, b) => {
+                    const cComp = (a.course_name || '').replace(/_/g, ' ').localeCompare((b.course_name || '').replace(/_/g, ' '));
+                    if (cComp !== 0) return cComp;
+                    const diff = (priority[a.mission_type] || 3) - (priority[b.mission_type] || 3);
+                    if (diff !== 0) return diff;
+                    if (!a.due_date && b.due_date) return 1;
+                    if (a.due_date && !b.due_date) return -1;
+                    return 0;
+                });
             }
+
+            // Actualizar también secciones subordinadas según el filtro de materias
+            let courseCompleted = allCompletedTasks;
+            let courseOverdue = allOverdueTasks;
+            let courseNoDate = allNoDateTasks;
+            if (selectedCourses.size > 0) {
+                courseCompleted = courseCompleted.filter(t => selectedCourses.has((t.course_name || '').replace(/_/g, ' ')));
+                courseOverdue = courseOverdue.filter(t => selectedCourses.has((t.course_name || '').replace(/_/g, ' ')));
+                courseNoDate = courseNoDate.filter(t => selectedCourses.has((t.course_name || '').replace(/_/g, ' ')));
+            }
+
+            renderTasks(courseCompleted, 'completed-tasks');
+            renderTasks(courseOverdue, 'overdue-tasks');
+            renderTasks(courseNoDate, 'no-date-tasks');
+
+            const completedCountEl = document.getElementById('completed-count');
+            if (completedCountEl) completedCountEl.textContent = courseCompleted.length;
+
+            const overdueCountEl = document.getElementById('overdue-count');
+            if (overdueCountEl) overdueCountEl.textContent = courseOverdue.length;
 
             const overdueSection = document.getElementById('overdue-section');
             if (overdueSection) {
-                overdueSection.style.display = (currentMissionFilter === 'rescue' || allOverdueTasks.length === 0) ? 'none' : 'block';
+                const hasOverdue = courseOverdue.length > 0;
+                overdueSection.style.display = (currentMissionFilter === 'rescue' || !hasOverdue) ? 'none' : 'block';
+                if (hasOverdue) {
+                    overdueSection.setAttribute('open', '');
+                } else {
+                    overdueSection.removeAttribute('open');
+                }
             }
+
+            const noDateCount = document.getElementById('no-date-count');
+            if (noDateCount) noDateCount.textContent = courseNoDate.length;
 
             renderTasks(filtered, 'timeline');
         }
@@ -3668,12 +3750,14 @@
             else selectedCourses.add(course);
             renderCoursesFilter();
             applyAllFilters();
+            updateMissionCounts();
         }
 
         function clearCourseSelection() {
             selectedCourses.clear();
             renderCoursesFilter();
             applyAllFilters();
+            updateMissionCounts();
         }
 
         function setMissionFilter(filter) {
@@ -3702,6 +3786,10 @@
                 overdueBase = overdueBase.filter(t => selectedCourses.has((t.course_name || '').replace(/_/g, ' ')));
                 openBase = openBase.filter(t => selectedCourses.has((t.course_name || '').replace(/_/g, ' ')));
             }
+
+            // 'Todas' suma TODAS las tareas que requieren acción del estudiante:
+            // Misiones Principales + Secundarias + Diarias + Especiales + Rescate + Sin fecha
+            const allActionableCount = base.length + overdueBase.length + openBase.length;
             const cAll = document.getElementById('count-all');
             const cMain = document.getElementById('count-main');
             const cSec = document.getElementById('count-secondary');
@@ -3719,11 +3807,11 @@
             const mOpen = document.getElementById('m-count-open');
 
             const counts = {
-                all: base.length,
-                main: base.filter(t => t.mission_type === 'main').length,
-                secondary: base.filter(t => t.mission_type === 'secondary').length,
-                daily: base.filter(t => t.mission_type === 'daily').length,
-                special: base.filter(t => t.mission_type === 'special').length,
+                all: allActionableCount,
+                main: [...base, ...openBase, ...overdueBase].filter(t => t.mission_type === 'main').length,
+                secondary: [...base, ...openBase, ...overdueBase].filter(t => t.mission_type === 'secondary').length,
+                daily: [...base, ...openBase, ...overdueBase].filter(t => t.mission_type === 'daily').length,
+                special: [...base, ...openBase, ...overdueBase].filter(t => t.mission_type === 'special').length,
                 rescue: overdueBase.length,
                 open: openBase.length
             };
@@ -3817,8 +3905,8 @@
             if (lblSub) lblSub.textContent = `${countSubmitted} en revisión`;
 
             // Actualizar La Antorcha
-            if (currentUserEmail === ALEX_TEST_EMAIL.toLowerCase()) {
-                // Para Alex la racha está determinada por la etapa del semestre
+            if (currentUserEmail === DEMO_USER_EMAIL.toLowerCase() || currentUserEmail === 'demo_user@agora.edu.mx') {
+                // Para el Modo Demo la racha está determinada por la etapa del semestre
             } else if (isUserAdminTest) {
                 setStreakLevel(activeStreakWeeks, activeStreakDays);
             } else {
@@ -3911,15 +3999,41 @@
             container.innerHTML = '';
 
             if (!tasks || tasks.length === 0) {
-                container.innerHTML = `
-                    <div class="py-12 px-6 text-center border-2 border-dashed border-cantera-300 dark:border-slate-800 rounded-2xl bg-cantera-50/50 dark:bg-slate-900/30">
-                        <div class="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl mb-3">
-                            <i class="fa-solid fa-check"></i>
-                        </div>
-                        <h4 class="font-bold text-cantera-900 dark:text-white text-sm">¡Estás al día!</h4>
-                        <p class="text-cantera-600 dark:text-slate-400 text-xs mt-1">No hay tareas pendientes en esta categoría.</p>
-                    </div>
-                `;
+                if (containerId === 'timeline') {
+                    // Contar si existen tareas de rescate en la vista activa
+                    let rescueTasksCount = 0;
+                    if (selectedCourses.size > 0) {
+                        rescueTasksCount = allOverdueTasks.filter(t => selectedCourses.has((t.course_name || '').replace(/_/g, ' '))).length;
+                    } else {
+                        rescueTasksCount = allOverdueTasks.length;
+                    }
+
+                    if (rescueTasksCount > 0) {
+                        // NO mostrar falso "¡Estás al día!" si hay tareas de rescate pendientes
+                        container.innerHTML = `
+                            <div class="py-8 px-6 text-center border-2 border-dashed border-orange-300 dark:border-orange-800/80 rounded-2xl bg-orange-50/60 dark:bg-orange-950/30 shadow-xs">
+                                <div class="w-12 h-12 mx-auto rounded-2xl bg-orange-100 dark:bg-orange-900/60 text-orange-600 dark:text-orange-400 flex items-center justify-center text-xl mb-3 shadow-xs">
+                                    <i class="fa-solid fa-life-ring animate-bounce"></i>
+                                </div>
+                                <h4 class="font-bold text-orange-900 dark:text-orange-200 text-sm">¡Tienes ${rescueTasksCount} ${rescueTasksCount === 1 ? 'misión de Rescate pendiente' : 'misiones de Rescate pendientes'}!</h4>
+                                <p class="text-orange-700/80 dark:text-orange-300/80 text-xs mt-1">No tienes entregas regulares para esta categoría, pero tienes entregas tardías por salvar en la sección de Rescate abajo.</p>
+                            </div>
+                        `;
+                    } else {
+                        // SOLO mostrar "¡Estás al día!" si tanto tareas regulares como de rescate están en 0
+                        container.innerHTML = `
+                            <div class="py-12 px-6 text-center border-2 border-dashed border-cantera-300 dark:border-slate-800 rounded-2xl bg-cantera-50/50 dark:bg-slate-900/30">
+                                <div class="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl mb-3">
+                                    <i class="fa-solid fa-check"></i>
+                                </div>
+                                <h4 class="font-bold text-cantera-900 dark:text-white text-sm">¡Estás al día!</h4>
+                                <p class="text-cantera-600 dark:text-slate-400 text-xs mt-1">No hay tareas pendientes en esta categoría.</p>
+                            </div>
+                        `;
+                    }
+                } else {
+                    container.innerHTML = `<p class="text-cantera-600 dark:text-slate-500 italic text-xs py-3 text-center">No hay tareas en esta sección</p>`;
+                }
                 return;
             }
 
@@ -3965,7 +4079,17 @@
                     missionBadge = `<span class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/80 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800"><i class="fa-solid fa-compass mr-1"></i>Abierta</span>`;
                 }
 
+                const hasDueDate = Boolean(task.due_date && parseDueDate(task.due_date));
                 const dateStr = formatRelativeDate(task.due_date);
+                const dateBadgeHtml = !hasDueDate
+                    ? `<div class="flex items-center gap-1.5 text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/80 border border-teal-200 dark:border-teal-800/80 px-2.5 py-1 rounded-lg shadow-2xs" title="Publicada en Classroom sin fecha límite de entrega">
+                           <i class="fa-regular fa-calendar-check text-teal-500"></i>
+                           <span>📅 Sin fecha límite</span>
+                       </div>`
+                    : `<div class="flex items-center gap-1.5 text-xs font-semibold text-cantera-700 dark:text-slate-300 bg-cantera-100/70 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg">
+                           <i class="fa-regular fa-clock text-slate-400"></i>
+                           <span>${dateStr}</span>
+                       </div>`;
 
                 // Tarjeta de Tarea Completada / Calificada
                 if (isDone) {
@@ -3983,7 +4107,7 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2 shrink-0 self-end md:self-center">
-                            <button onclick="openIgnisWorkspace('${taskId}')" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-cantera-300 dark:border-slate-700 hover:border-indigo-500 flex items-center gap-1.5 cursor-pointer transition-colors">
+                            <button onclick="openIgnisWorkspace('${taskId}', 'chat')" class="text-xs font-semibold px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-cantera-300 dark:border-slate-700 hover:border-indigo-500 flex items-center gap-1.5 cursor-pointer transition-colors">
                                 <i class="fa-solid fa-fire text-amber-500"></i> Repasar en Ignis
                             </button>
                         </div>
@@ -4005,10 +4129,7 @@
                                 ${missionBadge}
                                 ${classroomBadge}
                             </div>
-                            <div class="flex items-center gap-1.5 text-xs font-semibold text-cantera-700 dark:text-slate-300 bg-cantera-100/70 dark:bg-slate-800/80 px-2.5 py-1 rounded-lg">
-                                <i class="fa-regular fa-clock text-slate-400"></i>
-                                <span>${dateStr}</span>
-                            </div>
+                            ${dateBadgeHtml}
                         </div>
 
                         <!-- Título de la Tarea (A todo el ancho disponible) -->
@@ -4039,7 +4160,7 @@
 
                         <!-- Botones de Acción: Abrir en Ignis y Entregar en Google Classroom -->
                         <div class="flex items-center justify-between gap-3 pt-3.5 border-t border-cantera-200 dark:border-slate-800 mt-2 flex-wrap">
-                            <button onclick="openIgnisWorkspace('${taskId}')" class="text-xs md:text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-sm shadow-indigo-600/30 cursor-pointer">
+                            <button onclick="openIgnisWorkspace('${taskId}', 'chat')" class="text-xs md:text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all shadow-sm shadow-indigo-600/30 cursor-pointer">
                                 <i class="fa-solid fa-fire text-amber-300"></i>
                                 <span>Abrir en Ignis (Tutor)</span>
                             </button>
@@ -4267,7 +4388,7 @@
                 }
 
                 docButtonHtml = `
-                    <button onclick="openIgnisWorkspace('${taskId}')" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-900/60 transition-all font-semibold text-xs cursor-pointer shadow-2xs group" title="Abrir y consultar documento adjunto">
+                    <button onclick="openIgnisWorkspace('${taskId}', 'doc')" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-900/60 transition-all font-semibold text-xs cursor-pointer shadow-2xs group" title="Abrir y consultar documento adjunto">
                         <i class="fa-regular ${fileIcon} group-hover:scale-110 transition-transform"></i>
                         <span class="truncate max-w-[170px] sm:max-w-xs font-mono text-[11px]">${primaryDoc}</span>
                         <span class="text-[10px] bg-red-200/70 dark:bg-red-900/70 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Ver documento</span>
@@ -4499,6 +4620,30 @@
             }
         }
 
+        let currentAttachedDocument = null;
+
+        function clearAttachedFile(clearInput = true) {
+            currentAttachedDocument = null;
+            const bar = document.getElementById('chat-attached-file-bar');
+            if (bar) {
+                bar.classList.add('hidden');
+                bar.classList.remove('flex');
+            }
+            const nameEl = document.getElementById('chat-attached-file-name');
+            if (nameEl) nameEl.textContent = '';
+            const badgeEl = document.getElementById('chat-attached-file-badge');
+            if (badgeEl) {
+                badgeEl.textContent = '';
+                badgeEl.className = 'px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0';
+            }
+            const metaEl = document.getElementById('chat-attached-file-meta');
+            if (metaEl) metaEl.textContent = '';
+            if (clearInput) {
+                const inp = document.getElementById('notes-file-input');
+                if (inp) inp.value = '';
+            }
+        }
+
         function triggerNotesUpload() {
             const fileInp = document.getElementById('notes-file-input');
             if (fileInp) fileInp.click();
@@ -4507,6 +4652,54 @@
         async function handleNotesFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
+
+            // Mostrar inmediatamente la barra en móvil y escritorio
+            const bar = document.getElementById('chat-attached-file-bar');
+            const iconEl = document.getElementById('chat-attached-file-icon');
+            const nameEl = document.getElementById('chat-attached-file-name');
+            const badgeEl = document.getElementById('chat-attached-file-badge');
+            const metaEl = document.getElementById('chat-attached-file-meta');
+
+            if (bar) {
+                bar.classList.remove('hidden');
+                bar.classList.add('flex');
+            }
+            if (nameEl) {
+                nameEl.textContent = file.name;
+                nameEl.title = file.name;
+            }
+            if (badgeEl) {
+                badgeEl.textContent = "Procesando...";
+                badgeEl.className = "px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 shrink-0";
+            }
+            const sizeKb = Math.round(file.size / 1024);
+            if (metaEl) {
+                metaEl.textContent = `${sizeKb} KB · Extrayendo contenido...`;
+            }
+
+            if (iconEl) {
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (ext === 'pdf') {
+                    iconEl.innerHTML = '<i class="fa-regular fa-file-pdf text-red-500"></i>';
+                } else if (ext === 'docx' || ext === 'doc') {
+                    iconEl.innerHTML = '<i class="fa-regular fa-file-word text-blue-500"></i>';
+                } else if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext)) {
+                    iconEl.innerHTML = '<i class="fa-regular fa-file-image text-emerald-500"></i>';
+                } else if (ext === 'txt') {
+                    iconEl.innerHTML = '<i class="fa-regular fa-file-lines text-slate-500"></i>';
+                } else {
+                    iconEl.innerHTML = '<i class="fa-solid fa-file-lines text-indigo-500"></i>';
+                }
+            }
+
+            currentAttachedDocument = {
+                name: file.name,
+                size: file.size,
+                text: "",
+                file_id: null,
+                preview_url: null,
+                ready: false
+            };
 
             const chatContainer = document.getElementById('chat-messages');
             const courseName = currentTaskContext ? (currentTaskContext.course_name || coursesMap[currentTaskContext.course_id] || "General") : "General";
@@ -4518,8 +4711,8 @@
                     <i class="fa-solid fa-cloud-arrow-up animate-pulse text-xs"></i>
                 </div>
                 <div class="bg-cantera-50 dark:bg-slate-900 p-3 rounded-2xl rounded-tl-none border border-cantera-300 dark:border-slate-700 text-xs text-cantera-800 dark:text-slate-300">
-                    <p class="font-semibold flex items-center gap-1.5"><i class="fa-solid fa-spinner fa-spin"></i> Subiendo y procesando apunte en Drive...</p>
-                    <p class="text-[10px] text-cantera-500 dark:text-slate-400 mt-1">${file.name} (${Math.round(file.size / 1024)} KB)</p>
+                    <p class="font-semibold flex items-center gap-1.5"><i class="fa-solid fa-spinner fa-spin"></i> Procesando documento para Sócrates y mentores...</p>
+                    <p class="text-[10px] text-cantera-500 dark:text-slate-400 mt-1">${file.name} (${sizeKb} KB)</p>
                 </div>
             `;
             if (chatContainer) {
@@ -4539,15 +4732,31 @@
                 const res = await resp.json();
 
                 if (res.success) {
+                    currentAttachedDocument.text = res.extracted_text || "";
+                    currentAttachedDocument.file_id = res.file_id || null;
+                    currentAttachedDocument.preview_url = res.preview_url || null;
+                    currentAttachedDocument.ready = true;
+                    currentAttachedDocument.unit = res.unit || "Unidad 1";
+
+                    if (badgeEl) {
+                        badgeEl.textContent = "Listo para mentor";
+                        badgeEl.className = "px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 shrink-0";
+                    }
+                    if (metaEl) {
+                        const textLen = (res.extracted_text || "").length;
+                        const textStatus = textLen > 0 ? `${textLen} caracteres leídos` : 'Texto procesado';
+                        metaEl.textContent = `${sizeKb} KB · ${textStatus} · Guardado en ${res.unit || 'Apuntes'}`;
+                    }
+
                     let statusText = '';
                     if (res.is_duplicate) {
-                        statusText = `Archivo reconocido y deduplicado (SHA-256). Ya integrado en tus apuntes de <em>${courseName}</em>.`;
+                        statusText = `Documento reconocido y listo. Sócrates y tus mentores ya pueden leerlo y evaluarte con base en él.`;
                     } else if (res.drive_synced) {
-                        statusText = `Apunte sincronizado en tu Google Drive dentro de: <strong>Ágora - Apuntes / ${courseName}</strong> (${res.unit || 'Unidad 1'}).`;
+                        statusText = `Documento sincronizado en Google Drive (<strong>Ágora - Apuntes / ${courseName}</strong>). Texto listo para Sócrates y mentores.`;
                     } else if (res.drive_error) {
-                        statusText = `Apunte guardado localmente. <span class="text-amber-600 dark:text-amber-400 block mt-1"><i class="fa-solid fa-circle-info"></i> ${res.drive_error}</span>`;
+                        statusText = `Documento procesado localmente. Texto listo para Sócrates. <span class="text-amber-600 dark:text-amber-400 block mt-1"><i class="fa-solid fa-circle-info"></i> ${res.drive_error}</span>`;
                     } else {
-                        statusText = `Apunte clasificado como <strong>${res.unit || 'Unidad 1'}</strong>.`;
+                        statusText = `Documento procesado. Sócrates y tus mentores ya tienen acceso al contenido.`;
                     }
                     
                     let driveAction = '';
@@ -4563,24 +4772,36 @@
                         </div>
                         <div class="bg-cantera-50 dark:bg-slate-900 p-3 rounded-2xl rounded-tl-none border border-emerald-500/30 text-xs text-cantera-900 dark:text-slate-200">
                             <p class="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                                <i class="fa-brands fa-google-drive"></i> Apunte Procesado
+                                <i class="fa-solid fa-file-circle-check"></i> Documento Adjunto Preparado
                             </p>
                             <p class="mt-1">${statusText}</p>
                             ${driveAction}
                         </div>
                     `;
                 } else {
+                    if (badgeEl) {
+                        badgeEl.textContent = "Error";
+                        badgeEl.className = "px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 shrink-0";
+                    }
+                    if (metaEl) {
+                        metaEl.textContent = res.error || 'Error al procesar el archivo.';
+                    }
                     loadingBubble.innerHTML = `
                         <div class="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 flex items-center justify-center shrink-0">
                             <i class="fa-solid fa-triangle-exclamation text-xs"></i>
                         </div>
                         <div class="bg-cantera-50 dark:bg-slate-900 p-3 rounded-2xl rounded-tl-none border border-rose-500/30 text-xs text-rose-600 dark:text-rose-400">
-                            <p class="font-semibold">Error al procesar apunte</p>
+                            <p class="font-semibold">Error al procesar documento</p>
                             <p class="mt-1">${res.error || 'Ocurrió un error inesperado al subir el archivo.'}</p>
                         </div>
                     `;
                 }
             } catch(err) {
+                if (badgeEl) {
+                    badgeEl.textContent = "Error conexión";
+                    badgeEl.className = "px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 shrink-0";
+                }
+                if (metaEl) metaEl.textContent = err.message;
                 loadingBubble.innerHTML = `
                     <div class="w-8 h-8 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 flex items-center justify-center shrink-0">
                         <i class="fa-solid fa-triangle-exclamation text-xs"></i>
@@ -4792,22 +5013,11 @@
         // --- Gestión de Apuntes en Configuración ---
         let currentCourseNotesData = null;
 
-        function downloadModularDocx(docType) {
-            const sel = document.getElementById('settings-course-select');
-            const course = sel ? sel.value : '';
-            if (!course) {
-                alert('Por favor selecciona primero una asignatura en la lista superior.');
-                return;
-            }
-            window.open(`/api/notes/${encodeURIComponent(course)}/docx/${docType}`, '_blank');
-        }
-
         async function onSettingsCourseChanged(courseName) {
             const label = document.getElementById('settings-drive-course-label');
             if (label) label.textContent = courseName || 'Todas';
 
             const warn = document.getElementById('settings-drive-warning');
-            const docsList = document.getElementById('settings-notes-docs-list');
 
             if (!courseName) {
                 currentCourseNotesData = null;
@@ -4827,57 +5037,6 @@
 
                     if (warn) {
                         warn.style.display = data.drive_error ? 'flex' : 'none';
-                    }
-
-                    if (docsList && data.documents && data.documents.length > 0) {
-                        docsList.innerHTML = '';
-                        data.documents.forEach(doc => {
-                            const btn = document.createElement('button');
-                            btn.type = 'button';
-                            btn.className = "w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-cantera-200 dark:border-slate-700 hover:border-indigo-400 flex items-center justify-between text-left transition-colors cursor-pointer";
-                            
-                            let icon = '<i class="fa-regular fa-file-pdf text-rose-500"></i>';
-                            if (doc.type === 'docx_guide') icon = '<i class="fa-solid fa-file-word text-blue-600 dark:text-blue-400"></i>';
-                            else if (doc.type === 'docx_socrates') icon = '<i class="fa-solid fa-clipboard-check text-indigo-600 dark:text-indigo-400"></i>';
-                            else if (doc.type === 'docx_thematic') icon = '<i class="fa-regular fa-file-lines text-emerald-600 dark:text-emerald-400"></i>';
-                            else if (doc.type === 'thematic_summary') icon = '<i class="fa-solid fa-graduation-cap text-purple-500"></i>';
-                            else if (doc.type === 'formula_sheet') icon = '<i class="fa-solid fa-square-root-variable text-sky-500"></i>';
-                            else if (doc.type === 'master_document') icon = '<i class="fa-solid fa-book-atlas text-amber-500"></i>';
-                            else if (doc.type === 'drive_file') icon = '<i class="fa-brands fa-google-drive text-emerald-500"></i>';
-                            else if (doc.type === 'teacher_material') icon = '<i class="fa-solid fa-chalkboard-user text-indigo-500"></i>';
-
-                            const isAvailable = doc.available || (doc.preview_url && doc.preview_url !== '#');
-                            let actionLabel = isAvailable 
-                                ? '<span class="text-indigo-600 dark:text-indigo-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Ver en Drive</span>'
-                                : '<span class="text-slate-400 text-xs font-medium shrink-0 flex items-center gap-1"><i class="fa-solid fa-cloud-arrow-up text-[10px]"></i> Pendiente</span>';
-
-                            if (isAvailable && doc.type === 'thematic_summary') {
-                                actionLabel = '<span class="text-purple-600 dark:text-purple-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-book-open-reader text-[10px]"></i> Guía de Estudio</span>';
-                            } else if (isAvailable && doc.type && doc.type.startsWith('docx_')) {
-                                actionLabel = '<span class="text-blue-600 dark:text-blue-400 text-xs font-bold shrink-0 flex items-center gap-1"><i class="fa-solid fa-file-pen text-[10px]"></i> Abrir Docs</span>';
-                            }
-
-                            btn.innerHTML = `
-                                <div class="flex items-center gap-2 min-w-0">
-                                    ${icon}
-                                    <div class="min-w-0">
-                                        <span class="font-medium truncate text-xs text-cantera-900 dark:text-slate-100 block">${doc.name}</span>
-                                        ${doc.description ? `<span class="text-[10px] text-cantera-500 dark:text-slate-400 block truncate">${doc.description}</span>` : ''}
-                                    </div>
-                                </div>
-                                ${actionLabel}
-                            `;
-                            btn.onclick = () => {
-                                if (doc.preview_url && doc.preview_url !== '#') {
-                                    window.open(formatGoogleUrlWithAuth(doc.preview_url), '_blank');
-                                } else if (doc.download_url && doc.download_url !== '#') {
-                                    window.open(formatGoogleUrlWithAuth(doc.download_url), '_blank');
-                                } else {
-                                    alert(`El documento '${doc.name}' aún no contiene archivos subidos para '${courseName}'. Sube apuntes con el botón [📎] en Ignis o añade notas personales en las misiones.`);
-                                }
-                            };
-                            docsList.appendChild(btn);
-                        });
                     }
                 }
             } catch(e) {
@@ -5012,26 +5171,6 @@
             }
         }
 
-        function downloadModularNote(type) {
-            const select = document.getElementById('settings-course-select');
-            const courseName = select ? select.value : '';
-            if (!courseName) {
-                alert("Por favor selecciona una materia primero en el selector superior.");
-                return;
-            }
-
-            if (!currentCourseNotesData || !currentCourseNotesData.documents) {
-                alert(`No se han cargado apuntes todavía para '${courseName}'. Puedes adjuntarlos con el botón [📎] en el chat de Ignis.`);
-                return;
-            }
-
-            const doc = currentCourseNotesData.documents.find(d => d.type === type || (type === 'unit1' && d.unit === 'Unidad 1'));
-            if (doc && doc.preview_url && doc.preview_url !== '#') {
-                window.open(formatGoogleUrlWithAuth(doc.preview_url), '_blank');
-            } else {
-                alert(`El documento (${type}) para '${courseName}' aún no tiene archivos cargados. Sube apuntes en PDF o fotos de clase en Ignis para generarlo.`);
-            }
-        }
 
         async function deleteCurrentCourseNotes() {
             const select = document.getElementById('settings-course-select');
@@ -5120,7 +5259,7 @@
             }
         }
 
-        function setMobileIgnisSlide(slideIndex) {
+        function setMobileIgnisSlide(slideIndex, shouldAutoFocus = false) {
             const docCount = (currentTaskDocs && currentTaskDocs.length > 0) ? currentTaskDocs.length : 1;
             const totalSlides = docCount + 1;
 
@@ -5137,9 +5276,17 @@
                 return;
             }
 
+            // Asegurar que el contenedor padre no tenga desplazamiento horizontal parasitario
+            if (slider && slider.parentElement) {
+                slider.parentElement.scrollLeft = 0;
+            }
+
             if (slideIndex < docCount) {
                 ignisMobileActiveTab = 'doc';
-                if (slider) slider.style.transform = 'translateX(0%)';
+                if (slider) {
+                    slider.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+                    slider.style.transform = 'translateX(0%)';
+                }
 
                 if (currentDocIndex !== slideIndex) {
                     currentDocIndex = slideIndex;
@@ -5162,11 +5309,16 @@
                 }
             } else {
                 ignisMobileActiveTab = 'chat';
-                if (slider) slider.style.transform = 'translateX(-100%)';
-                setTimeout(() => {
-                    const inp = document.getElementById('chat-input');
-                    if (inp) inp.focus();
-                }, 150);
+                if (slider) {
+                    slider.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+                    slider.style.transform = 'translateX(-100%)';
+                }
+                if (shouldAutoFocus) {
+                    setTimeout(() => {
+                        const inp = document.getElementById('chat-input');
+                        if (inp) inp.focus();
+                    }, 320);
+                }
             }
 
             updateMobileTaskTitle(slideIndex, docCount);
@@ -5176,9 +5328,9 @@
         function setMobileIgnisTab(tab) {
             const docCount = (currentTaskDocs && currentTaskDocs.length > 0) ? currentTaskDocs.length : 1;
             if (tab === 'chat') {
-                setMobileIgnisSlide(docCount);
+                setMobileIgnisSlide(docCount, true);
             } else {
-                setMobileIgnisSlide(currentDocIndex || 0);
+                setMobileIgnisSlide(currentDocIndex || 0, false);
             }
         }
 
@@ -5196,6 +5348,11 @@
 
                 ignisModal.addEventListener('touchstart', (e) => {
                     if (window.innerWidth >= 768) return;
+                    // Si el usuario toca con dos o más dedos (pinch-zoom), cancelar swipe para no interferir con el zoom
+                    if (e.touches && e.touches.length > 1) {
+                        isSwiping = false;
+                        return;
+                    }
                     const target = e.target;
                     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
                     touchStartX = e.touches[0].clientX;
@@ -5207,6 +5364,10 @@
 
                 ignisModal.addEventListener('touchmove', (e) => {
                     if (!isSwiping || window.innerWidth >= 768) return;
+                    if (e.touches && e.touches.length > 1) {
+                        isSwiping = false;
+                        return;
+                    }
                     touchLastX = e.touches[0].clientX;
                     touchLastY = e.touches[0].clientY;
                 }, { passive: true });
@@ -5216,16 +5377,17 @@
                     isSwiping = false;
                     const diffX = touchLastX - touchStartX;
                     const diffY = touchLastY - touchStartY;
-                    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 35) {
+                    // Solo activar swipe si el movimiento es marcadamente horizontal (evita bloquear scroll vertical)
+                    if (Math.abs(diffX) > Math.abs(diffY) * 1.3 && Math.abs(diffX) > 35) {
                         const docCount = (currentTaskDocs && currentTaskDocs.length > 0) ? currentTaskDocs.length : 1;
                         const totalSlides = docCount + 1;
                         if (diffX < 0) {
                             if (mobileIgnisSlideIndex < totalSlides - 1) {
-                                setMobileIgnisSlide(mobileIgnisSlideIndex + 1);
+                                setMobileIgnisSlide(mobileIgnisSlideIndex + 1, false);
                             }
                         } else {
                             if (mobileIgnisSlideIndex > 0) {
-                                setMobileIgnisSlide(mobileIgnisSlideIndex - 1);
+                                setMobileIgnisSlide(mobileIgnisSlideIndex - 1, false);
                             }
                         }
                     }
@@ -5313,7 +5475,7 @@
 
         let ignisHistoryPushed = false;
 
-        function openIgnisWorkspace(taskId) {
+        function openIgnisWorkspace(taskId, targetView = 'doc') {
             const task = typeof taskId === 'object' ? taskId : tasksMap.get(String(taskId));
             if (!task) return;
 
@@ -5356,24 +5518,32 @@
                 };
             }
 
+            ignisMobileActiveTab = targetView;
+            docViewMode = 'pdf';
             ignisViewMode = 'split';
             updateIgnisPanes();
+
             if (window.innerWidth < 768) {
-                mobileIgnisSlideIndex = 0;
-                renderIgnisMobileDots(0);
-                setMobileIgnisSlide(0);
+                const docCount = (currentTaskDocs && currentTaskDocs.length > 0) ? currentTaskDocs.length : 1;
+                const slideToOpen = (targetView === 'chat') ? docCount : 0;
+                mobileIgnisSlideIndex = slideToOpen;
+                renderIgnisMobileDots(slideToOpen);
+                setMobileIgnisSlide(slideToOpen, targetView === 'chat');
                 const bNav = document.getElementById('mobile-bottom-nav');
                 if (bNav) bNav.style.display = 'none';
                 history.pushState({ modal: 'ignis' }, '');
                 ignisHistoryPushed = true;
+            } else {
+                if (targetView === 'chat') {
+                    setTimeout(() => {
+                        const inp = document.getElementById('chat-input');
+                        if (inp) inp.focus();
+                    }, 100);
+                }
             }
 
             const backdrop = document.getElementById('ignis-workspace-backdrop');
             if (backdrop) backdrop.style.display = 'flex';
-            setTimeout(() => {
-                const inp = document.getElementById('chat-input');
-                if (inp && window.innerWidth >= 768) inp.focus();
-            }, 80);
         }
 
         function closeIgnisWorkspace(fromPopState = false) {
@@ -5382,6 +5552,7 @@
             const bNav = document.getElementById('mobile-bottom-nav');
             if (bNav) bNav.style.display = '';
             currentTaskContext = null;
+            clearAttachedFile(true);
             if (ignisHistoryPushed && !fromPopState) {
                 ignisHistoryPushed = false;
                 history.back();
@@ -5629,6 +5800,8 @@
                 if (attachmentFiles.length > 0) {
                     attachmentFiles.forEach(f => {
                         currentTaskDocs.push({
+                            fileId: f.id || null,
+                            id: f.id || null,
                             title: f.title || 'Documento adjunto',
                             content: (desc || '').replace(/https?:\/\/\S+/g, '').replace(/(?:Archivos|Enlaces)\s*adjuntos:?[\s\S]*$/gi, '').trim() || 'Documento disponible para consulta y apoyo con tu tutor.',
                             link: f.link || task.link
@@ -5639,14 +5812,27 @@
                         const docTitle = m.at(1) || 'Documento adjunto';
                         const docContent = m.at(2) || '';
                         const docLink = driveLinks.at(idx) || task.link;
+                        let matchedId = null;
+                        if (docLink && docLink.includes('/file/d/')) {
+                            matchedId = docLink.split('/file/d/')[1].split('/')[0].split('?')[0];
+                        }
                         currentTaskDocs.push({
+                            fileId: matchedId,
+                            id: matchedId,
                             title: docTitle.trim(),
                             content: docContent.trim(),
                             link: docLink
                         });
                     });
                 } else {
+                    let singleId = null;
+                    const firstLink = driveLinks.at(0) || '';
+                    if (firstLink && firstLink.includes('/file/d/')) {
+                        singleId = firstLink.split('/file/d/')[1].split('/')[0].split('?')[0];
+                    }
                     currentTaskDocs.push({
+                        fileId: singleId,
+                        id: singleId,
                         title: "Instrucciones de la tarea",
                         content: desc || "No hay documento adjunto para esta tarea.",
                         link: driveLinks.at(0) || task.link
@@ -5654,6 +5840,8 @@
                 }
             } catch (err) {
                 currentTaskDocs.push({
+                    fileId: null,
+                    id: null,
                     title: "Instrucciones de la tarea",
                     content: desc || "No hay documento adjunto.",
                     link: task.link
@@ -5677,8 +5865,8 @@
 
             const container = document.getElementById('doc-viewer-container');
 
-            let fileId = null;
-            if (doc.link) {
+            let fileId = doc.fileId || doc.id || null;
+            if (!fileId && doc.link) {
                 if (doc.link.includes('/file/d/')) {
                     fileId = doc.link.split('/file/d/')[1].split('/')[0].split('?')[0];
                 } else if (doc.link.includes('id=')) {
@@ -5690,9 +5878,9 @@
             if (docViewMode === 'pdf' && fileId) {
                 const previewUrl = formatGoogleUrlWithAuth(`https://drive.google.com/file/d/${fileId}/preview`);
                 container.innerHTML = `
-                    <div class="w-full h-full flex flex-col">
-                        <iframe src="${previewUrl}" class="w-full flex-1 min-h-[460px] border-0 rounded-xl bg-white shadow-inner pointer-events-none md:pointer-events-auto" allow="autoplay"></iframe>
-                        <div class="pt-2 px-1 flex items-center justify-between text-[11px] text-cantera-600 dark:text-slate-400">
+                    <div class="w-full h-full flex flex-col" style="touch-action: pan-y pinch-zoom; -webkit-overflow-scrolling: touch;">
+                        <iframe src="${previewUrl}" class="w-full flex-1 min-h-[460px] border-0 rounded-xl bg-white shadow-inner pointer-events-auto" style="touch-action: pan-y pinch-zoom;" allow="autoplay"></iframe>
+                        <div class="pt-2 px-1 flex items-center justify-between text-[11px] text-cantera-600 dark:text-slate-400 shrink-0">
                             <span>¿El visor no carga tu cuenta escolar?</span>
                             <a href="${extLink}" target="_blank" class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center gap-1">
                                 Abrir en Drive <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
@@ -5701,7 +5889,7 @@
                     </div>
                 `;
             } else {
-                container.innerHTML = `<div class="whitespace-pre-wrap p-3 text-xs leading-relaxed text-cantera-900 dark:text-slate-300 font-sans">${doc.content || 'Sin contenido de texto adjunto.'}</div>`;
+                container.innerHTML = `<div class="whitespace-pre-wrap p-3 text-xs leading-relaxed text-cantera-900 dark:text-slate-300 font-sans" style="touch-action: pan-y pinch-zoom;">${doc.content || 'Sin contenido de texto adjunto.'}</div>`;
             }
 
             document.getElementById('doc-prev-btn').disabled = currentDocIndex === 0;
@@ -5783,13 +5971,61 @@
             if (el) el.remove();
         }
 
+        function createStreamingMessage() {
+            const chatContainer = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = "flex items-start gap-3";
+
+            const icon = `<div class="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-200 dark:border-indigo-500/30"><i class="fa-solid fa-fire text-amber-500 text-xs"></i></div>`;
+            const bubbleClass = "bg-cantera-50 dark:bg-slate-900 p-3.5 rounded-2xl rounded-tl-none border border-cantera-300 dark:border-slate-700 text-xs whitespace-pre-wrap text-cantera-900 dark:text-slate-200 max-w-[85%] leading-relaxed shadow-sm";
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = bubbleClass;
+            contentDiv.innerHTML = '<span class="streaming-text"></span><span class="inline-block w-1.5 h-3.5 bg-indigo-500 ml-0.5 animate-pulse align-middle"></span>';
+
+            msgDiv.innerHTML = icon;
+            msgDiv.appendChild(contentDiv);
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            const formatMd = (txt) => {
+                return (txt || '')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/`(.*?)`/g, '<code class="bg-cantera-200 dark:bg-slate-800 text-indigo-600 dark:text-indigo-300 px-1 py-0.5 rounded text-[11px]">$1</code>');
+            };
+
+            return {
+                update: (accumulatedText) => {
+                    const textEl = contentDiv.querySelector('.streaming-text');
+                    if (textEl) {
+                        textEl.innerHTML = formatMd(accumulatedText);
+                    }
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                },
+                finish: (finalText) => {
+                    contentDiv.innerHTML = formatMd(finalText);
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    if (currentTaskContext) {
+                        sessionTaskHistories[currentTaskContext.id] = {
+                            history: chatHistory,
+                            html: chatContainer.innerHTML
+                        };
+                    }
+                },
+                remove: () => {
+                    msgDiv.remove();
+                }
+            };
+        }
+
         async function handleChatSubmit(e) {
             e.preventDefault();
             const input = document.getElementById('chat-input');
             const btn = document.getElementById('chat-submit-btn');
-            const text = input.value.trim();
+            const text = input ? input.value.trim() : '';
 
-            if (!text || !currentTaskContext) return;
+            if (!text) return;
 
             input.value = '';
             input.disabled = true;
@@ -5798,42 +6034,126 @@
             appendMessage('user', text);
             chatHistory.push({ role: 'user', content: text });
 
-            const provider = document.querySelector('input[name="ai_provider"]:checked').value;
-            const mentor = document.getElementById('mentor-select').value;
+            const providerInput = document.querySelector('input[name="ai_provider"]:checked');
+            const provider = providerInput ? providerInput.value : 'openrouter';
+            const mentorSelect = document.getElementById('mentor-select');
+            const mentor = mentorSelect ? mentorSelect.value : 'auto';
 
             showTypingIndicator();
 
             try {
+                const payload = {
+                    provider: provider,
+                    mentor: mentor,
+                    stream: true,
+                    task_context: {
+                        id: currentTaskContext ? currentTaskContext.id : null,
+                        course_name: currentTaskContext ? (currentTaskContext.course_name || "General") : "General",
+                        title: currentTaskContext ? (currentTaskContext.title || "Consulta General") : "Consulta General",
+                        description: currentTaskContext ? (currentTaskContext.description || "") : "",
+                        due_date: currentTaskContext ? (currentTaskContext.due_date || "") : ""
+                    },
+                    messages: chatHistory
+                };
+
+                if (currentTaskContext && currentTaskContext.id) {
+                    payload.task_id = currentTaskContext.id;
+                }
+
+                if (currentAttachedDocument && currentAttachedDocument.text) {
+                    payload.attached_document = currentAttachedDocument.text;
+                    payload.attached_filename = currentAttachedDocument.name;
+                    if (currentAttachedDocument.file_id) {
+                        payload.file_id = currentAttachedDocument.file_id;
+                    }
+                } else if (currentTaskDocs && currentTaskDocs.length > 0) {
+                    const activeDoc = currentTaskDocs[currentDocIndex] || currentTaskDocs[0];
+                    if (activeDoc) {
+                        if (activeDoc.fileId || activeDoc.id) {
+                            payload.file_id = activeDoc.fileId || activeDoc.id;
+                        }
+                        if (activeDoc.title) {
+                            payload.document_title = activeDoc.title;
+                        }
+                        if (activeDoc.content && !activeDoc.content.includes("Documento disponible para consulta") && !activeDoc.content.includes("No hay documento adjunto")) {
+                            payload.attached_document = activeDoc.content;
+                        }
+                    }
+                }
+
                 const response = await fetch('/api/copilot/ask', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        provider: provider,
-                        mentor: mentor,
-                        task_context: {
-                            course_name: currentTaskContext.course_name,
-                            title: currentTaskContext.title,
-                            description: currentTaskContext.description,
-                            due_date: currentTaskContext.due_date
-                        },
-                        messages: chatHistory
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 removeTypingIndicator();
                 if (!response.ok) throw new Error('Error from AI service');
 
-                const data = await response.json();
-                appendMessage('assistant', data.response);
-                chatHistory.push({ role: 'assistant', content: data.response });
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('text/event-stream') && response.body) {
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    const streamMsg = createStreamingMessage();
+                    let accumulated = '';
+                    let buffer = '';
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop();
+
+                        for (const line of lines) {
+                            const trimmed = line.trim();
+                            if (!trimmed.startsWith('data:')) continue;
+                            const dataStr = trimmed.slice(5).trim();
+                            if (dataStr === '[DONE]') {
+                                continue;
+                            }
+                            try {
+                                const parsed = JSON.parse(dataStr);
+                                if (parsed.text) {
+                                    accumulated += parsed.text;
+                                    streamMsg.update(accumulated);
+                                } else if (parsed.error) {
+                                    throw new Error(parsed.error);
+                                }
+                            } catch (err) {
+                                // Ignore non-json chunk
+                            }
+                        }
+                    }
+
+                    if (buffer.trim().startsWith('data:')) {
+                        const dataStr = buffer.trim().slice(5).trim();
+                        if (dataStr !== '[DONE]') {
+                            try {
+                                const parsed = JSON.parse(dataStr);
+                                if (parsed.text) accumulated += parsed.text;
+                            } catch (e) {}
+                        }
+                    }
+
+                    streamMsg.finish(accumulated);
+                    chatHistory.push({ role: 'assistant', content: accumulated });
+                } else {
+                    const data = await response.json();
+                    appendMessage('assistant', data.response || 'Sin respuesta.');
+                    chatHistory.push({ role: 'assistant', content: data.response || '' });
+                }
 
             } catch (error) {
+                console.error("Error en Ignis chat:", error);
                 removeTypingIndicator();
-                appendMessage('assistant', 'Hubo un error al consultar a Ignis. Por favor intenta de nuevo.');
+                appendMessage('assistant', 'Hubo un error al consultar a tu mentor. Por favor intenta de nuevo.');
             } finally {
-                input.disabled = false;
-                btn.disabled = false;
-                input.focus();
+                if (input) {
+                    input.disabled = false;
+                    input.focus();
+                }
+                if (btn) btn.disabled = false;
             }
         }
 
@@ -6137,13 +6457,24 @@
                 const pctSub = Math.round((submittedTasks.length / (total || 1)) * 100);
 
                 container.innerHTML += `
-                    <details class="group p-3 rounded-xl bg-cantera-100 dark:bg-slate-800/80 border border-cantera-200 dark:border-slate-700">
-                        <summary class="cursor-pointer list-none flex justify-between items-center font-bold">
-                            <span class="text-cantera-900 dark:text-slate-200 truncate pr-2">${c}</span>
-                            <span class="text-indigo-600 dark:text-indigo-400 shrink-0 text-xs font-extrabold">${avgStr}</span>
+                    <details class="group p-3.5 rounded-xl bg-cantera-100 dark:bg-slate-800/80 border border-cantera-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500/60 active:scale-[0.99] transition-all duration-200 cursor-pointer select-none">
+                        <summary class="cursor-pointer list-none flex justify-between items-center gap-3">
+                            <div class="flex flex-col min-w-0 pr-2">
+                                <span class="text-cantera-900 dark:text-slate-100 font-bold truncate text-sm">${c}</span>
+                                <span class="text-[11px] text-cantera-500 dark:text-slate-400 font-medium flex items-center gap-1.5 mt-0.5">
+                                    <i class="fa-regular fa-folder-open text-[11px] text-indigo-500 dark:text-indigo-400"></i>
+                                    <span>Toca para ver tareas y notas</span>
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2.5 shrink-0">
+                                <span class="px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-xs font-black border border-indigo-500/20">${avgStr}</span>
+                                <div class="w-6 h-6 rounded-full bg-cantera-200/80 dark:bg-slate-700/80 flex items-center justify-center text-cantera-600 dark:text-slate-400 group-open:rotate-90 transition-transform duration-200">
+                                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                                </div>
+                            </div>
                         </summary>
                         
-                        <div class="mt-2.5 pt-2 border-t border-cantera-200 dark:border-slate-700/60 space-y-2 text-[11px]">
+                        <div class="mt-3 pt-2.5 border-t border-cantera-200 dark:border-slate-700/60 space-y-2 text-[11px]">
                             <div class="w-full bg-cantera-200 dark:bg-slate-900 rounded-full h-1.5 overflow-hidden flex">
                                 <div class="bg-emerald-500 h-full" style="width: ${pctGraded}%"></div>
                                 <div class="bg-indigo-500 h-full" style="width: ${pctSub}%"></div>
@@ -6269,6 +6600,27 @@
 
                 const data = await res.json();
                 container.innerHTML = '';
+
+                // Banner de descarga directa de la guía compilada .docx
+                const guideBanner = document.createElement('div');
+                guideBanner.className = "p-3 bg-indigo-50/90 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/80 rounded-2xl flex items-center justify-between gap-3 text-xs shadow-xs mb-3";
+                guideBanner.innerHTML = `
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                            <i class="fa-solid fa-file-word text-sm"></i>
+                        </div>
+                        <div class="truncate">
+                            <span class="font-bold text-cantera-900 dark:text-white block truncate">Guía Procedimental (.docx)</span>
+                            <span class="text-[10px] text-cantera-600 dark:text-slate-400 block truncate">Instructivo oficial con pauta de examen compilada para ${courseName}</span>
+                        </div>
+                    </div>
+                    <button onclick="downloadSocratesGuide()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shrink-0 transition-all cursor-pointer shadow-xs active:scale-95">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Descargar Guía (.docx)</span>
+                    </button>
+                `;
+                container.appendChild(guideBanner);
+
                 const responseText = data.response || 'Iniciando examen oral...';
                 appendSocratesMessage('assistant', responseText);
                 socratesChatHistory.push({ role: 'assistant', content: responseText });
@@ -6279,6 +6631,17 @@
             } catch (err) {
                 container.innerHTML = `<p class="text-xs text-rose-500 p-4">Error conectando con Sócrates: ${err.message}</p>`;
             }
+        }
+
+        function downloadSocratesGuide() {
+            const select = document.getElementById('socrates-course-select');
+            const course = (select && select.value) ? select.value : socratesActiveCourse;
+            if (!course) {
+                alert("Por favor selecciona una materia primero.");
+                return;
+            }
+            const safeCourse = encodeURIComponent(course);
+            window.open(`/api/notes/${safeCourse}/docx/socrates_guia`, '_blank');
         }
 
         async function handleSocratesSubmit(e) {

@@ -23,13 +23,19 @@ try:
     from docx.shared import Inches, Pt, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.enum.table import WD_TABLE_ALIGNMENT
+    from docx.oxml import parse_xml, OxmlElement
+    from docx.oxml.ns import nsdecls, qn
 except ImportError:
     docx = None
     Document = None
+    parse_xml = None
+    OxmlElement = None
+    nsdecls = None
+    qn = None
 
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaInMemoryUpload
-from services.classroom_service import inject_authuser
+from services.classroom_service import inject_authuser, sanitize_extracted_text
 
 NOTES_CACHE_DIR = os.path.join("data", "notes_cache")
 os.makedirs(NOTES_CACHE_DIR, exist_ok=True)
@@ -52,6 +58,29 @@ def _save_hashes(data: Dict[str, Any]):
     except Exception as e:
         print(f"[NotesService] Error guardando hashes: {e}")
 
+DELETED_FILES_LOG = os.path.join(NOTES_CACHE_DIR, "deleted_file_ids.json")
+
+def _load_deleted_file_ids() -> set:
+    if os.path.exists(DELETED_FILES_LOG):
+        try:
+            with open(DELETED_FILES_LOG, "r", encoding="utf-8") as f:
+                d = json.load(f)
+                return set(d) if isinstance(d, list) else set()
+        except Exception:
+            return set()
+    return set()
+
+def _add_deleted_file_id(file_id: str):
+    if not file_id:
+        return
+    try:
+        current = _load_deleted_file_ids()
+        current.add(str(file_id))
+        with open(DELETED_FILES_LOG, "w", encoding="utf-8") as f:
+            json.dump(list(current), f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[NotesService] Error guardando ID eliminado: {e}")
+
 def compute_sha256(content: bytes) -> str:
     """Calcula el hash SHA-256 de los bytes de un archivo."""
     return hashlib.sha256(content).hexdigest()
@@ -65,7 +94,10 @@ def extract_text_and_formulas(content: bytes, filename: str = "") -> Dict[str, A
     formulas = []
     
     is_pdf = filename.lower().endswith(".pdf") or content.startswith(b"%PDF")
+    is_docx = filename.lower().endswith(".docx") or filename.lower().endswith(".doc")
     
+    is_image = filename.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".svg"))
+
     if is_pdf and PdfReader:
         try:
             stream = io.BytesIO(content)
@@ -86,6 +118,26 @@ def extract_text_and_formulas(content: bytes, filename: str = "") -> Dict[str, A
         except Exception as e:
             print(f"[NotesService] Error leyendo PDF con pypdf: {e}")
             extracted_text = ""
+    elif is_docx:
+        try:
+            import docx
+            stream = io.BytesIO(content)
+            doc = docx.Document(stream)
+            lines = []
+            for p in doc.paragraphs:
+                if p.text.strip():
+                    lines.append(p.text.strip())
+            for table in doc.tables:
+                for row in table.rows:
+                    row_txt = " | ".join(c.text.strip() for c in row.cells if c.text.strip())
+                    if row_txt:
+                        lines.append(row_txt)
+            extracted_text = "\n".join(lines).strip()
+        except Exception as e:
+            print(f"[NotesService] Error leyendo DOCX con python-docx: {e}")
+            extracted_text = ""
+    elif is_image:
+        extracted_text = f"[Archivo de imagen adjunto: {filename}]"
     else:
         # Texto plano o binario fallback
         try:
@@ -99,10 +151,12 @@ def extract_text_and_formulas(content: bytes, filename: str = "") -> Dict[str, A
         if m not in formulas:
             formulas.append(m)
 
+    clean_text = sanitize_extracted_text(extracted_text)
+
     return {
-        "text": extracted_text,
+        "text": clean_text,
         "formulas": formulas[:25],
-        "has_dense_math": len(formulas) >= 3 or any(sym in extracted_text for sym in ["∮", "∫", "∬", "∑", "∂", "∇"])
+        "has_dense_math": len(formulas) >= 3 or any(sym in clean_text for sym in ["∮", "∫", "∬", "∑", "∂", "∇"])
     }
 
 def get_drive_service(creds):
@@ -219,6 +273,13 @@ def process_and_upload_note(
     if file_hash in hashes:
         existing = hashes[file_hash]
         preview_url = inject_authuser(existing.get("preview_url", ""), user_email)
+        dup_text = existing.get("extracted_text")
+        if not dup_text:
+            dup_analysis = extract_text_and_formulas(file_bytes, filename)
+            dup_text = dup_analysis.get("text", "")
+            existing["extracted_text"] = dup_text[:12000] if dup_text else ""
+            hashes[file_hash] = existing
+            _save_hashes(hashes)
         return {
             "success": True,
             "is_duplicate": True,
@@ -226,7 +287,9 @@ def process_and_upload_note(
             "file_id": existing.get("file_id"),
             "preview_url": preview_url,
             "filename": existing.get("filename", filename),
-            "unit": existing.get("unit", "Unidad 1")
+            "unit": existing.get("unit", "Unidad 1"),
+            "extracted_text": dup_text[:12000] if dup_text else "",
+            "formulas_extracted": len(existing.get("formulas", []))
         }
 
     # 2. Extracción de contenido
@@ -251,7 +314,20 @@ def process_and_upload_note(
             folder_id = get_or_create_course_folder(drive_service, course_name)
             
             # Subir archivo en Drive
-            media = MediaInMemoryUpload(file_bytes, mimetype="application/pdf" if filename.lower().endswith(".pdf") else "application/octet-stream", resumable=True)
+            if filename.lower().endswith(".pdf"):
+                upload_mime = "application/pdf"
+            elif filename.lower().endswith(".docx"):
+                upload_mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            elif filename.lower().endswith(".doc"):
+                upload_mime = "application/msword"
+            elif filename.lower().endswith(".txt"):
+                upload_mime = "text/plain"
+            elif filename.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+                upload_mime = f"image/{filename.split('.')[-1].lower().replace('jpg', 'jpeg')}"
+            else:
+                upload_mime = "application/octet-stream"
+
+            media = MediaInMemoryUpload(file_bytes, mimetype=upload_mime, resumable=True)
             file_metadata = {
                 'name': filename,
                 'parents': [folder_id] if folder_id else []
@@ -305,6 +381,7 @@ def process_and_upload_note(
         "course_name": course_name,
         "unit": unit_name,
         "preview_url": preview_url or "",
+        "extracted_text": extracted_text[:12000] if extracted_text else "",
         "uploaded_at": datetime.datetime.utcnow().isoformat()
     }
     _save_hashes(hashes)
@@ -322,6 +399,7 @@ def process_and_upload_note(
         "drive_error": drive_error,
         "filename": filename,
         "unit": unit_name,
+        "extracted_text": extracted_text[:12000] if extracted_text else "",
         "formulas_extracted": len(formulas)
     }
 
@@ -1155,6 +1233,201 @@ def get_exercise_catalog_for_course(
         "total_types": len(exercise_types)
     }
 
+# ==============================================================================
+# Helpers de Estilo Editorial para Generación de Documentos Word (.docx)
+# ==============================================================================
+
+def _apply_standard_doc_setup(doc):
+    """Aplica márgenes estándar (1 pulgada / 1440 dxa) y configuración tipográfica base."""
+    for section in doc.sections:
+        section.top_margin = Inches(1.0)
+        section.bottom_margin = Inches(1.0)
+        section.left_margin = Inches(1.0)
+        section.right_margin = Inches(1.0)
+    try:
+        normal = doc.styles['Normal']
+        normal.font.name = 'Calibri'
+        normal.font.size = Pt(11)
+        normal.font.color.rgb = RGBColor(30, 41, 59)
+        normal.paragraph_format.space_after = Pt(4)
+        normal.paragraph_format.line_spacing = 1.15
+    except Exception:
+        pass
+
+def _add_editorial_header_banner(
+    doc,
+    title_text: str,
+    course_name: str,
+    objective: str = "",
+    doc_category: str = "ÁGORA · DOCUMENTO DIDÁCTICO OFICIAL",
+    date_str: str = ""
+):
+    """
+    Inserta el encabezado principal con diseño editorial oscuro (Slate 900),
+    borde de acento índigo y metadatos de materia, fecha y objetivo de estudio.
+    """
+    date_label = date_str or datetime.datetime.utcnow().strftime("%Y-%m-%d")
+    clean_course = (course_name or "ASIGNATURA").upper()
+
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.space_after = Pt(8)
+    p.paragraph_format.line_spacing = 1.15
+
+    if parse_xml is not None and nsdecls is not None:
+        pPr = p._element.get_or_add_pPr()
+        shd = parse_xml(f'<w:shd {nsdecls("w")} w:fill="1E293B"/>')
+        pPr.append(shd)
+        pBdr = parse_xml(f'<w:pBdr {nsdecls("w")}><w:bottom w:val="single" w:sz="24" w:space="8" w:color="4F46E5"/></w:pBdr>')
+        pPr.append(pBdr)
+
+    r_cat = p.add_run(f"  {doc_category.upper()}\n")
+    r_cat.font.name = 'Calibri'
+    r_cat.font.size = Pt(8.5)
+    r_cat.font.bold = True
+    r_cat.font.color.rgb = RGBColor(148, 163, 184)
+
+    r_t = p.add_run(f"  {title_text.upper()}\n")
+    r_t.font.name = 'Calibri'
+    r_t.font.size = Pt(15)
+    r_t.font.bold = True
+    r_t.font.color.rgb = RGBColor(255, 255, 255)
+
+    meta_line = f"  Materia: {clean_course}   |   Fecha: {date_label}"
+    if objective:
+        meta_line += f"\n  Objetivo de Estudio: {objective}"
+    r_m = p.add_run(meta_line)
+    r_m.font.name = 'Calibri'
+    r_m.font.size = Pt(9.5)
+    r_m.font.color.rgb = RGBColor(199, 210, 254)
+
+def _add_styled_heading(doc, text: str, level: int = 1):
+    """Inserta encabezados con jerarquía tipográfica consistente y keep_with_next para evitar saltos huérfanos."""
+    h = doc.add_heading(text, level=level)
+    h.paragraph_format.keep_with_next = True
+    if level == 1:
+        h.paragraph_format.space_before = Pt(14)
+        h.paragraph_format.space_after = Pt(4)
+        for r in h.runs:
+            r.font.name = 'Calibri'
+            r.font.size = Pt(13)
+            r.font.bold = True
+            r.font.color.rgb = RGBColor(30, 58, 138)
+    elif level == 2:
+        h.paragraph_format.space_before = Pt(10)
+        h.paragraph_format.space_after = Pt(3)
+        for r in h.runs:
+            r.font.name = 'Calibri'
+            r.font.size = Pt(11)
+            r.font.bold = True
+            r.font.color.rgb = RGBColor(67, 56, 202)
+    else:
+        h.paragraph_format.space_before = Pt(8)
+        h.paragraph_format.space_after = Pt(2)
+        for r in h.runs:
+            r.font.name = 'Calibri'
+            r.font.size = Pt(10)
+            r.font.bold = True
+            r.font.color.rgb = RGBColor(51, 65, 85)
+    return h
+
+def _add_callout_box(doc, title: str, text: str, callout_type: str = "tip"):
+    """
+    Inserta un recuadro destacado (callout / nota importante) con borde izquierdo grueso,
+    fondo sombreado suave y tipografía jerárquica para tips de examen o advertencias de Sócrates.
+    """
+    colors = {
+        "tip": {"bg": "EEF2FF", "border": "4F46E5", "title": RGBColor(67, 56, 202), "icon": "💡"},
+        "warning": {"bg": "FEF2F2", "border": "DC2626", "title": RGBColor(185, 28, 28), "icon": "⚠️"},
+        "note": {"bg": "F8FAFC", "border": "64748B", "title": RGBColor(51, 65, 85), "icon": "📌"}
+    }
+    cfg = colors.get(callout_type, colors["tip"])
+
+    tbl = doc.add_table(rows=1, cols=1)
+    tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tbl.autofit = False
+    cell = tbl.cell(0, 0)
+    cell.width = Inches(6.5)
+
+    if parse_xml is not None and nsdecls is not None:
+        borders = parse_xml(f'''
+            <w:tcBorders {nsdecls("w")}>
+                <w:top w:val="none"/>
+                <w:left w:val="single" w:sz="36" w:space="0" w:color="{cfg['border']}"/>
+                <w:bottom w:val="none"/>
+                <w:right w:val="none"/>
+            </w:tcBorders>
+        ''')
+        cell._tc.get_or_add_tcPr().append(borders)
+        shd = parse_xml(f'<w:shd {nsdecls("w")} w:fill="{cfg["bg"]}"/>')
+        cell._tc.get_or_add_tcPr().append(shd)
+        mar = parse_xml(f'<w:tcMar {nsdecls("w")}><w:top w:w="160" w:type="dxa"/><w:bottom w:w="160" w:type="dxa"/><w:left w:w="240" w:type="dxa"/><w:right w:w="240" w:type="dxa"/></w:tcMar>')
+        cell._tc.get_or_add_tcPr().append(mar)
+
+    p = cell.paragraphs[0]
+    p.paragraph_format.space_before = Pt(2)
+    p.paragraph_format.space_after = Pt(2)
+    p.paragraph_format.line_spacing = 1.15
+
+    r_title = p.add_run(f"{cfg['icon']} {title.upper()}\n")
+    r_title.bold = True
+    r_title.font.name = 'Calibri'
+    r_title.font.size = Pt(10)
+    r_title.font.color.rgb = cfg["title"]
+
+    r_txt = p.add_run(text)
+    r_txt.font.name = 'Calibri'
+    r_txt.font.size = Pt(9.5)
+    r_txt.font.color.rgb = RGBColor(30, 41, 59)
+
+    doc.add_paragraph().paragraph_format.space_after = Pt(2)
+
+def _format_editorial_table(tbl, col_widths=None, header_bg="1E3A8A"):
+    """
+    Aplica diseño editorial a tablas:
+    - Encabezado con fondo oscuro, texto blanco y negrita.
+    - tblHeader y cantSplit para evitar filas divididas entre páginas.
+    - Filas de datos con fondo alterno y padding limpio.
+    """
+    tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tbl.style = 'Table Grid'
+
+    if len(tbl.rows) > 0 and parse_xml is not None and nsdecls is not None:
+        hdr = tbl.rows[0]
+        trPr = hdr._tr.get_or_add_trPr()
+        trPr.append(parse_xml(f'<w:tblHeader {nsdecls("w")}/>'))
+        trPr.append(parse_xml(f'<w:cantSplit {nsdecls("w")}/>'))
+
+        for cell in hdr.cells:
+            cell._tc.get_or_add_tcPr().append(parse_xml(f'<w:shd {nsdecls("w")} w:fill="{header_bg}"/>'))
+            cell._tc.get_or_add_tcPr().append(parse_xml(f'<w:tcMar {nsdecls("w")}><w:top w:w="120" w:type="dxa"/><w:bottom w:w="120" w:type="dxa"/><w:left w:w="140" w:type="dxa"/><w:right w:w="140" w:type="dxa"/></w:tcMar>'))
+            for p in cell.paragraphs:
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                for r in p.runs:
+                    r.font.name = 'Calibri'
+                    r.font.bold = True
+                    r.font.size = Pt(9)
+                    r.font.color.rgb = RGBColor(255, 255, 255)
+
+        for r_idx, row in enumerate(tbl.rows[1:], 1):
+            trPr = row._tr.get_or_add_trPr()
+            trPr.append(parse_xml(f'<w:cantSplit {nsdecls("w")}/>'))
+            bg_color = "F8FAFC" if r_idx % 2 == 1 else "FFFFFF"
+            for cell in row.cells:
+                cell._tc.get_or_add_tcPr().append(parse_xml(f'<w:shd {nsdecls("w")} w:fill="{bg_color}"/>'))
+                cell._tc.get_or_add_tcPr().append(parse_xml(f'<w:tcMar {nsdecls("w")}><w:top w:w="100" w:type="dxa"/><w:bottom w:w="100" w:type="dxa"/><w:left w:w="120" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tcMar>'))
+                for p in cell.paragraphs:
+                    for r in p.runs:
+                        r.font.name = 'Calibri'
+                        r.font.size = Pt(8.5)
+                        r.font.color.rgb = RGBColor(30, 41, 59)
+
+    if col_widths:
+        for row in tbl.rows:
+            for i, w in enumerate(col_widths):
+                if i < len(row.cells):
+                    row.cells[i].width = Inches(w)
+
 def build_docx_teacher_criteria(
     course_name: str,
     tasks: Optional[List[Dict[str, Any]]] = None,
@@ -1171,25 +1444,28 @@ def build_docx_teacher_criteria(
         return b""
 
     doc = Document()
+    _apply_standard_doc_setup(doc)
     clean_course = re.sub(r'[\\/:*?"<>|]', '_', course_name).strip() or "Asignatura"
 
-    # Encabezado institucional
-    title_p = doc.add_paragraph()
-    r_title = title_p.add_run("ÁGORA — GUÍA DOCENTE, RÚBRICAS Y BIBLIOGRAFÍA")
-    r_title.bold = True
-    r_title.font.size = Pt(16)
-    r_title.font.color.rgb = RGBColor(30, 58, 138)
+    # Encabezado institucional editorial
+    _add_editorial_header_banner(
+        doc,
+        title_text="ÁGORA — GUÍA DOCENTE, RÚBRICAS Y BIBLIOGRAFÍA",
+        course_name=course_name,
+        objective="Pautas oficiales de acreditación, matriz de evaluación ponderada y referencias bibliográficas canónicas",
+        doc_category="ÁGORA ACADÉMICA · PROGRAMA ANALÍTICO Y CRITERIOS DOCENTES"
+    )
 
-    sub_p = doc.add_paragraph()
-    r_sub = sub_p.add_run(f"Asignatura: {course_name} | Programa Analítico y Pautas Oficiales de Acreditación")
-    r_sub.font.size = Pt(11)
-    r_sub.font.color.rgb = RGBColor(71, 85, 105)
-
-    doc.add_paragraph(f"Fecha de emisión: {datetime.datetime.utcnow().strftime('%Y-%m-%d')} | Vigencia: Periodo Escolar Vigente")
-    doc.add_paragraph("=" * 70)
+    # Callout institucional de entrega
+    _add_callout_box(
+        doc,
+        title="Lineamiento Institucional de Entrega y Rigor Analítico",
+        text="Todo reporte, memoria de cálculo o práctica departamental debe someterse con desarrollo analítico completo, planteamiento explícito de variables y unidades en el Sistema Internacional (SI). Los desarrollos algebraicos duplicados o sin justificación serán anulados.",
+        callout_type="note"
+    )
 
     # 1. Preferencias del Docente y Normas de Entrega
-    doc.add_heading("1. Normas de Entrega y Preferencias del Docente", level=1)
+    _add_styled_heading(doc, "1. Normas de Entrega y Preferencias del Docente", level=1)
     doc.add_paragraph(
         "Las siguientes directrices representan los estándares formales requeridos por la academia "
         "para la recepción, revisión y acreditación de memorias de cálculo, reportes de laboratorio y proyectos:"
@@ -1232,20 +1508,14 @@ def build_docx_teacher_criteria(
             doc.add_paragraph(f"• \"{tn}\"", style='List Bullet')
 
     # 2. Rúbrica de Evaluación Ponderada
-    doc.add_heading("2. Rúbrica de Evaluación Ponderada y Criterios de Calificación", level=1)
+    _add_styled_heading(doc, "2. Rúbrica de Evaluación Ponderada y Criterios de Calificación", level=1)
     doc.add_paragraph("La evaluación de las actividades y exámenes de la asignatura se rige bajo la siguiente matriz ponderada:")
 
     table_rubric = doc.add_table(rows=1, cols=5)
-    table_rubric.style = 'Table Grid'
     hdr_cells = table_rubric.rows[0].cells
     headers = ["Criterio de Evaluación", "Ponderación", "Nivel Sobresaliente (100%)", "Nivel Suficiente (70%)", "Penalizaciones"]
     for i, title in enumerate(headers):
         hdr_cells[i].text = title
-        p = hdr_cells[i].paragraphs[0]
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        for run in p.runs:
-            run.bold = True
-            run.font.size = Pt(9.5)
 
     rubric_rows = [
         ("Formulación Analítica y Planteamiento Base", "30%", 
@@ -1273,13 +1543,11 @@ def build_docx_teacher_criteria(
         row_cells[2].text = sob
         row_cells[3].text = suf
         row_cells[4].text = pen
-        for cell in row_cells:
-            for p in cell.paragraphs:
-                for run in p.runs:
-                    run.font.size = Pt(8.5)
+
+    _format_editorial_table(table_rubric, col_widths=[1.6, 0.8, 1.5, 1.4, 1.2], header_bg="1E3A8A")
 
     # 3. Bibliografía Oficial Recomendada y Textos de Consulta
-    doc.add_heading("3. Bibliografía Oficial y Textos de Referencia", level=1)
+    _add_styled_heading(doc, "3. Bibliografía Oficial y Textos de Referencia", level=1)
     doc.add_paragraph(
         "A continuación se relacionan los libros de texto canónicos y las referencias bibliográficas "
         "recomendadas por el cuerpo docente para la preparación teórica y el desarrollo de ejercicios:"
@@ -1287,16 +1555,10 @@ def build_docx_teacher_criteria(
 
     bib_entries = get_recommended_bibliography(clean_course, tasks=tasks, announcements=announcements)
     table_bib = doc.add_table(rows=1, cols=5)
-    table_bib.style = 'Table Grid'
     hdr_b_cells = table_bib.rows[0].cells
     b_headers = ["Tipo", "Título de la Obra", "Autor(es)", "Editorial / Edición", "Capítulos / Aplicación"]
     for i, title in enumerate(b_headers):
         hdr_b_cells[i].text = title
-        p = hdr_b_cells[i].paragraphs[0]
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        for run in p.runs:
-            run.bold = True
-            run.font.size = Pt(9.5)
 
     for b in bib_entries:
         row_cells = table_bib.add_row().cells
@@ -1305,10 +1567,8 @@ def build_docx_teacher_criteria(
         row_cells[2].text = b.get("author", "")
         row_cells[3].text = b.get("editorial", "")
         row_cells[4].text = b.get("chapters", "")
-        for cell in row_cells:
-            for p in cell.paragraphs:
-                for run in p.runs:
-                    run.font.size = Pt(8.5)
+
+    _format_editorial_table(table_bib, col_widths=[0.8, 1.8, 1.3, 1.2, 1.4], header_bg="1E3A8A")
 
     stream = io.BytesIO()
     doc.save(stream)
@@ -1333,56 +1593,76 @@ def build_docx_socrates_procedural_guide(
         return b""
 
     doc = Document()
+    _apply_standard_doc_setup(doc)
     clean_course = re.sub(r'[\\/:*?"<>|]', '_', course_name).strip() or "Asignatura"
 
     # Encabezado procedimental sin prosa
-    title_p = doc.add_paragraph()
-    r_title = title_p.add_run("ÁGORA — INSTRUCTIVO DE EXAMEN Y CATÁLOGO DE EJERCICIOS")
-    r_title.bold = True
-    r_title.font.size = Pt(16)
-    r_title.font.color.rgb = RGBColor(15, 23, 42)
+    _add_editorial_header_banner(
+        doc,
+        title_text="ÁGORA — INSTRUCTIVO DE EXAMEN Y CATÁLOGO DE EJERCICIOS",
+        course_name=course_name,
+        objective="Pauta oficial procedimental para evaluación oral y práctica (Simulador Sócrates) · Directivo SIN PROSA",
+        doc_category="ÁGORA · SIMULADOR SÓCRATES (SINODAL DE EXAMEN)"
+    )
 
-    sub_p = doc.add_paragraph()
-    r_sub = sub_p.add_run("PAUTA OFICIAL PROCEDIMENTAL PARA EVALUACIÓN ORAL Y PRÁCTICA (SIMULADOR SÓCRATES)")
+    p_mode = doc.add_paragraph()
+    r_sub = p_mode.add_run("PAUTA OFICIAL PROCEDIMENTAL PARA EVALUACIÓN ORAL Y PRÁCTICA (SIMULADOR SÓCRATES) - DIRECTIVO / SIN PROSA DISCURSIVA")
     r_sub.bold = True
-    r_sub.font.size = Pt(11)
+    r_sub.font.size = Pt(10)
     r_sub.font.color.rgb = RGBColor(79, 70, 229)
 
-    doc.add_paragraph(f"Asignatura: {course_name} | Modalidad: DIRECTIVO / SIN PROSA DISCURSIVA | Fecha: {datetime.datetime.utcnow().strftime('%Y-%m-%d')}")
     doc.add_paragraph(
         "PROPÓSITO NORMATIVO: Este documento constituye la clave algorítmica de resolución para la prueba semestral. "
         "El estudiante y el simulador Sócrates deben ceñirse estrictamente a este protocolo procedimental paso a paso, "
         "sin rodeos conversacionales ni explicaciones retóricas."
     )
-    doc.add_paragraph("=" * 75)
+
+    # Callout de arranque obligatorio
+    _add_callout_box(
+        doc,
+        title="Regla de Arranque y Fiscalización Sinodal",
+        text="Para todo problema en el examen, el estudiante debe formular explícitamente el Paso 1 (extracción de variables, parámetros numéricos con unidades SI y condiciones iniciales) antes de aplicar cualquier fórmula o despeje algebraico. La omisión de hipótesis invalida la respuesta.",
+        callout_type="warning"
+    )
 
     catalog = get_exercise_catalog_for_course(clean_course, tasks=tasks)
     exercise_types = catalog.get("exercise_types", [])
 
     # SECCIÓN I: CATÁLOGO CLASIFICADO DE EJERCICIOS DEL SEMESTRE
-    doc.add_heading("I. CATÁLOGO CLASIFICADO DE EJERCICIOS DEL SEMESTRE", level=1)
+    _add_styled_heading(doc, "I. CATÁLOGO CLASIFICADO DE EJERCICIOS DEL SEMESTRE", level=1)
     doc.add_paragraph(f"Total de tipologías de problemas evaluadas en la prueba: {len(exercise_types)}")
 
-    for ex in exercise_types:
-        p_code = doc.add_paragraph()
-        r_code = p_code.add_run(f"[{ex.get('code')}] {ex.get('title').upper()}")
-        r_code.bold = True
-        r_code.font.size = Pt(11.5)
+    if exercise_types:
+        tbl_cat = doc.add_table(rows=1, cols=4)
+        c_hdrs = tbl_cat.rows[0].cells
+        c_hdrs[0].text = "Código"
+        c_hdrs[1].text = "Tipología del Problema"
+        c_hdrs[2].text = "Consigna Canónica de Examen"
+        c_hdrs[3].text = "Tareas Vinculadas"
+        for ex in exercise_types:
+            r = tbl_cat.add_row().cells
+            r[0].text = ex.get('code', '')
+            r[1].text = ex.get('title', '')
+            r[2].text = ex.get('statement', '')
+            r[3].text = ', '.join(ex.get('tasks_associated', [])) if ex.get('tasks_associated') else "General"
+        _format_editorial_table(tbl_cat, col_widths=[0.8, 1.6, 2.7, 1.4], header_bg="1E293B")
 
-        doc.add_paragraph(f"• Enunciado Canónico de Examen: {ex.get('statement')}", style='List Bullet')
-        if ex.get("tasks_associated"):
-            doc.add_paragraph(f"• Tareas Semestrales Vinculadas: {', '.join(ex.get('tasks_associated'))}", style='List Bullet')
-        doc.add_paragraph("")
+    _add_callout_box(
+        doc,
+        title="Tip de Examen — Sócrates (Sinodal)",
+        text="En problemas analíticos con variables dinámicas, define claramente el sentido de los vectores y las hipótesis de linealidad. Sócrates interrogará sobre los límites físicos y el comportamiento asintótico del sistema.",
+        callout_type="tip"
+    )
 
     # SECCIÓN II: ALGORITMO PROCEDIMENTAL DE RESOLUCIÓN ("CÓMO PROCEDER ANTE LA PRUEBA")
-    doc.add_heading("II. ALGORITMO PROCEDIMENTAL DE RESOLUCIÓN (\"CÓMO PROCEDER ANTE LA PRUEBA\")", level=1)
+    _add_styled_heading(doc, "II. ALGORITMO PROCEDIMENTAL DE RESOLUCIÓN (\"CÓMO PROCEDER ANTE LA PRUEBA\")", level=1)
     doc.add_paragraph(
         "Para todo problema presentado en el examen, el estudiante debe ejecutar obligatoriamente "
         "el siguiente algoritmo de 4 pasos secuenciales sin omitir justificaciones intermedias:"
     )
 
     for ex in exercise_types:
-        doc.add_heading(f"Protocolo de Resolución para {ex.get('code')} — {ex.get('title')}", level=2)
+        _add_styled_heading(doc, f"Protocolo de Resolución para {ex.get('code')} — {ex.get('title')}", level=2)
         
         p1 = doc.add_paragraph()
         r_p1 = p1.add_run("▶ PASO 1 (EXTRACCIÓN DE DATOS, VARIABLES Y CONDICIONES INICIALES):")
@@ -1404,10 +1684,16 @@ def build_docx_socrates_procedural_guide(
         r_p4.bold = True
         doc.add_paragraph(f"  {ex.get('step_4')}")
 
-        doc.add_paragraph("-" * 65)
+        if ex.get("common_traps"):
+            _add_callout_box(
+                doc,
+                title=f"Trampa Típica a Penalizar en {ex.get('code')}",
+                text=ex.get("common_traps", ""),
+                callout_type="warning"
+            )
 
     # SECCIÓN III: PAUTA DE AUDITORÍA E INTERROGACIÓN PARA SÓCRATES (SINODAL)
-    doc.add_heading("III. PAUTA DE AUDITORÍA E INTERROGACIÓN PARA SÓCRATES (SINODAL)", level=1)
+    _add_styled_heading(doc, "III. PAUTA DE AUDITORÍA E INTERROGACIÓN PARA SÓCRATES (SINODAL)", level=1)
     doc.add_paragraph(
         "El evaluador Sócrates utilizará los siguientes lineamientos para auditar el desempeño oral del sustentante:"
     )
@@ -1422,7 +1708,6 @@ def build_docx_socrates_procedural_guide(
             doc.add_paragraph(f"    - \"{q}\"")
         if ex.get("common_traps"):
             doc.add_paragraph(f"    * Trampa típica / Error a penalizar: {ex.get('common_traps')}")
-        doc.add_paragraph("")
 
     doc.add_paragraph("4. CRITERIOS DE CALIFICACIÓN Y APROBACIÓN:", style='List Bullet')
     doc.add_paragraph("   - Aprobado Sobresaliente: Resuelve los 4 pasos en orden, demuestra exactitud dimensional y responde con solidez teórica a las preguntas de control.", style='List Bullet')
@@ -1459,25 +1744,26 @@ def build_docx_thematic_notes(
     }
 
     doc = Document()
-    
-    # Portada de Tema
-    title_p = doc.add_paragraph()
-    r_title = title_p.add_run("ÁGORA — APUNTES DIDÁCTICOS DE CLASE")
-    r_title.bold = True
-    r_title.font.size = Pt(16)
-    r_title.font.color.rgb = RGBColor(15, 23, 42)
+    _apply_standard_doc_setup(doc)
 
-    sub_p = doc.add_paragraph()
-    r_sub = sub_p.add_run(f"Asignatura: {course_name} | {top.get('title')}")
-    r_sub.bold = True
-    r_sub.font.size = Pt(12)
-    r_sub.font.color.rgb = RGBColor(30, 58, 138)
+    # Portada / Banner de Tema
+    _add_editorial_header_banner(
+        doc,
+        title_text="ÁGORA — APUNTES DIDÁCTICOS DE CLASE",
+        course_name=course_name,
+        objective=f"Unidad Temática {idx + 1}: {top.get('title')} — Marco conceptual en prosa explicativa, leyes rectoras y problema modelo",
+        doc_category="ÁGORA ACADÉMICA · MEMORIA DIDÁCTICA TEMÁTICA"
+    )
 
-    doc.add_paragraph(f"Unidad Temática: {idx + 1} | Fecha: {datetime.datetime.utcnow().strftime('%Y-%m-%d')} | Formato: Prosa Didáctica Explicativa")
-    doc.add_paragraph("=" * 75)
+    _add_callout_box(
+        doc,
+        title="Enfoque de Aprendizaje y Rigor Conceptual",
+        text="Esta unidad debe estudiarse articulando los principios rectores de conservación con su respuesta dinámica. En la evaluación con Sócrates, se exigirá justificar la validez de cada ecuación antes de proceder al cálculo numérico.",
+        callout_type="tip"
+    )
 
     # 1. Introducción y Marco Pedagógico
-    doc.add_heading("1. Introducción Conceptual y Objetivos de Aprendizaje", level=1)
+    _add_styled_heading(doc, "1. Introducción Conceptual y Objetivos de Aprendizaje", level=1)
     doc.add_paragraph(
         f"El estudio sistemático de '{top.get('title')}' dentro de la disciplina de {course_name} "
         f"tiene como propósito fundamental dotar al estudiante de las bases teórico-prácticas y metodológicas "
@@ -1490,7 +1776,7 @@ def build_docx_thematic_notes(
         doc.add_paragraph(f"• Comprender y aplicar de manera autónoma: {c}", style='List Bullet')
 
     # 2. Desarrollo Teórico en Prosa Explicativa
-    doc.add_heading("2. Desarrollo Conceptual y Fundamentos Teóricos", level=1)
+    _add_styled_heading(doc, "2. Desarrollo Conceptual y Fundamentos Teóricos", level=1)
     doc.add_paragraph(
         "A diferencia de una simple enumeración de diapositivas o fichas de fórmulas, la comprensión profunda "
         "de este tema exige articular la relación causa-efecto entre los axiomas fundamentales y su respuesta dinámica. "
@@ -1498,7 +1784,7 @@ def build_docx_thematic_notes(
         "las variables de estado con las excitaciones externas aplicadas."
     )
     for i, c in enumerate(top.get("concepts", []), 1):
-        doc.add_heading(f"2.{i}. Análisis Pormenorizado: {c[:60]}...", level=2)
+        _add_styled_heading(doc, f"2.{i}. Análisis Pormenorizado: {c[:60]}...", level=2)
         doc.add_paragraph(
             f"En términos didácticos, {c.lower()} Cuando se analiza este principio, es crucial recordar que la validez del modelo "
             f"depende de que se satisfagan las condiciones de contorno establecidas. En la práctica de ingeniería y ciencias exactas, "
@@ -1507,24 +1793,26 @@ def build_docx_thematic_notes(
         )
 
     # 3. Deducción y Formulación Matemática
-    doc.add_heading("3. Formulación Matemática, Leyes y Teoremas Rectores", level=1)
+    _add_styled_heading(doc, "3. Formulación Matemática, Leyes y Teoremas Rectores", level=1)
     doc.add_paragraph(
         "A continuación se presenta la formulación canónica que rige los cálculos y análisis de esta unidad temática, "
         "detallando el significado físico y analítico de cada uno de sus términos:"
     )
-    for f in top.get("formulas", []):
-        p_form = doc.add_paragraph()
-        r_f = p_form.add_run(f"▶ {f}")
-        r_f.bold = True
-        r_f.font.size = Pt(11)
-        doc.add_paragraph(
-            "Interpretación analítica: Esta relación describe la conservación o transformación de variables en el sistema. "
-            "Cada parámetro debe evaluarse manteniendo la coherencia de dimensiones en el Sistema Internacional (SI).",
-            style='List Bullet'
-        )
+
+    formulas_list = top.get("formulas", [])
+    if formulas_list:
+        tbl_form = doc.add_table(rows=1, cols=2)
+        f_hdrs = tbl_form.rows[0].cells
+        f_hdrs[0].text = "Ecuación / Modelo Rector"
+        f_hdrs[1].text = "Interpretación Analítica y Condiciones de Validez"
+        for f in formulas_list:
+            r = tbl_form.add_row().cells
+            r[0].text = f
+            r[1].text = "Relación canónica fundamental. Requiere consistencia en unidades del Sistema Internacional (SI) y verificación en condiciones de frontera."
+        _format_editorial_table(tbl_form, col_widths=[2.2, 4.3], header_bg="1E3A8A")
 
     # 4. Metodología de Resolución y Caso de Estudio Resuelto
-    doc.add_heading("4. Caso de Estudio Práctico Resuelto Paso a Paso", level=1)
+    _add_styled_heading(doc, "4. Caso de Estudio Práctico Resuelto Paso a Paso", level=1)
     doc.add_paragraph(
         "Para consolidar el aprendizaje teórico en prosa continua, examinamos un problema típico de evaluación semestral:"
     )
@@ -1540,7 +1828,7 @@ def build_docx_thematic_notes(
     )
 
     # 5. Síntesis y Preguntas de Autoevaluación
-    doc.add_heading("5. Síntesis Conceptual y Preguntas de Autoevaluación", level=1)
+    _add_styled_heading(doc, "5. Síntesis Conceptual y Preguntas de Autoevaluación", level=1)
     doc.add_paragraph(
         "Como preparación previa a la sesión con el simulador Sócrates, reflexiona y responde de forma razonada:"
     )
@@ -1767,7 +2055,7 @@ def get_thematic_study_summary(course_name: str, tasks: Optional[List[Dict[str, 
 def normalize_course_name(name: str) -> str:
     if not name:
         return ""
-    n = str(name).replace('_', ' ').strip().lower()
+    n = re.sub(r'[\s_]+', ' ', str(name)).strip().lower()
     return ''.join(c for c in unicodedata.normalize('NFD', n) if unicodedata.category(c) != 'Mn')
 
 def get_course_notes(

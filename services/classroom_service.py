@@ -51,47 +51,127 @@ def save_cached_attachment_data(file_id: str, data: dict):
     except Exception as e:
         print(f"Error guardando caché de PDF {file_id}: {e}")
 
-def extract_actionable_consignas(text: str, course_name: str = "", task_title: str = "", max_items: int = 4) -> list[str]:
+def sanitize_extracted_text(text: str) -> str:
     """
-    Extrae de forma robusta y rigurosa las consignas reales y ejercicios de un texto de PDF universitario.
-    Filtra encabezados institucionales, nombres de materia y metadatos docentes para extraer
-    exactamente las acciones requeridas por el estudiante (ej. 'Resuelve 5 ejercicios sobre transformada de Laplace...').
+    Sanitiza y reconstruye oraciones completas de textos extraídos de PDFs, diapositivas y documentos:
+    - Normaliza retornos de carro (\r\n a \n).
+    - Une palabras partidas por guiones de separación silábica al final de línea (ej. experi-\nmentos -> experimentos).
+    - Une saltos de línea duros (\n): si un renglón no termina con un punto o puntuación de cierre
+      y el siguiente no es una nueva viñeta o inciso, lo une con el siguiente renglón mediante un espacio.
+    - Limpia dobles/múltiples espacios y espaciados anómalos antes de signos de puntuación.
+    """
+    if not text:
+        return ""
+
+    # 1. Normalizar saltos de línea
+    t = text.replace('\r\n', '\n').replace('\r', '\n')
+
+    # 2. Deshacer guiones de separación de palabras al final de línea
+    t = re.sub(r'(\w+)[-–—]\s*\n\s*(\w+)', r'\1\2', t)
+
+    # 3. Reconstruir oraciones completas causadas por saltos de línea duros
+    raw_lines = t.split('\n')
+    cleaned_lines = []
+    current_line = ''
+    CLOSING_PUNCT = ('.', '!', '?', ':', ';', '.)', '!"', '?"', '."', "'")
+    bullet_re = re.compile(r'^(?:[-*•–—]|\d+[\.\)]|[a-zA-Z][\.\)])\s+')
+
+    for line in raw_lines:
+        s = line.strip()
+        if not s:
+            if current_line:
+                cleaned_lines.append(current_line)
+                current_line = ''
+            continue
+
+        if not current_line:
+            current_line = s
+        else:
+            ends_with_punct = any(current_line.endswith(p) for p in CLOSING_PUNCT)
+            is_new_bullet = bool(bullet_re.match(s))
+
+            if ends_with_punct or is_new_bullet:
+                cleaned_lines.append(current_line)
+                current_line = s
+            else:
+                # Si el renglón no termina con punto o puntuación de cierre,
+                # unirlo con el siguiente renglón con un espacio para reconstruir la oración completa.
+                current_line = f"{current_line} {s}"
+
+    if current_line:
+        cleaned_lines.append(current_line)
+
+    res = '\n'.join(cleaned_lines)
+
+    # 4. Limpiar espacios dobles o múltiples y espaciado previo a signos
+    res = re.sub(r'[ \t]{2,}', ' ', res)
+    res = re.sub(r'\s+([.,;:!?])', r'\1', res)
+    return res.strip()
+
+def extract_actionable_consignas(text: str, course_name: str = "", task_title: str = "", max_items: int = 5) -> list[str]:
+    """
+    Extrae de forma robusta y rigurosa las consignas reales y requisitos operativos de una tarea universitaria.
+    Aplica sanitización previa de saltos de línea duros, consulta al motor de IA (Groq/OpenRouter/Gemini/OpenAI)
+    con el prompt de requisitos operativos críticos, y cuenta con un fallback heurístico exhaustivo
+    anti-oraciones cortadas.
     """
     if not text:
         return []
 
-    lines = [l.strip() for l in text.split('\n') if l.strip()]
-    
+    clean_text = sanitize_extracted_text(text)
+    if not clean_text:
+        return []
+
+    # 1. Intentar extracción con modelo de IA y prompt especializado
+    try:
+        from services.ai_service import extract_task_consignas_ai_sync
+        ai_actions = extract_task_consignas_ai_sync(clean_text, course_name=course_name, task_title=task_title)
+        if ai_actions and len(ai_actions) >= 1:
+            return ai_actions[:max_items]
+    except Exception as e:
+        print(f"[Classroom Service] Fallback heurístico en consignas: {e}")
+
+    # 2. Fallback Heurístico Robusto (sin dependencias externas / offline)
+    lines = [l.strip() for l in clean_text.split('\n') if l.strip()]
+
     IGNORE_PATTERNS = [
         r'universidad', r'departamento', r'divisi[oó]n', r'centro universitario', r'cucei',
-        r'profesor', r'docente', r'alumno', r'estudiante', r'c[oó]digo:', r'fecha:',
-        r'semestre', r'ciclo escolar', r'licenciatura', r'ingenier[ií]a', r'cr[eé]ditos',
+        r'profesor\b', r'docente\b', r'alumno\b', r'estudiante\b', r'c[oó]digo:', r'fecha:',
+        r'semestre\b', r'ciclo escolar', r'licenciatura', r'cr[eé]ditos',
         r'criterios? de evaluaci[oó]n', r'ponderaci[oó]n', r'r[uú]brica', r'bibliograf[ií]a',
         r'p[aá]gina \d+', r'^\d+\s*$'
     ]
     ignore_re = re.compile('|'.join(IGNORE_PATTERNS), re.IGNORECASE)
 
     ACTION_VERBS = [
+        # Operativos / Organización / Modalidad / Lugar / Trámite
+        r'formar(?:\s+equipos)?', r'integrar', r'agendar(?:\s+una\s+visita)?', r'visitar', r'visita',
+        r'inspecci[oó]n', r'inspeccionar', r'investigaci[oó]n', r'investigar', r'revisi[oó]n',
+        r'laboratorio', r'aula\s+[a-zA-Z0-9]+', r'citas?', r'integrantes',
+        # Académicos / Técnicos
         r'resuelve', r'resolver', r'calcula', r'calcular', r'determina', r'determinar',
         r'obten(?:er|ga)?', r'halla(?:r)?', r'grafica(?:r)?', r'demuestra', r'demostrar',
         r'elabora(?:r)?', r'realiza(?:r)?', r'redacta(?:r)?', r'desarrolla(?:r)?',
-        r'simula(?:r)?', r'investiga(?:r)?', r'analiza(?:r)?', r'compara(?:r)?',
+        r'simula(?:r)?', r'analiza(?:r)?', r'compara(?:r)?',
         r'entrega(?:r)?', r'sube', r'subir', r'contesta(?:r)?', r'responde(?:r)?',
         r'encuentra', r'encontrar', r'aplica(?:r)?', r'ejercicios?', r'problemas?',
         r'transformada de laplace', r'funci[oó]n de transferencia', r'diagrama',
-        r'ecuaci[oó]n', r'circuito', r'cuestionario', r'reporte', r'ensayo'
+        r'ecuaci[oó]n', r'circuito', r'cuestionario', r'reporte', r'ensayo',
+        r'plantilla\s+ieee', r'formato\s+pdf'
     ]
     action_re = re.compile(r'\b(' + '|'.join(ACTION_VERBS) + r')\b', re.IGNORECASE)
 
     prefix_clean_re = re.compile(r'^(?:instrucciones?|consigna|objetivo|actividad|tarea|ejercicio\s*\d*|problema\s*\d*)\s*[:.-]\s*', re.IGNORECASE)
     bullet_clean_re = re.compile(r'^(?:[-*•–—]|\d+[\.\)]|[a-zA-Z][\.\)])\s*')
+    dangling_connector_re = re.compile(r'[\s,]+(?:y|e|o|u|de|en|con|para|que|a|al|del)$', re.IGNORECASE)
+    incomplete_list_re = re.compile(r'(?:que\s+contenga\s+la\s+siguiente(?:\s+informaci[oó]n)?|los\s+siguientes\s+puntos|lo\s+siguiente)\s*[:.]?$', re.IGNORECASE)
 
     candidate_sentences = []
 
     for line in lines:
         if ignore_re.search(line) and not action_re.search(line):
             continue
-        
+
         sentences = re.split(r'(?<=[.!?])\s+', line)
         for s in sentences:
             s_clean = s.strip()
@@ -106,7 +186,22 @@ def extract_actionable_consignas(text: str, course_name: str = "", task_title: s
             if task_title and s_clean.lower() == task_title.lower():
                 continue
 
+            # Omitir si la frase es solo el nombre de la materia repetido
+            if re.match(r'^(?:teor[ií]a de sistemas|c[aá]lculo|control|sistemas inteligentes)(?:\s+[ivx0-9a-z]+)*$', s_clean, re.IGNORECASE):
+                continue
+
             if action_re.search(s_clean):
+                # Arreglar listas incompletas o que terminan en 'contenga la siguiente información'
+                if incomplete_list_re.search(s_clean):
+                    s_clean = incomplete_list_re.sub(r' (consultar especificaciones en el documento)', s_clean).strip()
+
+                # Limpiar conectores huérfanos al final de la oración
+                while dangling_connector_re.search(s_clean):
+                    s_clean = dangling_connector_re.sub('', s_clean).strip()
+
+                if len(s_clean) < 12:
+                    continue
+
                 s_formatted = s_clean[0].upper() + s_clean[1:]
                 if not s_formatted.endswith(('.', '!', '?')):
                     s_formatted += '.'
@@ -115,9 +210,14 @@ def extract_actionable_consignas(text: str, course_name: str = "", task_title: s
 
     filtered = []
     for c in candidate_sentences:
-        if len(c) > 250:
+        if len(c) > 300:
             sub = re.split(r'(?<=[.!?])\s+', c)
             c = sub[0]
+            if not c.endswith('.'):
+                c += '.'
+        # Validar que no termine en conector trunco
+        if re.search(r'\b(?:y|e|o|u|de|en|con|para|que|del)\.$', c, re.IGNORECASE):
+            continue
         if len(c) >= 15 and c not in filtered:
             filtered.append(c)
 
@@ -167,12 +267,14 @@ def get_gmail_service(creds=None):
         return None
 
 def extract_pdf_text_from_drive(drive_service, file_id: str) -> str:
-    """Extrae texto de un PDF o Documento en Drive bajo demanda (con caché y soporte para Google Docs)."""
-    if not file_id or not drive_service:
+    """Extrae texto de un PDF o Documento en Drive bajo demanda (con sanitización de renglones y caché)."""
+    if not file_id:
         return ""
     cached = get_cached_attachment_data(file_id)
     if cached and cached.get("text"):
-        return cached["text"]
+        return sanitize_extracted_text(cached["text"])
+    if not drive_service:
+        return ""
 
     try:
         request = drive_service.files().get_media(fileId=file_id)
@@ -182,17 +284,50 @@ def extract_pdf_text_from_drive(drive_service, file_id: str) -> str:
         while not done:
             status, done = downloader.next_chunk()
 
-        fh.seek(0)
-        reader = PdfReader(fh)
-        text_content = []
-        # Limitar a las primeras 5 páginas para optimizar tiempo y memoria
-        for page in reader.pages[:5]:
-            t = page.extract_text()
-            if t:
-                text_content.append(t)
-        res = "\n".join(text_content).strip()
-        if res:
-            return res
+        # 1. Intentar como PDF
+        try:
+            fh.seek(0)
+            reader = PdfReader(fh)
+            text_content = []
+            for page in reader.pages[:10]:
+                t = page.extract_text()
+                if t:
+                    text_content.append(t)
+            raw = "\n".join(text_content).strip()
+            res = sanitize_extracted_text(raw)
+            if res:
+                return res
+        except Exception:
+            pass
+
+        # 2. Intentar como DOCX (Word)
+        try:
+            fh.seek(0)
+            import docx
+            doc = docx.Document(fh)
+            text_content = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+            for table in doc.tables:
+                for row in table.rows:
+                    row_text = " | ".join(c.text.strip() for c in row.cells if c.text.strip())
+                    if row_text:
+                        text_content.append(row_text)
+            raw = "\n".join(text_content).strip()
+            res = sanitize_extracted_text(raw)
+            if res:
+                return res
+        except Exception:
+            pass
+
+        # 3. Intentar como texto plano / markdown
+        try:
+            fh.seek(0)
+            raw = fh.read().decode('utf-8', errors='ignore').strip()
+            res = sanitize_extracted_text(raw)
+            if res and len(res) > 20 and not res.startswith('\x00'):
+                return res
+        except Exception:
+            pass
+
     except Exception as e:
         print(f"Aviso: descarga get_media de {file_id} ({e}), probando exportación alternativa...")
 
@@ -205,18 +340,37 @@ def extract_pdf_text_from_drive(drive_service, file_id: str) -> str:
         while not done:
             _, done = downloader_exp.next_chunk()
         fh_exp.seek(0)
-        return fh_exp.read().decode('utf-8', errors='ignore').strip()
+        raw = fh_exp.read().decode('utf-8', errors='ignore').strip()
+        return sanitize_extracted_text(raw)
     except Exception as e_exp:
         print(f"Aviso: no se pudo extraer texto del archivo {file_id}: {e_exp}")
         return ""
 
-def get_task_attachment_summary(drive_service, file_id: str, course_name: str = "", task_title: str = "") -> dict:
-    """Obtiene el resumen y acciones del adjunto, aprovechando la caché en disco."""
+def get_task_attachment_summary(
+    drive_service,
+    file_id: str,
+    course_name: str = "",
+    task_title: str = "",
+    force_refresh: bool = False
+) -> dict:
+    """
+    Obtiene el resumen y acciones del adjunto, aprovechando la caché en disco
+    e invalidando automáticamente cualquier entrada con oraciones cortadas o frases truncadas.
+    """
     if not file_id:
         return {"actions": [], "text": ""}
     cached = get_cached_attachment_data(file_id)
-    if cached and cached.get("actions"):
-        return cached
+    if not force_refresh and cached and cached.get("actions"):
+        # Auto-invalidar si la caché previa contiene oraciones cortadas por el bug antiguo
+        has_broken_action = any(
+            re.search(r'\b(?:y|e|o|u|de|en|con|para|que|del)\.$', str(a).strip(), re.IGNORECASE) or
+            "la siguiente." in str(a).lower() or
+            "los siguientes puntos." in str(a).lower() or
+            len(str(a).strip()) < 10
+            for a in cached["actions"]
+        )
+        if not has_broken_action:
+            return cached
 
     text = extract_pdf_text_from_drive(drive_service, file_id)
     actions = extract_actionable_consignas(text, course_name=course_name, task_title=task_title)
@@ -224,7 +378,7 @@ def get_task_attachment_summary(drive_service, file_id: str, course_name: str = 
     data = {
         "file_id": file_id,
         "actions": actions,
-        "text": text[:3000]
+        "text": text[:3500]
     }
     if text or actions:
         save_cached_attachment_data(file_id, data)

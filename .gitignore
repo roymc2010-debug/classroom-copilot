@@ -24,4 +24,9 @@ data/
 *.sqlite3
 *.db
 
+# Reportes y análisis generados
+graphify-out/
+architecture.html
+
+
 

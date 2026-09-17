@@ -50,7 +50,11 @@ BASE_SYSTEM_PROMPT = (
     "orientándolo a deducir el camino correcto.\n"
     "4. REGLA ANTI-COPIA: Tienes prohibido resolver los ejercicios finales, escribir el código definitivo o entregar cálculos listos para copiar. "
     "Si se requiere modelado o cálculo, plantea un ejercicio gemelo (análogo) para ilustrar el método y solicita al alumno aplicarlo a su ejercicio real.\n"
-    "5. JERARQUÍA: Las especificaciones del documento/PDF de la tarea actual siempre tienen prioridad.\n"
+    "5. JERARQUÍA: Las especificaciones del documento/PDF de la tarea actual siempre tienen prioridad.\n\n"
+    "PROHIBICIÓN ESTRICTA DE ALUCINACIÓN O INVENCIÓN DE CONSIGNAS:\n"
+    "Tienes TERMINANTEMENTE PROHIBIDO inventar, suponer o alucinar consignas, ejercicios, datos o requerimientos que no figuren explícitamente en el documento oficial de la tarea o en sus instrucciones.\n"
+    "Si el contenido real del documento o archivo adjunto está disponible en el contexto, básate RIGUROSAMENTE en sus enunciados y ejercicios reales para guiar al estudiante.\n"
+    "Si la tarea no contiene un ejercicio específico o el documento no estuviera disponible, pide al estudiante de forma sobria que te indique o cite textualmente el problema exacto en el que requiere asesoría antes de asumir cualquier consigna ficticia.\n"
 )
 
 # Enfoques Metodológicos por Disciplina (Mentores de Dominio Público)
@@ -367,3 +371,199 @@ async def ask_copilot(
         return response.choices[0].message.content
     except Exception as e:
         return f"Error de conexión con {provider_name}: {str(e)}"
+
+async def stream_copilot(
+    provider: str = "openrouter",
+    messages: list = None,
+    mentor: str = None,
+    task_context: dict = None,
+    **kwargs
+):
+    """
+    Ejecuta la asesoría académica en modo streaming (generador asíncrono)
+    para Server-Sent Events (SSE).
+    """
+    if messages is None:
+        messages = []
+
+    provider_name = kwargs.get("provider_name", provider).lower()
+    provider_config = PROVIDERS.get(provider_name)
+    if not provider_config:
+        yield f"Error: Proveedor '{provider_name}' no soportado."
+        return
+
+    try:
+        client = get_client(provider_name)
+    except Exception as err:
+        yield f"Error de configuración: {str(err)}"
+        return
+
+    model = provider_config.get("model")
+
+    # Selección automática de mentor si no viene especificado
+    if not mentor or mentor == "auto":
+        c_name = task_context.get("course_name", "") if task_context else ""
+        t_title = task_context.get("title", "") if task_context else ""
+        mentor = clasificar_mentor(c_name, t_title)
+
+    mentor_instruction = MENTOR_PROMPTS.get(mentor, MENTOR_PROMPTS["newton"])
+
+    context_str = ""
+    if task_context:
+        title = task_context.get("title", "")
+        desc = task_context.get("description", "")
+        doc_info = task_context.get("pdf_text") or task_context.get("document_info", "")
+        context_str = f"\n\nCONTEXTO DE LA TAREA ACTUAL:\nMateria: {task_context.get('course_name', '')}\nTítulo: {title}\nInstrucciones: {desc}\nContenido analizado: {doc_info}"
+        student_notes = task_context.get("student_notes")
+        if student_notes:
+            context_str += f"\n\nApuntes y fórmulas de clase del estudiante:\n{student_notes}"
+        procedural_guide = task_context.get("procedural_guide")
+        if procedural_guide:
+            context_str += f"\n\nINSTRUCTIVO PROCEDIMENTAL DE EXAMEN Y CATÁLOGO DE EJERCICIOS (PAUTA OFICIAL):\n{procedural_guide}"
+
+    full_system = f"{BASE_SYSTEM_PROMPT}\n\n{mentor_instruction}{context_str}"
+
+    # Compresión de contexto: si supera 8 turnos, conserva el sistema y los últimos 6
+    if len(messages) > 8:
+        processed_messages = [{"role": "system", "content": full_system}] + messages[-6:]
+    else:
+        processed_messages = [{"role": "system", "content": full_system}] + messages
+
+    try:
+        response = await client.chat.completions.create(
+            model=model,
+            messages=processed_messages,
+            temperature=0.6,
+            stream=True
+        )
+        async for chunk in response:
+            if chunk.choices and len(chunk.choices) > 0:
+                delta = chunk.choices[0].delta
+                if delta and delta.content:
+                    yield delta.content
+    except Exception as e:
+        yield f"\n[Error de conexión con {provider_name}: {str(e)}]"
+
+
+# --- PROMPT Y EXTRACTOR DE CONSIGNAS DE TAREAS ('¿QUÉ DEBES HACER?') ---
+TASK_CONSIGNAS_SYSTEM_PROMPT = (
+    "Eres el motor de análisis y síntesis de tareas universitarias para la sección '¿QUÉ DEBES HACER?'.\n"
+    "Tu objetivo es extraer y redactar las consignas y requisitos operativos esenciales que el estudiante debe cumplir a partir del texto del documento o instrucciones de la tarea.\n\n"
+    "DIRECTIVAS Y REGLAS ESTRICTAS:\n"
+    "1. PROHIBIDO GENERAR ORACIONES CORTADAS, FRASES INCOMPLETAS O QUE TERMINEN ABRUPTAMENTE EN CONECTORES "
+    "(ej. 'y.', 'con.', 'para.', 'de.', 'que contenga la siguiente.', 'los siguientes puntos:'). "
+    "Cada ítem debe ser una oración completa, gramaticalmente impecable y con punto final.\n"
+    "2. EXTRAER SIEMPRE LOS REQUISITOS OPERATIVOS CRÍTICOS:\n"
+    "   - Modalidad: especificar si la actividad es individual o el número exacto de integrantes por equipo (ej. 'Formar equipos de máximo 5 integrantes cada uno.').\n"
+    "   - Lugares o trámites previos: detallar aulas asignadas (ej. aula R5), citas, agendado de visitas o laboratorios requeridos.\n"
+    "   - Acciones concretas: detallar los experimentos, investigaciones, inspecciones de equipos, desarrollos o cálculos solicitados.\n"
+    "   - Formato exacto de entrega: especificar el formato del archivo (PDF, DOCX, ZIP), lineamientos o plantillas requeridas (ej. plantilla IEEE a doble columna) y fecha límite si se menciona.\n"
+    "3. MANEJO DE LISTAS CONTINUAS O EN OTRA PÁGINA:\n"
+    "   Si una consigna hace referencia a una lista de puntos, rúbricas o datos que continúa más adelante (ej. 'que contenga la siguiente información:'), "
+    "sintetiza el objetivo o aclara explícitamente '(consultar especificaciones en el documento)' en lugar de dejar el texto mocho o cortado.\n"
+    "4. OMITIR RUIDO INSTITUCIONAL: Descarta encabezados repetitivos, nombres de directores, códigos de curso o membretes universitarios.\n"
+    "5. FORMATO DE SALIDA EXCLUSIVO: Devuelve ÚNICAMENTE un arreglo JSON de strings con entre 3 y 5 acciones prioritarias bien redactadas. "
+    "No agregues texto explicativo ni bloques markdown alrededor, solo el array JSON válido."
+)
+
+async def extract_task_consignas_ai(
+    text: str,
+    course_name: str = "",
+    task_title: str = "",
+    provider: str = None
+) -> list[str]:
+    """
+    Extrae las consignas operativas críticas de una tarea usando LLM con el prompt riguroso de '¿QUÉ DEBES HACER?'.
+    Prueba proveedores en cascada (Groq -> OpenRouter -> Gemini -> OpenAI).
+    """
+    if not text or len(text.strip()) < 30:
+        return []
+
+    # Probar proveedores disponibles con preferencia por rapidez y disponibilidad
+    providers_to_try = [provider] if provider else ["groq", "openrouter", "gemini", "openai"]
+
+    user_prompt = (
+        f"Materia: {course_name or 'No especificada'}\n"
+        f"Título de la tarea: {task_title or 'Tarea'}\n\n"
+        f"Contenido del documento o instrucciones:\n{text[:4500]}\n\n"
+        "Extrae las consignas y requisitos operativos para '¿QUÉ DEBES HACER?' en formato JSON:"
+    )
+
+    import json
+    import re
+
+    for p_name in providers_to_try:
+        p_cfg = PROVIDERS.get(p_name)
+        if not p_cfg or not p_cfg.get("api_key"):
+            continue
+
+        try:
+            client = get_client(p_name)
+            model = p_cfg.get("model")
+            resp = await client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": TASK_CONSIGNAS_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.2,
+                timeout=10.0
+            )
+            raw_content = resp.choices[0].message.content or ""
+            raw_content = raw_content.strip()
+
+            # Extraer arreglo JSON incluso si viene dentro de markdown ```json ... ```
+            json_match = re.search(r'\[\s*".*?"\s*\]', raw_content, re.DOTALL)
+            if json_match:
+                actions = json.loads(json_match.group(0))
+            else:
+                # Intentar parseo directo
+                actions = json.loads(raw_content)
+
+            if isinstance(actions, list) and len(actions) >= 1:
+                cleaned_actions = []
+                for a in actions:
+                    if isinstance(a, str):
+                        s = a.strip()
+                        # Verificar que no termine en conector o frase cortada
+                        s = re.sub(r'[\s,]+(?:y|e|o|u|de|en|con|para|que)\.?$', '.', s)
+                        if not s.endswith(('.', '!', '?')):
+                            s += '.'
+                        if len(s) >= 12:
+                            cleaned_actions.append(s)
+                if cleaned_actions:
+                    return cleaned_actions[:5]
+        except Exception as err:
+            print(f"[AI Consignas] Aviso con proveedor {p_name}: {err}")
+            continue
+
+    return []
+
+def extract_task_consignas_ai_sync(
+    text: str,
+    course_name: str = "",
+    task_title: str = "",
+    provider: str = None
+) -> list[str]:
+    """
+    Versión sincrónica segura de extract_task_consignas_ai.
+    """
+    import asyncio
+    try:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(asyncio.run, extract_task_consignas_ai(text, course_name, task_title, provider))
+                return future.result(timeout=12.0)
+        else:
+            return asyncio.run(extract_task_consignas_ai(text, course_name, task_title, provider))
+    except Exception as e:
+        print(f"[AI Consignas Sync] Fallback: {e}")
+        return []
+
+
