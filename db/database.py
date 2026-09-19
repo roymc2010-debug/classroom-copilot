@@ -53,6 +53,16 @@ def init_db():
             notified INTEGER DEFAULT 0
         )
     ''')
+    # Create table for permanent OAuth sessions (30-day silent auto-renewal)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_oauth_sessions (
+            session_id TEXT PRIMARY KEY,
+            user_email TEXT,
+            refresh_token TEXT,
+            creds_json TEXT,
+            updated_at TEXT
+        )
+    ''')
     try:
         cursor.execute("ALTER TABLE scheduled_timer_alarms ADD COLUMN endpoint TEXT")
     except Exception:
@@ -112,7 +122,7 @@ def save_push_subscription(endpoint, p256dh, auth, user_email=""):
         ON CONFLICT(endpoint) DO UPDATE SET
             p256dh = excluded.p256dh,
             auth = excluded.auth,
-            user_email = excluded.user_email
+            user_email = CASE WHEN excluded.user_email != '' THEN excluded.user_email ELSE push_subscriptions.user_email END
     ''', (endpoint, p256dh, auth, user_email.lower().strip(), now_str))
     conn.commit()
     conn.close()
@@ -262,6 +272,86 @@ def mark_timer_alarm_notified(alarm_id):
     cursor.execute("UPDATE scheduled_timer_alarms SET notified = 1 WHERE id = ?", (str(alarm_id),))
     conn.commit()
     conn.close()
+
+def save_oauth_session(session_id: str, user_email: str, refresh_token: str = "", creds_json: str = ""):
+    """
+    Persiste la sesión OAuth de forma permanente (30 días o más).
+    Preserva el refresh_token existente si la renovación no trae uno nuevo.
+    """
+    if not session_id:
+        return
+    conn = get_connection()
+    cursor = conn.cursor()
+    import datetime
+    now_str = datetime.datetime.utcnow().isoformat()
+    email_clean = (user_email or "").lower().strip()
+
+    # Si no nos pasaron refresh_token, intentar rescatar uno existente para este usuario
+    if not refresh_token and email_clean:
+        cursor.execute("SELECT refresh_token FROM user_oauth_sessions WHERE user_email = ? AND refresh_token != '' LIMIT 1", (email_clean,))
+        row = cursor.fetchone()
+        if row and row["refresh_token"]:
+            refresh_token = row["refresh_token"]
+
+    cursor.execute('''
+        INSERT INTO user_oauth_sessions (session_id, user_email, refresh_token, creds_json, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(session_id) DO UPDATE SET
+            user_email = CASE WHEN excluded.user_email != '' THEN excluded.user_email ELSE user_oauth_sessions.user_email END,
+            refresh_token = CASE WHEN excluded.refresh_token != '' THEN excluded.refresh_token ELSE user_oauth_sessions.refresh_token END,
+            creds_json = CASE WHEN excluded.creds_json != '' THEN excluded.creds_json ELSE user_oauth_sessions.creds_json END,
+            updated_at = excluded.updated_at
+    ''', (str(session_id), email_clean, refresh_token or "", creds_json or "", now_str))
+    conn.commit()
+    conn.close()
+
+def get_oauth_session(session_id: str):
+    """Recupera la sesión OAuth por su session_id."""
+    if not session_id:
+        return None
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT session_id, user_email, refresh_token, creds_json, updated_at FROM user_oauth_sessions WHERE session_id = ?", (str(session_id),))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return dict(row)
+    return None
+
+def get_oauth_session_by_email(user_email: str):
+    """Recupera la sesión OAuth más reciente para un email."""
+    if not user_email:
+        return None
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT session_id, user_email, refresh_token, creds_json, updated_at FROM user_oauth_sessions WHERE user_email = ? ORDER BY updated_at DESC LIMIT 1", (user_email.lower().strip(),))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return dict(row)
+    return None
+
+def get_all_oauth_sessions():
+    """Recupera todas las sesiones activas persistidas."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT session_id, user_email, refresh_token, creds_json, updated_at FROM user_oauth_sessions")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_refresh_token_for_user(user_email: str) -> str:
+    """Busca un refresh_token guardado para el usuario."""
+    if not user_email:
+        return ""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT refresh_token FROM user_oauth_sessions WHERE user_email = ? AND refresh_token != '' ORDER BY updated_at DESC LIMIT 1", (user_email.lower().strip(),))
+    row = cursor.fetchone()
+    conn.close()
+    if row and row["refresh_token"]:
+        return row["refresh_token"]
+    return ""
 
 # Initialize the database on module import
 init_db()

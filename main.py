@@ -79,6 +79,20 @@ def get_redirect_uri(request: Request):
     return f"{base}/auth/callback"
 
 def restore_and_refresh_credentials(creds_data, session_id: str = None):
+    if not creds_data and session_id:
+        try:
+            import db.database as db
+            db_sess = db.get_oauth_session(session_id)
+            if db_sess:
+                creds_data = db_sess.get("creds_json")
+                if session_id not in user_sessions:
+                    user_sessions[session_id] = {
+                        "creds": creds_data,
+                        "email": db_sess.get("user_email", "")
+                    }
+        except Exception:
+            pass
+
     if not creds_data:
         return None
     if isinstance(creds_data, dict) and creds_data.get("is_demo"):
@@ -89,9 +103,26 @@ def restore_and_refresh_credentials(creds_data, session_id: str = None):
         else:
             raw_creds = creds_data
         data = json.loads(raw_creds) if isinstance(raw_creds, str) else raw_creds
+        refresh_token = data.get("refresh_token")
+
+        # Si el refresh_token está ausente en la sesión, buscarlo permanentemente en SQLite
+        if not refresh_token and session_id:
+            try:
+                import db.database as db
+                email = user_sessions.get(session_id, {}).get("email", "") if isinstance(user_sessions.get(session_id), dict) else ""
+                if not email:
+                    db_sess = db.get_oauth_session(session_id)
+                    if db_sess:
+                        email = db_sess.get("user_email", "")
+                        refresh_token = db_sess.get("refresh_token", "")
+                if not refresh_token and email:
+                    refresh_token = db.get_refresh_token_for_user(email)
+            except Exception:
+                pass
+
         creds = Credentials(
             token=data.get("token") or data.get("access_token"),
-            refresh_token=data.get("refresh_token"),
+            refresh_token=refresh_token,
             token_uri=data.get("token_uri") or "https://oauth2.googleapis.com/token",
             client_id=data.get("client_id"),
             client_secret=data.get("client_secret"),
@@ -101,11 +132,15 @@ def restore_and_refresh_credentials(creds_data, session_id: str = None):
         if creds and creds.expired and creds.refresh_token:
             try:
                 creds.refresh(GoogleRequest())
-                if session_id and session_id in user_sessions:
-                    if isinstance(user_sessions[session_id], dict) and "creds" in user_sessions[session_id]:
-                        user_sessions[session_id]["creds"] = creds.to_json()
-                    else:
-                        user_sessions[session_id] = creds.to_json()
+                email = user_sessions.get(session_id, {}).get("email", "") if session_id and isinstance(user_sessions.get(session_id), dict) else ""
+                if session_id:
+                    if session_id in user_sessions:
+                        if isinstance(user_sessions[session_id], dict) and "creds" in user_sessions[session_id]:
+                            user_sessions[session_id]["creds"] = creds.to_json()
+                        else:
+                            user_sessions[session_id] = creds.to_json()
+                    import db.database as db
+                    db.save_oauth_session(session_id, email, creds.refresh_token, creds.to_json())
                     save_sessions()
             except Exception as e:
                 print(f"No se pudo refrescar el token de Google: {e}")
@@ -239,15 +274,27 @@ async def read_root(request: Request):
     session_id = request.cookies.get("agora_session")
     has_session = False
     user_email = ""
-    if session_id and session_id in user_sessions:
-        sess = user_sessions[session_id]
-        if isinstance(sess, dict) and sess.get("is_demo"):
-            has_session = True
-            user_email = sess.get("email", ALEX_EMAIL)
-        else:
-            creds = restore_and_refresh_credentials(sess, session_id=session_id)
-            if creds and (creds.token or creds.refresh_token):
+    if session_id:
+        if session_id not in user_sessions:
+            try:
+                import db.database as db
+                db_sess = db.get_oauth_session(session_id)
+                if db_sess:
+                    user_sessions[session_id] = {
+                        "creds": db_sess.get("creds_json"),
+                        "email": db_sess.get("user_email", "")
+                    }
+            except Exception:
+                pass
+        if session_id in user_sessions:
+            sess = user_sessions[session_id]
+            if isinstance(sess, dict) and sess.get("is_demo"):
                 has_session = True
+                user_email = sess.get("email", ALEX_EMAIL)
+            else:
+                creds = restore_and_refresh_credentials(sess, session_id=session_id)
+                if creds and (creds.token or creds.refresh_token):
+                    has_session = True
                 user_email = get_session_email(session_id, creds=creds)
 
     return templates.TemplateResponse(
@@ -386,6 +433,17 @@ async def auth_callback(request: Request, code: str = None, error: str = None):
         save_sessions()
 
         try:
+            import db.database as db
+            db.save_oauth_session(
+                session_id=session_id,
+                user_email=user_email,
+                refresh_token=refresh_token or "",
+                creds_json=creds.to_json()
+            )
+        except Exception as e:
+            print(f"Aviso guardando sesión OAuth en SQLite: {e}")
+
+        try:
             with open("token.json", "w", encoding="utf-8") as f:
                 f.write(creds.to_json())
         except Exception:
@@ -464,10 +522,17 @@ async def get_courses(request: Request):
         return JSONResponse(status_code=500, content={"error": str(e)})
 
 @app.get("/api/tasks")
-async def get_tasks(request: Request):
+async def get_tasks(request: Request, force: bool = False):
     """
     Devuelve las tareas y misiones exclusivas del usuario autenticado.
+    Soporta force=True para forzar recarga fresca desde Classroom e invalidar caché.
     """
+    no_cache_headers = {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+    }
+
     session_id = request.cookies.get("agora_session")
     sess = user_sessions.get(session_id)
     if isinstance(sess, dict) and sess.get("is_demo"):
@@ -476,24 +541,31 @@ async def get_tasks(request: Request):
         tasks = alex_data["tasks"]
         tasks_with_dates = [t for t in tasks if t.get('due_date')]
         tasks_without_dates = [t for t in tasks if not t.get('due_date')]
-        return {
-            "user_email": ALEX_EMAIL,
-            "enrolled_courses": alex_data.get("courses", []),
-            "mock_stage_id": alex_data["id"],
-            "mock_stage_name": alex_data["name"],
-            "mock_streak_weeks": alex_data["streak_weeks"],
-            "mock_streak_days": alex_data["streak_days"],
-            "tasks_with_dates": tasks_with_dates,
-            "tasks_without_dates": tasks_without_dates
-        }
+        return JSONResponse(
+            content={
+                "user_email": ALEX_EMAIL,
+                "enrolled_courses": alex_data.get("courses", []),
+                "mock_stage_id": alex_data["id"],
+                "mock_stage_name": alex_data["name"],
+                "mock_streak_weeks": alex_data["streak_weeks"],
+                "mock_streak_days": alex_data["streak_days"],
+                "tasks_with_dates": tasks_with_dates,
+                "tasks_without_dates": tasks_without_dates
+            },
+            headers=no_cache_headers
+        )
 
     creds_json = user_sessions.get(session_id)
     creds = restore_and_refresh_credentials(creds_json, session_id=session_id)
 
     if not creds:
-        return JSONResponse(status_code=401, content={"error": "Not authenticated"})
+        return JSONResponse(status_code=401, content={"error": "Not authenticated"}, headers=no_cache_headers)
 
     user_email = get_session_email(session_id, creds=creds)
+
+    # Si se solicitó recarga forzada, limpiar caché en memoria
+    if force and user_email and user_email in USER_TASKS_CACHE:
+        USER_TASKS_CACHE.pop(user_email, None)
 
     # Si es Alex, servir paquete de datos falsos de la etapa activa
     if user_email == ALEX_EMAIL:
@@ -503,16 +575,19 @@ async def get_tasks(request: Request):
         USER_TASKS_CACHE[user_email] = tasks
         tasks_with_dates = [t for t in tasks if t.get('due_date')]
         tasks_without_dates = [t for t in tasks if not t.get('due_date')]
-        return {
-            "user_email": user_email,
-            "enrolled_courses": alex_data.get("courses", []),
-            "mock_stage_id": alex_data["id"],
-            "mock_stage_name": alex_data["name"],
-            "mock_streak_weeks": alex_data["streak_weeks"],
-            "mock_streak_days": alex_data["streak_days"],
-            "tasks_with_dates": tasks_with_dates,
-            "tasks_without_dates": tasks_without_dates
-        }
+        return JSONResponse(
+            content={
+                "user_email": user_email,
+                "enrolled_courses": alex_data.get("courses", []),
+                "mock_stage_id": alex_data["id"],
+                "mock_stage_name": alex_data["name"],
+                "mock_streak_weeks": alex_data["streak_weeks"],
+                "mock_streak_days": alex_data["streak_days"],
+                "tasks_with_dates": tasks_with_dates,
+                "tasks_without_dates": tasks_without_dates
+            },
+            headers=no_cache_headers
+        )
 
     try:
         courses = fetch_courses(creds=creds, user_email=user_email)
@@ -541,15 +616,18 @@ async def get_tasks(request: Request):
 
         tasks_with_dates = [t for t in tasks if t.get('due_date')]
         tasks_without_dates = [t for t in tasks if not t.get('due_date')]
-        return {
-            "user_email": user_email,
-            "enrolled_courses": courses,
-            "tasks_with_dates": tasks_with_dates,
-            "tasks_without_dates": tasks_without_dates
-        }
+        return JSONResponse(
+            content={
+                "user_email": user_email,
+                "enrolled_courses": courses,
+                "tasks_with_dates": tasks_with_dates,
+                "tasks_without_dates": tasks_without_dates
+            },
+            headers=no_cache_headers
+        )
     except Exception as e:
         traceback.print_exc()
-        return JSONResponse(status_code=500, content={"error": str(e)})
+        return JSONResponse(status_code=500, content={"error": str(e)}, headers=no_cache_headers)
 
 @app.post("/api/tasks/{task_id}/toggle")
 async def toggle_task_status(task_id: str, request: Request):
@@ -1120,29 +1198,59 @@ async def push_unsubscribe(req: Request):
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+@app.get("/api/push/test")
 @app.post("/api/push/test")
 async def push_test(req: Request):
     try:
-        data = await req.json()
+        data = {}
+        try:
+            data = await req.json()
+        except Exception:
+            data = {}
         endpoint = data.get("endpoint")
         keys = data.get("keys", {})
-        sub = {
-            "endpoint": endpoint,
-            "keys": {
-                "p256dh": keys.get("p256dh", ""),
-                "auth": keys.get("auth", "")
-            }
-        }
         from services.push_service import send_web_push
-        ok, msg = send_web_push(
-            subscription_info=sub,
-            title="🔔 Notificación de Prueba Ágora",
-            body="¡Las notificaciones Push 24/7 están funcionando perfectamente en tu dispositivo!",
-            url="/",
-            silent=False,
-            tag="test-notification"
-        )
-        return {"status": "ok" if ok else "error", "message": msg}
+        import db.database as db
+
+        session_id = req.cookies.get("agora_session") or req.cookies.get("session_id") or ""
+        user_email = user_sessions.get(session_id, {}).get("email", "") if session_id else ""
+        if not user_email and data:
+            user_email = str(data.get("user_email", "")).strip().lower()
+
+        if endpoint and keys.get("p256dh") and keys.get("auth"):
+            sub = {
+                "endpoint": endpoint,
+                "keys": {
+                    "p256dh": keys.get("p256dh", ""),
+                    "auth": keys.get("auth", "")
+                }
+            }
+            ok, msg = send_web_push(
+                subscription_info=sub,
+                title="🔔 Notificación de Prueba Ágora",
+                body="¡Las notificaciones Push 24/7 están funcionando perfectamente en tu dispositivo!",
+                url="/",
+                silent=False,
+                tag="test-notification"
+            )
+            return {"status": "ok" if ok else "error", "message": msg, "sent_to": 1}
+        else:
+            subs = db.get_push_subscriptions_for_user(user_email) if user_email else db.get_all_push_subscriptions()
+            if not subs:
+                return JSONResponse(status_code=404, content={"status": "error", "message": "No hay suscripciones registradas en la base de datos."})
+            sent_count = 0
+            for s in subs:
+                ok, msg = send_web_push(
+                    subscription_info=s,
+                    title="🔔 Notificación de Prueba Ágora",
+                    body="¡Las notificaciones Push 24/7 están funcionando perfectamente en tu dispositivo!",
+                    url="/",
+                    silent=False,
+                    tag="test-notification"
+                )
+                if ok:
+                    sent_count += 1
+            return {"status": "ok", "message": f"Notificación de prueba enviada a {sent_count} dispositivo(s).", "sent_to": sent_count}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 

@@ -60,7 +60,7 @@ def get_public_key():
     _, pub_key = get_or_create_vapid_keys()
     return pub_key
 
-def send_web_push(subscription_info, title, body, url="/", silent=False, tag="agora-notice", is_alarm=False):
+def send_web_push(subscription_info, title, body, url="/", silent=False, tag="agora-notice", is_alarm=False, vibrate=None):
     """
     Despacha una notificación Push encriptada al Push Service (FCM/Apple) usando RFC 8291.
     Si is_alarm=True, utiliza vibración continua de alarma, requireInteraction y máxima urgencia.
@@ -69,6 +69,14 @@ def send_web_push(subscription_info, title, body, url="/", silent=False, tag="ag
 
     alarm_vibrate = [600, 250, 600, 250, 600, 250, 1000]
     std_vibrate = [300, 150, 300, 150, 400]
+    if vibrate is not None:
+        chosen_vibrate = vibrate
+    elif silent and not is_alarm:
+        chosen_vibrate = []
+    elif is_alarm:
+        chosen_vibrate = alarm_vibrate
+    else:
+        chosen_vibrate = std_vibrate
 
     payload = {
         "title": title,
@@ -77,7 +85,7 @@ def send_web_push(subscription_info, title, body, url="/", silent=False, tag="ag
         "badge": "/static/agora_logo_light_32.png?v=4",
         "url": url,
         "silent": bool(silent),
-        "vibrate": [] if silent else (alarm_vibrate if is_alarm else std_vibrate),
+        "vibrate": chosen_vibrate,
         "alarm": bool(is_alarm),
         "isAlarm": bool(is_alarm),
         "requireInteraction": bool(is_alarm),
@@ -103,11 +111,30 @@ def send_web_push(subscription_info, title, body, url="/", silent=False, tag="ag
             ttl=300 if is_alarm else 86400,
             headers=headers if headers else None
         )
+        try:
+            endpoint_display = (subscription_info.get("endpoint") or "")[:55]
+            title_safe = str(title).encode("ascii", errors="replace").decode("ascii")
+            print(f"[WebPush] [OK] Notificacion Push enviada con exito (titulo: '{title_safe}') a {endpoint_display}...")
+        except Exception:
+            pass
         return True, "sent"
     except WebPushException as ex:
-        status_code = getattr(ex.response, "status_code", None) if hasattr(ex, "response") else None
+        status_code = getattr(ex.response, "status_code", None) if hasattr(ex, "response") and ex.response is not None else None
+        resp_text = getattr(ex.response, "text", "") if hasattr(ex, "response") and ex.response is not None else ""
+        try:
+            endpoint_display = (subscription_info.get("endpoint") or "")[:55]
+            err_safe = str(ex).encode("ascii", errors="replace").decode("ascii")
+            print(f"[WebPush] [ERROR] WebPushException (status={status_code}): {err_safe} | Endpoint: {endpoint_display}...")
+        except Exception:
+            pass
         if status_code in (404, 410):
             return False, "expired"
-        return False, f"error: {ex}"
+        return False, f"error: {ex} (status={status_code})"
     except Exception as e:
+        try:
+            endpoint_display = (subscription_info.get("endpoint") or "")[:55]
+            err_safe = str(e).encode("ascii", errors="replace").decode("ascii")
+            print(f"[WebPush] [ERROR] Excepcion inesperada al enviar Web Push: {err_safe} | Endpoint: {endpoint_display}...")
+        except Exception:
+            pass
         return False, f"exception: {e}"

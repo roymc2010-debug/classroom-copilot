@@ -447,7 +447,15 @@
         </aside>
 
         <!-- Contenedor Central Dinámico (Timeline) -->
-        <main id="main-content-area" class="flex-1 h-full overflow-y-auto custom-scroll p-4 sm:p-6 md:p-8 pb-24 md:pb-8 2xl:pr-[340px]">
+        <main id="main-content-area" class="flex-1 h-full overflow-y-auto custom-scroll p-4 sm:p-6 md:p-8 pb-24 md:pb-8 2xl:pr-[340px] relative">
+            <!-- Indicador Sutil de Pull-to-Refresh Móvil -->
+            <div id="pull-to-refresh-indicator" class="pointer-events-none w-full flex items-center justify-center overflow-hidden transition-all duration-200 h-0 opacity-0 -mt-2 mb-2">
+                <div class="flex items-center gap-2 py-1.5 px-3.5 rounded-full bg-white/95 dark:bg-night-900/95 border border-cantera-300 dark:border-slate-700 shadow-md text-xs font-semibold text-cantera-700 dark:text-slate-300 backdrop-blur-xs">
+                    <i id="pull-to-refresh-icon" class="fa-solid fa-arrows-rotate text-indigo-600 dark:text-indigo-400 text-xs transition-transform"></i>
+                    <span id="pull-to-refresh-label" class="text-[11px] font-medium tracking-tight">Desliza para actualizar</span>
+                </div>
+            </div>
+
             <div id="loading" class="text-center py-16">
                 <i class="fa-solid fa-spinner fa-spin text-3xl text-indigo-500 mb-4"></i>
                 <p class="text-cantera-600 dark:text-slate-400 text-sm">Sincronizando con Classroom...</p>
@@ -856,15 +864,13 @@
                 <!-- Fila 1: Encabezado -->
                 <!-- 1.A: Header Móvil (< md) -->
                 <div class="md:hidden p-2.5 px-3 border-b border-cantera-300 dark:border-slate-800 flex items-center justify-between bg-cantera-50 dark:bg-night-800 shrink-0 relative z-30">
-                    <div class="flex items-center gap-2 min-w-0">
-                        <!-- Botón Volver a Misiones -->
-                        <button type="button" onclick="closeIgnisWorkspace()" class="text-cantera-700 dark:text-slate-300 hover:text-indigo-500 flex items-center justify-center w-8 h-8 rounded-xl bg-cantera-200/60 dark:bg-slate-800 shrink-0 active:scale-90 transition-transform" title="Volver a Misiones">
-                            <i class="fa-solid fa-arrow-left text-xs"></i>
-                        </button>
+                    <div class="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
                         <button type="button" onclick="openMentorsModal()" class="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-500 active:scale-95 transition-transform shrink-0" title="Seleccionar Mentor">
                             <i class="fa-solid fa-fire text-sm"></i>
                         </button>
-                        <span id="mobile-mentor-name" class="font-bold text-sm text-cantera-900 dark:text-white tracking-tight truncate">Alan Turing</span>
+                        <div class="min-w-0 flex-1">
+                            <span id="mobile-mentor-name" class="font-bold text-sm text-cantera-900 dark:text-white tracking-tight truncate block">Alan Turing</span>
+                        </div>
                     </div>
 
                     <!-- Botón Selector de IA con Isotipo Oficial en Móvil -->
@@ -1007,8 +1013,13 @@
                 <div class="flex-1 w-full min-h-0 overflow-hidden relative flex flex-col">
                     <div id="ignis-panes-slider" class="flex-1 flex flex-row w-full transition-transform duration-300 ease-out">
                         <!-- Panel 1: Documento / PDF (100% en móvil, 50% en desktop) -->
-                        <div id="ignis-doc-pane" class="w-full min-w-full md:w-1/2 md:min-w-0 h-full flex flex-col bg-cantera-50/70 dark:bg-slate-900/50 shrink-0 md:shrink border-r-0 md:border-r md:border-cantera-300 md:dark:border-slate-700">
-                            <div id="doc-viewer-container" class="flex-1 p-0 md:p-4 overflow-y-auto custom-scroll text-xs leading-relaxed" style="touch-action: pan-y pinch-zoom; -webkit-overflow-scrolling: touch;"></div>
+                        <div id="ignis-doc-pane" class="w-full min-w-full md:w-1/2 md:min-w-0 h-full flex flex-col bg-cantera-50/70 dark:bg-slate-900/50 shrink-0 md:shrink border-r-0 md:border-r md:border-cantera-300 md:dark:border-slate-700 relative">
+                            <div id="doc-viewer-container" class="flex-1 p-0 md:p-4 overflow-y-auto custom-scroll text-xs leading-relaxed relative" style="touch-action: pan-y pinch-zoom; -webkit-overflow-scrolling: touch;"></div>
+                            <!-- Botón flotante para restablecer zoom en caso de zoom > 1 -->
+                            <button id="doc-zoom-reset-badge" onclick="resetDocZoom()" style="display: none;" class="absolute bottom-3 right-3 z-30 px-2.5 py-1 rounded-full bg-slate-900/85 text-white text-[11px] font-mono font-medium shadow-lg backdrop-blur-xs flex items-center gap-1.5 border border-white/20 active:scale-95 transition-all cursor-pointer">
+                                <span id="doc-zoom-scale-text">1.0x</span>
+                                <i class="fa-solid fa-rotate-left text-[10px]"></i>
+                            </button>
                         </div>
 
                         <!-- Panel 2: Chat Ignis (100% en móvil, 50% en desktop) -->
@@ -1044,12 +1055,6 @@
                                 </form>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Indicador de Puntos Discretos Móvil (Instagram style: N documentos + 1 Ignis Chat) -->
-                    <div id="ignis-dots-container" class="md:hidden py-2 flex items-center justify-center gap-2 bg-cantera-100/90 dark:bg-night-950 border-t border-cantera-200 dark:border-slate-800 shrink-0">
-                        <button type="button" onclick="setMobileIgnisSlide(0)" class="w-2.5 h-2.5 rounded-full bg-indigo-600 transition-all duration-200 cursor-pointer shadow-xs" aria-label="Ver Documento 1"></button>
-                        <button type="button" onclick="setMobileIgnisSlide(1)" class="w-2 h-2 rounded-full bg-cantera-300 dark:bg-slate-700 opacity-60 hover:opacity-100 transition-all duration-200 cursor-pointer" aria-label="Ver Chat de Ignis"></button>
                     </div>
                 </div>
             </div>
@@ -1832,6 +1837,17 @@
         let docViewMode = 'pdf';
         let ignisViewMode = 'split';
 
+        // Estado del Visor de Documentos (Carrete y Zoom Sensible al Estado)
+        let zoomScale = 1.0;
+        let panX = 0;
+        let panY = 0;
+        let isPanningDoc = false;
+        let pinchStartDist = 0;
+        let pinchStartScale = 1.0;
+        let lastPanTouchX = 0;
+        let lastPanTouchY = 0;
+        let lastDocTapTime = 0;
+
         let currentSocratesMode = 'hibrido';
         let socratesChatHistory = [];
         let socratesActiveCourse = '';
@@ -2090,6 +2106,7 @@
             initLiveClock();
             loadPreferences();
             initServiceWorker();
+            setupPullToRefresh();
         }
 
         if (document.readyState === 'loading') {
@@ -2390,10 +2407,10 @@
                                 body: body,
                                 icon: '/static/icon.png',
                                 badge: '/static/icon.png',
-                                tag: 'agora-timer-alarm',
+                                tag: 'agora-study-mission-done',
                                 renotify: true,
                                 requireInteraction: true,
-                                vibrate: [600, 250, 600, 250, 600, 250, 1000],
+                                vibrate: [300, 150, 300, 150, 300],
                                 data: { url: '/?openTimer=1', isAlarm: true },
                                 actions: [
                                     { action: 'stop_alarm', title: '🔕 Detener Alarma' },
@@ -2411,7 +2428,7 @@
                     new Notification(title, {
                         body: body,
                         icon: '/static/icon.png',
-                        tag: 'agora-timer-alarm',
+                        tag: 'agora-study-mission-done',
                         requireInteraction: true
                     });
                 } catch(e) {}
@@ -2475,7 +2492,12 @@
             const preset = TIMER_PRESETS[activePresetKey] || TIMER_PRESETS['pomodoro'];
             const isFocus = currentPhase === 'focus';
 
-            // Cancelar alarma programada en el servidor (ya se disparó en cliente)
+            // Cancelar alarma programada en el servidor y en el Service Worker (ya se disparó en cliente)
+            try {
+                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_TIMER_TARGET' });
+                }
+            } catch(e) {}
             try {
                 fetch('/api/timer/cancel', {
                     method: 'POST',
@@ -2488,9 +2510,9 @@
             startContinuousAlarm();
 
             // 2. Notificación nativa del sistema en la barra de estado
-            const notifTitle = isFocus ? "⏰ ¡Foco Completado!" : "🔔 ¡Descanso Concluido!";
+            const notifTitle = isFocus ? "¡Misión Cumplida! ⏰" : "🔔 ¡Descanso Concluido!";
             const notifBody = isFocus
-                ? `¡Completaste tu sesión de ${preset.label}! Toca para iniciar tu descanso.`
+                ? "Tu bloque de estudio ha finalizado."
                 : "¡Tu descanso ha concluido! ¿Listo para otro bloque de foco?";
             showAlarmSystemNotification(notifTitle, notifBody);
 
@@ -2583,6 +2605,25 @@
                 }).catch(err => console.warn('Error programando alarma en servidor:', err));
             } catch(e) {}
 
+            // 4. Delegar hora exacta de finalización al Service Worker para no morir con pantalla apagada
+            try {
+                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'SET_TIMER_TARGET',
+                        targetTime: timerEndTime
+                    });
+                } else if (navigator.serviceWorker) {
+                    navigator.serviceWorker.ready.then(reg => {
+                        if (reg && reg.active) {
+                            reg.active.postMessage({
+                                type: 'SET_TIMER_TARGET',
+                                targetTime: timerEndTime
+                            });
+                        }
+                    }).catch(() => {});
+                }
+            } catch(e) {}
+
             const btn = document.getElementById('timer-start-btn');
             if (btn) btn.textContent = 'Corriendo';
             updateTimerDisplay();
@@ -2607,7 +2648,16 @@
             timerRunning = false;
             timerEndTime = null;
 
-            // Cancelar alarma en el servidor
+            // Cancelar alarma en el Service Worker y en el servidor
+            try {
+                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_TIMER_TARGET' });
+                } else if (navigator.serviceWorker) {
+                    navigator.serviceWorker.ready.then(reg => {
+                        if (reg && reg.active) reg.active.postMessage({ type: 'CLEAR_TIMER_TARGET' });
+                    }).catch(() => {});
+                }
+            } catch(e) {}
             try {
                 fetch('/api/timer/cancel', {
                     method: 'POST',
@@ -2634,7 +2684,16 @@
             timerRunning = false;
             timerEndTime = null;
 
-            // Cancelar alarma en el servidor
+            // Cancelar alarma en el Service Worker y en el servidor
+            try {
+                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_TIMER_TARGET' });
+                } else if (navigator.serviceWorker) {
+                    navigator.serviceWorker.ready.then(reg => {
+                        if (reg && reg.active) reg.active.postMessage({ type: 'CLEAR_TIMER_TARGET' });
+                    }).catch(() => {});
+                }
+            } catch(e) {}
             try {
                 fetch('/api/timer/cancel', {
                     method: 'POST',
@@ -2953,6 +3012,8 @@
                 });
 
                 const subJson = newSub.toJSON();
+                const email = currentUserEmail || localStorage.getItem('agora_user_email') || '';
+                subJson.user_email = email;
                 await fetch('/api/push/subscribe', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -3053,19 +3114,21 @@
             }
         }, 25000);
 
-        // Carga de tareas
-        async function loadTasks() {
+        // Carga y sincronización de tareas con soporte para Pull-to-Refresh y auto-refresco
+        async function loadTasks(isPullToRefresh = false, forceRefresh = false) {
             const loading = document.getElementById('loading');
             const authWarning = document.getElementById('auth-warning');
             const timelineView = document.getElementById('timeline-view');
 
-            if (loading) loading.style.display = 'block';
+            if (loading && !isPullToRefresh) loading.style.display = 'block';
             if (authWarning) authWarning.style.display = 'none';
 
             try {
+                const tasksEndpoint = forceRefresh ? `/api/tasks?force=true&t=${Date.now()}` : `/api/tasks?t=${Date.now()}`;
+                const coursesEndpoint = `/api/courses?t=${Date.now()}`;
                 const [response, coursesResponse] = await Promise.all([
-                    fetch('/api/tasks'),
-                    fetch('/api/courses').catch(() => null)
+                    fetch(tasksEndpoint, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache, no-store' } }),
+                    fetch(coursesEndpoint, { cache: 'no-store' }).catch(() => null)
                 ]);
 
                 if (response.status === 401) {
@@ -3194,6 +3257,7 @@
 
                 if (timelineView) timelineView.style.display = 'block';
                 dismissSplashScreen(true);
+                window._lastTaskSyncTime = Date.now();
 
             } catch (error) {
                 console.error("Error loading tasks:", error);
@@ -3202,6 +3266,135 @@
                 if (loading) loading.style.display = 'none';
             }
         }
+
+        // Gesto Móvil Pull-to-Refresh con Resistencia Elástica e Indicador Visual Sutil
+        function setupPullToRefresh() {
+            const mainArea = document.getElementById('main-content-area');
+            const indicator = document.getElementById('pull-to-refresh-indicator');
+            const icon = document.getElementById('pull-to-refresh-icon');
+            const label = document.getElementById('pull-to-refresh-label');
+
+            if (!mainArea || !indicator || !icon || !label) return;
+
+            let touchStartY = 0;
+            let currentPullDist = 0;
+            let isPulling = false;
+            let isRefreshing = false;
+            const threshold = 55;
+            const maxPull = 82;
+
+            mainArea.addEventListener('touchstart', (e) => {
+                if (window.innerWidth >= 768) return;
+                // Solo activar si el scroll del contenedor principal está en la parte superior
+                const ignisBackdrop = document.getElementById('ignis-workspace-backdrop');
+                const isIgnisOpen = ignisBackdrop && ignisBackdrop.style.display !== 'none';
+                if (mainArea.scrollTop <= 2 && !isRefreshing && !isIgnisOpen) {
+                    touchStartY = e.touches[0].clientY;
+                    isPulling = true;
+                    indicator.style.transition = 'none';
+                }
+            }, { passive: true });
+
+            mainArea.addEventListener('touchmove', (e) => {
+                if (!isPulling || isRefreshing || window.innerWidth >= 768) return;
+
+                // Si el usuario scrolleó hacia abajo, abortar pull
+                if (mainArea.scrollTop > 2) {
+                    isPulling = false;
+                    resetIndicator();
+                    return;
+                }
+
+                const currentY = e.touches[0].clientY;
+                const deltaY = currentY - touchStartY;
+
+                if (deltaY > 0) {
+                    // Resistencia elástica progresiva amortiguada
+                    currentPullDist = Math.min(maxPull, deltaY * 0.42);
+                    const progress = Math.min(1, currentPullDist / threshold);
+
+                    indicator.style.height = `${currentPullDist}px`;
+                    indicator.style.opacity = `${progress}`;
+                    icon.style.transform = `rotate(${progress * 280}deg)`;
+
+                    if (currentPullDist >= threshold) {
+                        label.textContent = 'Suelta para sincronizar';
+                        icon.classList.add('text-amber-500');
+                        icon.classList.remove('text-indigo-600', 'dark:text-indigo-400');
+                    } else {
+                        label.textContent = 'Desliza para actualizar';
+                        icon.classList.remove('text-amber-500');
+                        icon.classList.add('text-indigo-600', 'dark:text-indigo-400');
+                    }
+                }
+            }, { passive: true });
+
+            const finishPull = async () => {
+                if (!isPulling || window.innerWidth >= 768) return;
+                isPulling = false;
+
+                if (currentPullDist >= threshold && !isRefreshing) {
+                    isRefreshing = true;
+                    indicator.style.transition = 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)';
+                    indicator.style.height = '42px';
+                    indicator.style.opacity = '1';
+                    label.textContent = 'Sincronizando con Classroom...';
+                    icon.classList.add('fa-spin');
+                    icon.classList.remove('text-amber-500');
+                    icon.classList.add('text-indigo-600', 'dark:text-indigo-400');
+
+                    try {
+                        await loadTasks(true, true);
+                        label.textContent = '¡Todo al día!';
+                        icon.classList.remove('fa-spin', 'fa-arrows-rotate');
+                        icon.classList.add('fa-check', 'text-emerald-500');
+                    } catch (err) {
+                        label.textContent = 'Error al sincronizar';
+                    } finally {
+                        setTimeout(() => {
+                            resetIndicator();
+                            setTimeout(() => {
+                                icon.className = 'fa-solid fa-arrows-rotate text-indigo-600 dark:text-indigo-400 text-xs transition-transform';
+                                isRefreshing = false;
+                            }, 300);
+                        }, 500);
+                    }
+                } else {
+                    resetIndicator();
+                }
+            };
+
+            function resetIndicator() {
+                indicator.style.transition = 'all 0.25s ease';
+                indicator.style.height = '0px';
+                indicator.style.opacity = '0';
+                currentPullDist = 0;
+            }
+
+            mainArea.addEventListener('touchend', finishPull, { passive: true });
+            mainArea.addEventListener('touchcancel', finishPull, { passive: true });
+        }
+
+        // Auto-sincronización PWA al volver a la app tras estar en segundo plano
+        (function setupPwaResumeSync() {
+            let lastFocusSync = Date.now();
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') {
+                    const elapsed = Date.now() - (window._lastTaskSyncTime || lastFocusSync);
+                    if (elapsed > 45000) {
+                        window._lastTaskSyncTime = Date.now();
+                        loadTasks(true, true).catch(() => {});
+                    }
+                }
+            });
+            window.addEventListener('focus', () => {
+                const elapsed = Date.now() - (window._lastTaskSyncTime || lastFocusSync);
+                if (elapsed > 45000) {
+                    window._lastTaskSyncTime = Date.now();
+                    loadTasks(true, true).catch(() => {});
+                }
+            });
+        })();
 
         function classifyTaskMission(task, dueDate, now) {
             const titleLower = (task.title || '').toLowerCase();
@@ -5230,33 +5423,107 @@
 
         function renderIgnisMobileDots(activeIndex = 0) {
             mobileIgnisSlideIndex = activeIndex;
-            const container = document.getElementById('ignis-dots-container');
+            // Los puntos (. . .) fueron eliminados para maximizar el área de lectura en pantalla móvil
+        }
+
+        function isDocZoomed() {
+            const vpScale = (window.visualViewport && window.visualViewport.scale) ? window.visualViewport.scale : 1.0;
+            return zoomScale > 1.05 || vpScale > 1.05;
+        }
+
+        function updateDocZoomTransform() {
+            const target = document.getElementById('doc-zoom-target');
+            const badge = document.getElementById('doc-zoom-reset-badge');
+            const badgeText = document.getElementById('doc-zoom-scale-text');
+
+            if (target) {
+                target.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomScale})`;
+            }
+
+            if (badge) {
+                if (zoomScale > 1.05) {
+                    badge.style.display = 'flex';
+                    if (badgeText) badgeText.textContent = `${zoomScale.toFixed(1)}x`;
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        }
+
+        function resetDocZoom() {
+            zoomScale = 1.0;
+            panX = 0;
+            panY = 0;
+            isPanningDoc = false;
+            const target = document.getElementById('doc-zoom-target');
+            if (target) {
+                target.style.transition = 'transform 0.2s ease-out';
+                updateDocZoomTransform();
+                setTimeout(() => {
+                    if (target) target.style.transition = '';
+                }, 200);
+            } else {
+                updateDocZoomTransform();
+            }
+        }
+
+        function setDocZoom(newScale, clientX, clientY) {
+            const prevScale = zoomScale;
+            zoomScale = Math.min(Math.max(newScale, 1.0), 4.0);
+
+            if (zoomScale <= 1.05) {
+                zoomScale = 1.0;
+                panX = 0;
+                panY = 0;
+            } else if (clientX !== undefined && clientY !== undefined && prevScale > 0) {
+                const factor = zoomScale / prevScale;
+                panX = (panX - clientX) * factor + clientX;
+                panY = (panY - clientY) * factor + clientY;
+            }
+            updateDocZoomTransform();
+        }
+
+        function setupDocViewerGestures() {
+            const container = document.getElementById('doc-viewer-container');
             if (!container) return;
 
-            const docCount = (currentTaskDocs && currentTaskDocs.length > 0) ? currentTaskDocs.length : 1;
-            const totalDots = docCount + 1; // N documentos + 1 Chat Ignis
-
-            container.innerHTML = '';
-            for (let i = 0; i < totalDots; i++) {
-                const dot = document.createElement('button');
-                dot.type = 'button';
-                const isChatDot = (i === docCount);
-                if (i === activeIndex) {
-                    dot.className = isChatDot
-                        ? "w-2.5 h-2.5 rounded-full bg-amber-500 transition-all duration-200 cursor-pointer shadow-xs"
-                        : "w-2.5 h-2.5 rounded-full bg-indigo-600 transition-all duration-200 cursor-pointer shadow-xs";
-                } else {
-                    dot.className = "w-2 h-2 rounded-full bg-cantera-300 dark:bg-slate-700 opacity-60 hover:opacity-100 transition-all duration-200 cursor-pointer";
+            container.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    // Pinch zoom
+                    pinchStartDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    pinchStartScale = zoomScale;
+                } else if (e.touches.length === 1) {
+                    const now = Date.now();
+                    if (now - lastDocTapTime < 320) {
+                        // Doble toque: alterna entre 1.0x y 2.0x
+                        if (zoomScale > 1.05) {
+                            resetDocZoom();
+                        } else {
+                            const rect = container.getBoundingClientRect();
+                            const tapX = e.touches[0].clientX - rect.left;
+                            const tapY = e.touches[0].clientY - rect.top;
+                            setDocZoom(2.0, tapX, tapY);
+                        }
+                        lastDocTapTime = 0;
+                        return;
+                    }
+                    lastDocTapTime = now;
                 }
+            }, { passive: true });
 
-                const label = (i < docCount)
-                    ? (docCount > 1 ? `Ver Documento ${i + 1}: ${currentTaskDocs[i]?.title || ''}` : 'Ver Documento')
-                    : 'Ver Chat de Ignis';
-                dot.setAttribute('aria-label', label);
-                dot.title = label;
-                dot.onclick = () => setMobileIgnisSlide(i);
-                container.appendChild(dot);
-            }
+            container.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && pinchStartDist > 0) {
+                    const currentDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    const ratio = currentDist / pinchStartDist;
+                    setDocZoom(pinchStartScale * ratio);
+                }
+            }, { passive: true });
         }
 
         function setMobileIgnisSlide(slideIndex, shouldAutoFocus = false) {
@@ -5268,6 +5535,7 @@
 
             const prevIndex = mobileIgnisSlideIndex;
             mobileIgnisSlideIndex = slideIndex;
+            resetDocZoom();
 
             const slider = document.getElementById('ignis-panes-slider');
 
@@ -5334,7 +5602,9 @@
             }
         }
 
-        // Detección de Gesto de Deslizamiento Táctil en Toda la Pantalla para Ignis (Swipe estilo Fotos)
+        // Detección de Gesto de Deslizamiento Táctil State-Aware para Ignis
+        // 1.0x: Carrete fluido de fotos entre documentos y chat de Ignis.
+        // >1.0x: Inhibe el cambio horizontal de slide y dedica el arrastre táctil al paneo libre.
         (function setupIgnisTouchSwipe() {
             let touchStartX = 0;
             let touchStartY = 0;
@@ -5346,46 +5616,109 @@
                 const ignisModal = document.getElementById('ignis-workspace-modal') || document.getElementById('ignis-workspace-backdrop');
                 if (!ignisModal) return;
 
+                setupDocViewerGestures();
+
                 ignisModal.addEventListener('touchstart', (e) => {
                     if (window.innerWidth >= 768) return;
-                    // Si el usuario toca con dos o más dedos (pinch-zoom), cancelar swipe para no interferir con el zoom
+
+                    const docCount = (currentTaskDocs && currentTaskDocs.length > 0) ? currentTaskDocs.length : 1;
+                    const isViewingDoc = (mobileIgnisSlideIndex < docCount);
+
+                    // Si estamos en un documento y está zoomeado
+                    if (isViewingDoc && isDocZoomed()) {
+                        if (e.touches.length === 1) {
+                            isPanningDoc = true;
+                            isSwiping = false;
+                            lastPanTouchX = e.touches[0].clientX;
+                            lastPanTouchY = e.touches[0].clientY;
+                        } else {
+                            isPanningDoc = false;
+                            isSwiping = false;
+                        }
+                        return;
+                    }
+
+                    // Si el usuario toca con dos o más dedos (pinch-zoom), cancelar swipe
                     if (e.touches && e.touches.length > 1) {
                         isSwiping = false;
                         return;
                     }
+
                     const target = e.target;
                     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') return;
+
                     touchStartX = e.touches[0].clientX;
                     touchStartY = e.touches[0].clientY;
                     touchLastX = touchStartX;
                     touchLastY = touchStartY;
                     isSwiping = true;
+                    isPanningDoc = false;
                 }, { passive: true });
 
                 ignisModal.addEventListener('touchmove', (e) => {
-                    if (!isSwiping || window.innerWidth >= 768) return;
+                    if (window.innerWidth >= 768) return;
+
+                    const docCount = (currentTaskDocs && currentTaskDocs.length > 0) ? currentTaskDocs.length : 1;
+                    const isViewingDoc = (mobileIgnisSlideIndex < docCount);
+
+                    // Si hay zoom activo en el documento: arrastre táctil con un dedo sirve exclusivamente para paneo
+                    if (isViewingDoc && isDocZoomed()) {
+                        isSwiping = false;
+                        if (isPanningDoc && e.touches.length === 1) {
+                            const curX = e.touches[0].clientX;
+                            const curY = e.touches[0].clientY;
+                            const deltaX = curX - lastPanTouchX;
+                            const deltaY = curY - lastPanTouchY;
+                            panX += deltaX;
+                            panY += deltaY;
+                            lastPanTouchX = curX;
+                            lastPanTouchY = curY;
+                            updateDocZoomTransform();
+                        }
+                        return;
+                    }
+
+                    if (!isSwiping) return;
                     if (e.touches && e.touches.length > 1) {
                         isSwiping = false;
                         return;
                     }
+
                     touchLastX = e.touches[0].clientX;
                     touchLastY = e.touches[0].clientY;
                 }, { passive: true });
 
                 const handleSwipeEnd = () => {
-                    if (!isSwiping || window.innerWidth >= 768) return;
+                    if (window.innerWidth >= 768) return;
+
+                    const docCount = (currentTaskDocs && currentTaskDocs.length > 0) ? currentTaskDocs.length : 1;
+                    const isViewingDoc = (mobileIgnisSlideIndex < docCount);
+
+                    // Si había zoom, finalizar paneo e inhibir cualquier cambio de slide
+                    if (isViewingDoc && isDocZoomed()) {
+                        isPanningDoc = false;
+                        isSwiping = false;
+                        return;
+                    }
+
+                    if (!isSwiping) return;
                     isSwiping = false;
+
                     const diffX = touchLastX - touchStartX;
                     const diffY = touchLastY - touchStartY;
-                    // Solo activar swipe si el movimiento es marcadamente horizontal (evita bloquear scroll vertical)
+
+                    // Cuando NO hay zoom (1.0x):
+                    // Deslizar verticalmente scrollea natural.
+                    // Deslizar horizontalmente funciona como carrete de fotos fluido.
                     if (Math.abs(diffX) > Math.abs(diffY) * 1.3 && Math.abs(diffX) > 35) {
-                        const docCount = (currentTaskDocs && currentTaskDocs.length > 0) ? currentTaskDocs.length : 1;
                         const totalSlides = docCount + 1;
                         if (diffX < 0) {
+                            // Deslizar a la izquierda: siguiente documento o al chat de Ignis
                             if (mobileIgnisSlideIndex < totalSlides - 1) {
                                 setMobileIgnisSlide(mobileIgnisSlideIndex + 1, false);
                             }
                         } else {
+                            // Deslizar a la derecha: documento anterior o volver del chat al documento
                             if (mobileIgnisSlideIndex > 0) {
                                 setMobileIgnisSlide(mobileIgnisSlideIndex - 1, false);
                             }
@@ -5857,6 +6190,7 @@
 
         function renderCurrentDoc() {
             if (currentTaskDocs.length === 0) return;
+            resetDocZoom();
             const doc = currentTaskDocs[currentDocIndex];
             document.getElementById('doc-carousel-title').textContent = doc.title;
             document.getElementById('doc-carousel-counter').textContent = `${currentDocIndex + 1}/${currentTaskDocs.length}`;
@@ -5875,11 +6209,27 @@
                 }
             }
 
-            if (docViewMode === 'pdf' && fileId) {
+            const isImage = Boolean(
+                doc.isImage || 
+                (doc.title && /\.(png|jpe?g|webp|gif|svg)$/i.test(doc.title)) ||
+                (doc.link && /\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(doc.link))
+            );
+
+            let docHtml = '';
+            if (isImage && doc.link) {
+                docHtml = `
+                    <div class="w-full h-full flex flex-col items-center justify-center p-2 min-h-[360px]">
+                        <img src="${doc.link}" alt="${doc.title}" class="max-w-full max-h-[75vh] object-contain rounded-xl shadow-md pointer-events-auto select-none" />
+                        <div class="pt-2 px-1 text-[11px] text-cantera-600 dark:text-slate-400 text-center">
+                            <span>Doble toque o pellizca para explorar con zoom</span>
+                        </div>
+                    </div>
+                `;
+            } else if (docViewMode === 'pdf' && fileId) {
                 const previewUrl = formatGoogleUrlWithAuth(`https://drive.google.com/file/d/${fileId}/preview`);
-                container.innerHTML = `
-                    <div class="w-full h-full flex flex-col" style="touch-action: pan-y pinch-zoom; -webkit-overflow-scrolling: touch;">
-                        <iframe src="${previewUrl}" class="w-full flex-1 min-h-[460px] border-0 rounded-xl bg-white shadow-inner pointer-events-auto" style="touch-action: pan-y pinch-zoom;" allow="autoplay"></iframe>
+                docHtml = `
+                    <div class="w-full h-full flex flex-col min-h-[460px]">
+                        <iframe id="doc-preview-iframe" src="${previewUrl}" class="w-full flex-1 min-h-[460px] border-0 rounded-xl bg-white shadow-inner pointer-events-auto" allow="autoplay"></iframe>
                         <div class="pt-2 px-1 flex items-center justify-between text-[11px] text-cantera-600 dark:text-slate-400 shrink-0">
                             <span>¿El visor no carga tu cuenta escolar?</span>
                             <a href="${extLink}" target="_blank" class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline flex items-center gap-1">
@@ -5889,8 +6239,10 @@
                     </div>
                 `;
             } else {
-                container.innerHTML = `<div class="whitespace-pre-wrap p-3 text-xs leading-relaxed text-cantera-900 dark:text-slate-300 font-sans" style="touch-action: pan-y pinch-zoom;">${doc.content || 'Sin contenido de texto adjunto.'}</div>`;
+                docHtml = `<div class="whitespace-pre-wrap p-3 text-xs leading-relaxed text-cantera-900 dark:text-slate-300 font-sans">${doc.content || 'Sin contenido de texto adjunto.'}</div>`;
             }
+
+            container.innerHTML = `<div id="doc-zoom-target" class="w-full h-full origin-top-left will-change-transform" style="transform: translate(0px, 0px) scale(1); touch-action: pan-x pan-y pinch-zoom;">${docHtml}</div>`;
 
             document.getElementById('doc-prev-btn').disabled = currentDocIndex === 0;
             document.getElementById('doc-next-btn').disabled = currentDocIndex >= currentTaskDocs.length - 1;

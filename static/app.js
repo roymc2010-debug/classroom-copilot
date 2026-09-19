@@ -21,6 +21,9 @@ let metricMode = 'tasks';
 let currentTaskDocs = [];
 let currentDocIndex = 0;
 let docViewMode = 'pdf';
+let zoomScale = 1.0;
+let panX = 0;
+let panY = 0;
 
 // Temporizador de 2 Fases (Foco y Descanso)
 let timerInterval = null;
@@ -284,16 +287,17 @@ function saveApiKeys() {
 // -------------------------------------------------------------
 // CARGA Y SEPARACIÓN DE TAREAS
 // -------------------------------------------------------------
-async function loadTasks() {
+async function loadTasks(isPullToRefresh = false, forceRefresh = false) {
     const loading = document.getElementById('loading');
     const authWarning = document.getElementById('auth-warning');
     const timelineView = document.getElementById('timeline-view');
 
-    if (loading) loading.style.display = 'block';
+    if (loading && !isPullToRefresh) loading.style.display = 'block';
     if (authWarning) authWarning.style.display = 'none';
 
     try {
-        const response = await fetch('/api/tasks');
+        const fetchUrl = forceRefresh ? `/api/tasks?force=true&t=${Date.now()}` : `/api/tasks?t=${Date.now()}`;
+        const response = await fetch(fetchUrl, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache, no-store' } });
         if (response.status === 401) {
             const splashLoading = document.getElementById('splash-loading-state');
             const splashAuth = document.getElementById('splash-auth-state');
