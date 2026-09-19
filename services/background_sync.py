@@ -339,6 +339,7 @@ def check_and_dispatch_due_timer_alarms():
         phase = alarm.get("phase", "focus")
         label = alarm.get("preset_label", "Foco")
         target_endpoint = alarm.get("endpoint", "")
+        break_minutes = int(alarm.get("break_minutes") or 5)
 
         if phase == "focus":
             title = "¡Misión Cumplida! ⏰"
@@ -359,7 +360,7 @@ def check_and_dispatch_due_timer_alarms():
         if not subscriptions:
             subscriptions = db.get_all_push_subscriptions()
 
-        print(f"[Timer Alarm] Despachando alarma #{alarm_id} ({phase} - {label}) para {user_email or 'dispositivo'}. Dispositivos encontrados: {len(subscriptions)}")
+        print(f"[Timer Alarm] Despachando alarma #{alarm_id} ({phase} - {label}, break={break_minutes}m) para {user_email or 'dispositivo'}. Dispositivos encontrados: {len(subscriptions)}")
         for sub in subscriptions:
             ok, msg = send_web_push(
                 subscription_info=sub,
@@ -369,7 +370,8 @@ def check_and_dispatch_due_timer_alarms():
                 silent=False,
                 tag="agora-study-mission-done",
                 is_alarm=True,
-                vibrate=[300, 150, 300, 150, 300]
+                vibrate=[300, 150, 300, 150, 300],
+                break_minutes=break_minutes
             )
             print(f"[Timer Alarm] Push enviado a {sub.get('endpoint', '')[:45]}... Ok: {ok}, Msg: {msg}")
             if not ok and msg == "expired":

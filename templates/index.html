@@ -2389,7 +2389,7 @@
             }
         }
 
-        async function showAlarmSystemNotification(title, body) {
+        async function showAlarmSystemNotification(title, body, breakMinutes = 5) {
             if (!('Notification' in window)) return;
             try {
                 if (Notification.permission === 'default') {
@@ -2398,6 +2398,7 @@
             } catch(e) {}
 
             if (Notification.permission === 'granted') {
+                const bMin = Number(breakMinutes) || 5;
                 // Notificación nativa mediante Service Worker para móviles (evita crash de new Notification en Android)
                 if ('serviceWorker' in navigator) {
                     try {
@@ -2405,16 +2406,16 @@
                         if (reg && reg.showNotification) {
                             await reg.showNotification(title, {
                                 body: body,
-                                icon: '/static/icon.png',
-                                badge: '/static/icon.png',
+                                icon: '/static/agora_logo_192.png?v=4',
+                                badge: '/static/img/badge.png',
                                 tag: 'agora-study-mission-done',
                                 renotify: true,
                                 requireInteraction: true,
                                 vibrate: [300, 150, 300, 150, 300],
-                                data: { url: '/?openTimer=1', isAlarm: true },
+                                data: { url: '/?openTimer=1', isAlarm: true, breakMinutes: bMin },
                                 actions: [
-                                    { action: 'stop_alarm', title: '🔕 Detener Alarma' },
-                                    { action: 'open_timer', title: '📱 Abrir Ágora' }
+                                    { action: 'stop_alarm', title: '⏹ Detener Alarma' },
+                                    { action: 'start_break', title: `☕ Iniciar Descanso (${bMin} min)` }
                                 ]
                             });
                             return;
@@ -2427,7 +2428,7 @@
                 try {
                     new Notification(title, {
                         body: body,
-                        icon: '/static/icon.png',
+                        icon: '/static/agora_logo_192.png?v=4',
                         tag: 'agora-study-mission-done',
                         requireInteraction: true
                     });
@@ -2491,8 +2492,34 @@
             const currentPhase = timerPhase;
             const preset = TIMER_PRESETS[activePresetKey] || TIMER_PRESETS['pomodoro'];
             const isFocus = currentPhase === 'focus';
+            const breakMinutes = (preset && Number(preset.break) > 0) ? Number(preset.break) : 5;
 
-            // Cancelar alarma programada en el servidor y en el Service Worker (ya se disparó en cliente)
+            // 1. Iniciar timbre continuo y vibración potente
+            startContinuousAlarm();
+
+            // 2. Disparar notificación visual inmediatamente (saltando en pantalla de bloqueo vía Service Worker)
+            const notifTitle = isFocus ? "¡Misión Cumplida! ⏰" : "🔔 ¡Descanso Concluido!";
+            const notifBody = isFocus
+                ? "Tu bloque de estudio ha finalizado."
+                : "¡Tu descanso ha concluido! ¿Listo para otro bloque de foco?";
+
+            try {
+                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'SHOW_TIMER_ALARM_NOTIFICATION',
+                        title: notifTitle,
+                        body: notifBody,
+                        breakMinutes: breakMinutes,
+                        phase: currentPhase
+                    });
+                } else {
+                    showAlarmSystemNotification(notifTitle, notifBody, breakMinutes);
+                }
+            } catch(e) {
+                showAlarmSystemNotification(notifTitle, notifBody, breakMinutes);
+            }
+
+            // Cancelar alarma de respaldo programada en el servidor y en el Service Worker una vez despachada
             try {
                 if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                     navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_TIMER_TARGET' });
@@ -2505,16 +2532,6 @@
                     body: JSON.stringify({ user_email: currentUserEmail })
                 }).catch(() => {});
             } catch(e) {}
-
-            // 1. Iniciar timbre continuo y vibración potente
-            startContinuousAlarm();
-
-            // 2. Notificación nativa del sistema en la barra de estado
-            const notifTitle = isFocus ? "¡Misión Cumplida! ⏰" : "🔔 ¡Descanso Concluido!";
-            const notifBody = isFocus
-                ? "Tu bloque de estudio ha finalizado."
-                : "¡Tu descanso ha concluido! ¿Listo para otro bloque de foco?";
-            showAlarmSystemNotification(notifTitle, notifBody);
 
             // 3. Desplegar el modal de alarma a pantalla completa
             showAlarmModal(isFocus, preset);
@@ -2589,8 +2606,9 @@
             timerEndTime = Date.now() + (timerSeconds * 1000);
 
             // 3. Programar alarma 24/7 en el servidor adjuntando la suscripción del teléfono
+            const preset = TIMER_PRESETS[activePresetKey] || TIMER_PRESETS['pomodoro'];
+            const breakMinutes = (preset && Number(preset.break) > 0) ? Number(preset.break) : 5;
             try {
-                const preset = TIMER_PRESETS[activePresetKey] || TIMER_PRESETS['pomodoro'];
                 const email = currentUserEmail || localStorage.getItem('agora_user_email') || '';
                 fetch('/api/timer/schedule', {
                     method: 'POST',
@@ -2600,25 +2618,26 @@
                         phase: timerPhase,
                         label: preset.label,
                         user_email: email,
-                        subscription: pushSub
+                        subscription: pushSub,
+                        break_minutes: breakMinutes
                     })
                 }).catch(err => console.warn('Error programando alarma en servidor:', err));
             } catch(e) {}
 
             // 4. Delegar hora exacta de finalización al Service Worker para no morir con pantalla apagada
             try {
+                const swTargetPayload = {
+                    type: 'SET_TIMER_TARGET',
+                    targetTime: timerEndTime,
+                    breakMinutes: breakMinutes,
+                    phase: timerPhase
+                };
                 if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                    navigator.serviceWorker.controller.postMessage({
-                        type: 'SET_TIMER_TARGET',
-                        targetTime: timerEndTime
-                    });
+                    navigator.serviceWorker.controller.postMessage(swTargetPayload);
                 } else if (navigator.serviceWorker) {
                     navigator.serviceWorker.ready.then(reg => {
                         if (reg && reg.active) {
-                            reg.active.postMessage({
-                                type: 'SET_TIMER_TARGET',
-                                targetTime: timerEndTime
-                            });
+                            reg.active.postMessage(swTargetPayload);
                         }
                     }).catch(() => {});
                 }
@@ -2722,18 +2741,28 @@
         document.addEventListener('visibilitychange', handleVisibilityOrFocus);
         window.addEventListener('focus', handleVisibilityOrFocus);
 
-        // Escuchar orden de detener alarma emitida desde la barra de notificaciones del celular
+        // Escuchar órdenes desde la barra de notificaciones del celular (Detener Alarma o Iniciar Descanso)
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.addEventListener('message', (event) => {
-                if (event.data && event.data.type === 'STOP_ALARM') {
+                if (!event.data) return;
+                if (event.data.type === 'STOP_ALARM') {
                     stopContinuousAlarm();
                     const modal = document.getElementById('modal-timer-alarm');
                     if (modal) modal.style.display = 'none';
+                } else if (event.data.type === 'START_BREAK') {
+                    stopContinuousAlarm();
+                    const modal = document.getElementById('modal-timer-alarm');
+                    if (modal) modal.style.display = 'none';
+                    const bMin = Number(event.data.breakMinutes) || 5;
+                    timerPhase = 'break';
+                    timerSeconds = bMin * 60;
+                    updateTimerDisplay();
+                    startTimer();
                 }
             });
         }
 
-        // Si se abre la app desde una notificación de alarma (?openTimer=1)
+        // Si se abre la app desde una notificación de alarma (?openTimer=1 o ?startBreak=1)
         window.addEventListener('DOMContentLoaded', () => {
             try {
                 const urlParams = new URLSearchParams(window.location.search);
@@ -2745,6 +2774,16 @@
                     if (mTimerPage) {
                         mTimerPage.scrollIntoView({ behavior: 'smooth' });
                     }
+                }
+                if (urlParams.get('startBreak')) {
+                    const bMin = Number(urlParams.get('breakMinutes')) || 5;
+                    stopContinuousAlarm();
+                    const modal = document.getElementById('modal-timer-alarm');
+                    if (modal) modal.style.display = 'none';
+                    timerPhase = 'break';
+                    timerSeconds = bMin * 60;
+                    updateTimerDisplay();
+                    startTimer();
                 }
             } catch(e) {}
         });

@@ -60,7 +60,7 @@ def get_public_key():
     _, pub_key = get_or_create_vapid_keys()
     return pub_key
 
-def send_web_push(subscription_info, title, body, url="/", silent=False, tag="agora-notice", is_alarm=False, vibrate=None):
+def send_web_push(subscription_info, title, body, url="/", silent=False, tag="agora-notice", is_alarm=False, vibrate=None, break_minutes=5):
     """
     Despacha una notificación Push encriptada al Push Service (FCM/Apple) usando RFC 8291.
     Si is_alarm=True, utiliza vibración continua de alarma, requireInteraction y máxima urgencia.
@@ -78,23 +78,34 @@ def send_web_push(subscription_info, title, body, url="/", silent=False, tag="ag
     else:
         chosen_vibrate = std_vibrate
 
+    actions = []
+    if is_alarm:
+        actions = [
+            {"action": "stop_alarm", "title": "⏹ Detener Alarma"},
+            {"action": "start_break", "title": f"☕ Iniciar Descanso ({int(break_minutes)} min)"}
+        ]
+
     payload = {
         "title": title,
         "body": body,
         "icon": "/static/agora_logo_192.png?v=4",
-        "badge": "/static/agora_logo_light_32.png?v=4",
+        "badge": "/static/img/badge.png",
         "url": url,
         "silent": bool(silent),
         "vibrate": chosen_vibrate,
         "alarm": bool(is_alarm),
         "isAlarm": bool(is_alarm),
         "requireInteraction": bool(is_alarm),
+        "actions": actions,
+        "breakMinutes": int(break_minutes),
         "timestamp": int(time.time() * 1000),
         "data": {
             "url": url,
             "silent": bool(silent),
             "alarm": bool(is_alarm),
-            "isAlarm": bool(is_alarm)
+            "isAlarm": bool(is_alarm),
+            "breakMinutes": int(break_minutes),
+            "actions": actions
         }
     }
 

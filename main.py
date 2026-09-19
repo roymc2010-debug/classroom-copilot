@@ -1266,6 +1266,7 @@ async def timer_schedule(req: Request):
 
         phase = str(data.get("phase", "focus"))
         label = str(data.get("label", "Foco"))
+        break_minutes = int(data.get("break_minutes") or data.get("break") or 5)
         alarm_id = str(data.get("alarm_id") or uuid.uuid4())
 
         session_id = req.cookies.get("agora_session") or req.cookies.get("session_id") or ""
@@ -1290,10 +1291,11 @@ async def timer_schedule(req: Request):
             ends_at=ends_at,
             phase=phase,
             preset_label=label,
-            endpoint=endpoint
+            endpoint=endpoint,
+            break_minutes=break_minutes
         )
-        print(f"[Timer Schedule] Alarma #{alarm_id} ({phase} - {label}) guardada para '{user_email or 'dispositivo'}'")
-        return {"status": "ok", "alarm_id": alarm_id, "ends_at": ends_at}
+        print(f"[Timer Schedule] Alarma #{alarm_id} ({phase} - {label}, break={break_minutes}m) guardada para '{user_email or 'dispositivo'}'")
+        return {"status": "ok", "alarm_id": alarm_id, "ends_at": ends_at, "break_minutes": break_minutes}
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
